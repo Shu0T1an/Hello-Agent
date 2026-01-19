@@ -1,9 +1,43 @@
-
+# Spring AI 配置
 spring:
+  application:
+    name: agent-core
   config:
     name: demo
   profiles:
     active: dev
+
+  ai:
+    # OpenAI 配置
+    openai:
+      # API Key (可以从环境变量或配置文件中读取)
+      api-key: ${OPENAI_API_KEY:your-api-key-here}
+      # Base URL (如果使用代理或其他兼容的 API)
+      base-url: ${OPENAI_BASE_URL:https://api.openai.com}
+      # Chat 配置
+      chat:
+        options:
+          # 模型名称
+          model: ${OPENAI_MODEL:gpt-4o-mini}
+          # 温度参数
+          temperature: 0.7
+          # 最大 token 数
+          max-tokens: 2000
+
+# Agent 配置
+agent:
+  # 默认最大迭代次数
+  max-iterations: 10
+  # 默认温度参数
+  temperature: 0.7
+  # 默认系统提示词
+  system-prompt: "You are a helpful assistant."
+
+# 日志配置
+logging:
+  level:
+    cn.ts.agent: DEBUG
+    org.springframework.ai: DEBUG
 
 server:
   port: 8080

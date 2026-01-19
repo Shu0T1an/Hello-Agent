@@ -50,6 +50,7 @@ public class ChatModelRequest implements ModelRequest {
         // 添加系统消息
         if (systemPrompt != null && !systemPrompt.isEmpty()) {
             spec = spec.messages(new SystemMessage(systemPrompt));
+
         }
 
         // 添加对话消息
