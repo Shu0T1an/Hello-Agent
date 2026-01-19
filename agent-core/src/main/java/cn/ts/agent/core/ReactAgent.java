@@ -3,15 +3,27 @@ package cn.ts.agent.core;
 import cn.ts.agent.api.*;
 import cn.ts.agent.node.*;
 import cn.ts.graph.*;
+import cn.ts.graph.config.RunnableConfig;
 import cn.ts.graph.constant.GraphConstants;
 import cn.ts.graph.node.NodeAction;
 import cn.ts.graph.edge.EdgeAction;
+import cn.ts.graph.state.MapState;
 import cn.ts.graph.state.State;
+import cn.ts.graph.state.strategy.AppendStrategy;
+import cn.ts.graph.state.strategy.ReplaceStrategy;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+
+import static cn.ts.graph.constant.GraphConstants.AGENT_MODEL;
+import static cn.ts.graph.constant.GraphConstants.AGENT_TOOL;
+import static cn.ts.graph.constant.GraphConstants.AGENT_END;
 
 /**
  * ReAct Agent：组合 LLMNode 和 ToolNode
@@ -161,46 +173,55 @@ public class ReactAgent implements Agent {
     private CompiledGraph buildReActGraph(ChatModel chatModel, Object[] tools) {
         StateGraph graph = new StateGraph();
 
+        // 设置状态初始化器，注册策略
+        graph.setStateInitializer(() -> {
+            MapState state = new MapState();
+            // messages 使用追加策略，这样多个节点的输出可以追加到同一个列表
+            state.registerKeyStrategy("messages", AppendStrategy.getInstance());
+            // iteration 使用替换策略（这是默认策略，但显式声明更清晰）
+            state.registerKeyStrategy("iteration", ReplaceStrategy.getInstance());
+            return state;
+        });
+
         // 创建节点
         LLMNode llmNode = new LLMNode(chatModel, tools);
         ToolNode toolNode = new ToolNode();
 
         // 添加节点到图
-        graph.addNode("llm", llmNode);
-        graph.addNode("tools", toolNode);
+        graph.addNode(AGENT_MODEL, llmNode);
+        graph.addNode(AGENT_TOOL, toolNode);
 
-        // 条件边：判断是否有 toolCalls
-        graph.addConditionalEdge("llm",
-                new EdgeAction() {
-                    @Override
-                    public String route(State state) {
-                        ChatResponse response = state.<ChatResponse>value("chat_response").orElse(null);
-                        if (response != null && response.hasToolCalls()) {
-                            return "tools";
-                        }
-                        return "end";
+        // 条件边1：判断最后一条消息是否有 toolCalls
+        graph.addConditionalEdge(AGENT_MODEL,
+                state -> {
+                    List<Message> messages = state.value("messages", new ArrayList<Message>());
+                    if (messages.isEmpty()) {
+                        return AGENT_END;
                     }
+
+                    Message last = messages.get(messages.size() - 1);
+                    if (last instanceof AssistantMessage am && am.hasToolCalls()) {
+                        return AGENT_TOOL;
+                    }
+                    return AGENT_END;
                 },
-                Map.of("tools", "tools", "end", "end")
+                Map.of(AGENT_TOOL, AGENT_TOOL, AGENT_END, AGENT_END)
         );
 
-        // 条件边：判断是否继续迭代
-        graph.addConditionalEdge("tools",
-                new EdgeAction() {
-                    @Override
-                    public String route(State state) {
-                        int iteration = state.<Integer>value("iteration").orElse(0);
-                        int maxIterations = state.<Integer>value("max_iterations").orElse(10);
-                        // 注意：iteration 的递增应该在节点中完成，这里只是读取
-                        return (iteration + 1 < maxIterations) ? "llm" : "end";
-                    }
+        // 条件边2：判断是否继续迭代
+        graph.addConditionalEdge(AGENT_TOOL,
+                state -> {
+                    int iteration = state.<Integer>value("iteration").orElse(0);
+                    int maxIterations = state.<Integer>value("max_iterations").orElse(10);
+                    // iteration 已在 ToolNode 中递增
+                    return (iteration < maxIterations) ? AGENT_MODEL : AGENT_END;
                 },
-                Map.of("llm", "llm", "end", "end")
+                Map.of(AGENT_MODEL, AGENT_MODEL, AGENT_END, AGENT_END)
         );
 
         // 连接
-        graph.addEdge(GraphConstants.START, "llm");
-        graph.addEdge("end", GraphConstants.END);
+        graph.addEdge(GraphConstants.START, AGENT_MODEL);
+        graph.addEdge(AGENT_END, GraphConstants.END);
 
         return graph.compile();
     }
