@@ -14,6 +14,7 @@ import cn.ts.graph.state.strategy.ReplaceStrategy;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.ToolResponseMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 
@@ -43,6 +44,7 @@ public class ReactAgent implements Agent {
     private final CompiledGraph graph;
     private final ChatModel chatModel;
     private final Object[] tools;
+    private final boolean streaming;
 
     /**
      * 创建 ReAct Agent
@@ -53,11 +55,7 @@ public class ReactAgent implements Agent {
      * @param tools Spring AI 工具对象（使用 @Tool 注解的方法所在类）
      */
     public ReactAgent(String name, String description, ChatModel chatModel, Object... tools) {
-        this.name = name;
-        this.description = description;
-        this.chatModel = chatModel;
-        this.tools = tools;
-        this.graph = buildReActGraph(chatModel, tools);
+        this(name, description, chatModel, false, tools);
     }
 
     /**
@@ -68,7 +66,25 @@ public class ReactAgent implements Agent {
      * @param tools Spring AI 工具对象
      */
     public ReactAgent(String name, ChatModel chatModel, Object... tools) {
-        this(name, "ReAct Agent with tool calling capabilities", chatModel, tools);
+        this(name, "ReAct Agent with tool calling capabilities", chatModel, false, tools);
+    }
+
+    /**
+     * 创建 ReAct Agent（支持流式配置）
+     *
+     * @param name Agent 名称
+     * @param description Agent 描述
+     * @param chatModel ChatModel 实例
+     * @param streaming 是否启用流式输出
+     * @param tools Spring AI 工具对象
+     */
+    public ReactAgent(String name, String description, ChatModel chatModel, boolean streaming, Object... tools) {
+        this.name = name;
+        this.description = description;
+        this.chatModel = chatModel;
+        this.tools = tools;
+        this.streaming = streaming;
+        this.graph = buildReActGraph(chatModel, streaming, tools);
     }
 
     @Override
@@ -84,7 +100,7 @@ public class ReactAgent implements Agent {
                     "input", input,
                     "max_iterations", config.getMaxIterations(),
                     "iteration", 0,
-                    "chat_history", new java.util.ArrayList<Map<String, String>>()
+                    "messages", new ArrayList<Message>()
             );
 
             // 执行图
@@ -95,17 +111,18 @@ public class ReactAgent implements Agent {
                 return AgentResult.failure(graphResult.error());
             }
 
-            // 从 chat_history 中获取最后的 assistant 消息作为输出
-            java.util.List<Map<String, String>> chatHistory = graphResult.finalState()
-                    .<java.util.List<Map<String, String>>>value("chat_history")
-                    .orElse(new java.util.ArrayList<>());
+            // 从 messages 中获取最后的 assistant 消息作为输出
+            List<Message> messages = graphResult.finalState()
+                    .<List<Message>>value("messages")
+                    .orElse(new ArrayList<>());
 
             // 获取最后一个 assistant 消息
             String output = "";
-            for (int i = chatHistory.size() - 1; i >= 0; i--) {
-                Map<String, String> msg = chatHistory.get(i);
-                if ("assistant".equals(msg.get("role"))) {
-                    output = msg.get("content");
+            for (int i = messages.size() - 1; i >= 0; i--) {
+                Message msg = messages.get(i);
+                if (msg instanceof AssistantMessage) {
+                    AssistantMessage am = (AssistantMessage) msg;
+                    output = am.getText();
                     break;
                 }
             }
@@ -167,10 +184,11 @@ public class ReactAgent implements Agent {
      * 构建 ReAct 循环图
      *
      * @param chatModel ChatModel 实例
+     * @param streaming 是否启用流式输出
      * @param tools 工具对象数组
      * @return 编译后的图
      */
-    private CompiledGraph buildReActGraph(ChatModel chatModel, Object[] tools) {
+    private CompiledGraph buildReActGraph(ChatModel chatModel, boolean streaming, Object[] tools) {
         StateGraph graph = new StateGraph();
 
         // 设置状态初始化器，注册策略
@@ -178,18 +196,23 @@ public class ReactAgent implements Agent {
             MapState state = new MapState();
             // messages 使用追加策略，这样多个节点的输出可以追加到同一个列表
             state.registerKeyStrategy("messages", AppendStrategy.getInstance());
+            System.out.println("State initialized with keys: " + state.keys());
             // iteration 使用替换策略（这是默认策略，但显式声明更清晰）
             state.registerKeyStrategy("iteration", ReplaceStrategy.getInstance());
+            // max_iterations 使用替换策略
+            state.registerKeyStrategy("max_iterations", ReplaceStrategy.getInstance());
             return state;
         });
 
         // 创建节点
-        LLMNode llmNode = new LLMNode(chatModel, tools);
-        ToolNode toolNode = new ToolNode();
+        LLMNode llmNode = new LLMNode(chatModel, "You are a helpful assistant.", streaming, tools);
+        ToolNode toolNode = new ToolNode(tools);
 
         // 添加节点到图
         graph.addNode(AGENT_MODEL, llmNode);
         graph.addNode(AGENT_TOOL, toolNode);
+        // 添加 AGENT_END 空节点，作为流程的终点中转站
+        graph.addNode(AGENT_END, NodeAction.of(state -> Map.of()));
 
         // 条件边1：判断最后一条消息是否有 toolCalls
         graph.addConditionalEdge(AGENT_MODEL,
@@ -202,10 +225,12 @@ public class ReactAgent implements Agent {
                     Message last = messages.get(messages.size() - 1);
                     if (last instanceof AssistantMessage am && am.hasToolCalls()) {
                         return AGENT_TOOL;
+                    }else if(last instanceof ToolResponseMessage){
+                        return AGENT_MODEL;
                     }
                     return AGENT_END;
                 },
-                Map.of(AGENT_TOOL, AGENT_TOOL, AGENT_END, AGENT_END)
+                Map.of(AGENT_TOOL, AGENT_TOOL, AGENT_END, AGENT_END, AGENT_MODEL, AGENT_MODEL)
         );
 
         // 条件边2：判断是否继续迭代

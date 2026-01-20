@@ -9,10 +9,26 @@ import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.ToolResponseMessage;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.ai.tool.metadata.ToolMetadata;
+import org.springframework.ai.tool.method.MethodToolCallback;
+import org.springframework.ai.tool.support.ToolDefinitions;
+import org.springframework.ai.tool.support.ToolUtils;
+import org.springframework.aop.support.AopUtils;
+import org.springframework.util.ClassUtils;
+import org.springframework.util.ReflectionUtils;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
+
+import static org.springframework.ai.model.tool.ToolCallingChatOptions.validateToolCallbacks;
 
 /**
  * 工具节点：处理工具调用
@@ -42,15 +58,23 @@ public class ToolNode implements NodeAction {
     /**
      * 创建工具节点（使用工具对象数组）
      * <p>
-     * 注意：需要手动将工具对象转换为 ToolCallback
+     * 使用 Spring AI 的 ToolCallbacks.from() 方法自动从工具对象中提取
+     * 带有 @Tool 注解的方法，转换为 ToolCallback
      * </p>
      *
      * @param tools 工具对象数组
      */
     public ToolNode(Object... tools) {
         this.toolCallbacks = new ArrayList<>();
-        // TODO: 实现从工具对象提取 ToolCallback 的逻辑
-        logger.warn("ToolNode(Object... tools) constructor not fully implemented yet");
+
+        if (tools != null && tools.length > 0) {
+            // 使用 Spring AI 提供的 ToolCallbacks.from() 方法
+            // 自动从工具对象中提取 ToolCallback
+            ToolCallback[] callbacks = getToolCallbacksFromTools(Arrays.asList(tools));
+            this.toolCallbacks.addAll(Arrays.asList(callbacks));
+            logger.debug("ToolNode initialized with {} tool callbacks from {} tool objects",
+                    toolCallbacks.size(), tools.length);
+        }
     }
 
     /**
@@ -118,16 +142,17 @@ public class ToolNode implements NodeAction {
             }
         }
 
-        // 7. 将 ToolResponseMessage 添加到 messages 列表
-        messages.add(new ToolResponseMessage(responses));
+        // 7. 创建 ToolResponseMessage
+        ToolResponseMessage toolResponseMessage = new ToolResponseMessage(responses);
 
         // 8. 递增 iteration
         int iteration = state.<Integer>value("iteration").orElse(0);
         int nextIteration = iteration + 1;
         logger.debug("ToolNode completed, iteration: {} -> {}", iteration, nextIteration);
 
+        // 只返回新增的 ToolResponseMessage，让 AppendStrategy 追加到现有列表
         return Map.of(
-                "messages", messages,
+                "messages", List.of(toolResponseMessage),
                 "iteration", nextIteration
         );
     }
@@ -162,4 +187,43 @@ public class ToolNode implements NodeAction {
     public List<ToolCallback> getToolCallbacks() {
         return List.copyOf(toolCallbacks);
     }
+
+
+    public ToolCallback[] getToolCallbacksFromTools(List<Object> tools) {
+        var toolCallbacks = tools.stream()
+                .map(toolObject -> Stream
+                        .of(ReflectionUtils.getDeclaredMethods(
+                                AopUtils.isAopProxy(toolObject) ? AopUtils.getTargetClass(toolObject) : toolObject.getClass()))
+                        .filter(toolMethod -> toolMethod.isAnnotationPresent(Tool.class))
+                        .filter(toolMethod -> !isFunctionalType(toolMethod))
+                        .map(toolMethod -> MethodToolCallback.builder()
+                                .toolDefinition(ToolDefinitions.from(toolMethod))
+                                .toolMetadata(ToolMetadata.from(toolMethod))
+                                .toolMethod(toolMethod)
+                                .toolObject(toolObject)
+                                .toolCallResultConverter(ToolUtils.getToolCallResultConverter(toolMethod))
+                                .build())
+                        .toArray(ToolCallback[]::new))
+                .flatMap(Stream::of)
+                .toArray(ToolCallback[]::new);
+
+        validateToolCallbacks(List.of(toolCallbacks));
+
+        return toolCallbacks;
+    }
+
+    private boolean isFunctionalType(Method toolMethod) {
+        var isFunction = ClassUtils.isAssignable(toolMethod.getReturnType(), Function.class)
+                || ClassUtils.isAssignable(toolMethod.getReturnType(), Supplier.class)
+                || ClassUtils.isAssignable(toolMethod.getReturnType(), Consumer.class);
+
+        if (isFunction) {
+            logger.warn("Method {} is annotated with @Tool but returns a functional type. "
+                    + "This is not supported and the method will be ignored.", toolMethod.getName());
+        }
+
+        return isFunction;
+    }
+
+
 }

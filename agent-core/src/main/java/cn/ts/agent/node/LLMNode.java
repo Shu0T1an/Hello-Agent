@@ -4,12 +4,10 @@ import cn.ts.agent.model.ChatModelRequest;
 import cn.ts.graph.flux.GraphFlux;
 import cn.ts.graph.node.NodeAction;
 import cn.ts.graph.state.State;
-import cn.ts.graph.state.strategy.AppendStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
-import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.ChatOptions;
@@ -20,6 +18,7 @@ import reactor.core.publisher.Flux;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * LLM 节点：调用 Spring AI ChatClient
@@ -181,13 +180,9 @@ public class LLMNode implements NodeAction {
         // 获取响应中的 AssistantMessage（包含 toolCalls）
         AssistantMessage assistantMessage = response.getResult().getOutput();
 
-        // 添加到消息列表
-        List<Message> updatedMessages = new ArrayList<>(request.getMessages());
-        updatedMessages.add(assistantMessage);
-
-        // 返回状态更新
+        // 只返回新增的 AssistantMessage，让 AppendStrategy 追加到现有列表
         return Map.of(
-                "messages", updatedMessages,
+                "messages", List.of(assistantMessage),
                 "chat_response", response
         );
     }
