@@ -1,0 +1,6 @@
+# 日志配置
+logging:
+  level:
+    root: INFO
+    cn.ts: DEBUG  # 项目包下的日志级别设为 DEBUG
+    org.springframework.ai: DEBUG

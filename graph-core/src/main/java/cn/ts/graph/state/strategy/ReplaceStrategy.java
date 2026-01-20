@@ -34,6 +34,7 @@ public final class ReplaceStrategy<T> implements KeyStrategy<T> {
         return newValue; // 直接返回新值
     }
 
+
     @Override
     public String toString() {
         return "ReplaceStrategy";

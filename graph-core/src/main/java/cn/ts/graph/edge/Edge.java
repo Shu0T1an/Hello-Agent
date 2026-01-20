@@ -126,12 +126,25 @@ public class Edge {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Edge edge = (Edge) o;
-        return Objects.equals(from, edge.from) && type == edge.type;
+        // 对于普通边，比较 from, to, type
+        // 对于条件边，比较 from, type, routeMapping
+        if (type != edge.type) return false;
+        if (!Objects.equals(from, edge.from)) return false;
+
+        if (isNormal()) {
+            return Objects.equals(to, edge.to);
+        } else { // CONDITIONAL
+            return Objects.equals(routeMapping, edge.routeMapping);
+        }
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(from, type);
+        if (isNormal()) {
+            return Objects.hash(from, to, type);
+        } else {
+            return Objects.hash(from, type, routeMapping);
+        }
     }
 
     @Override

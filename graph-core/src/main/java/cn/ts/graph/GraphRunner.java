@@ -180,8 +180,8 @@ public class GraphRunner {
     private Flux<GraphResponse<NodeOutput>> runStreamInternal(
             Map<String, Object> initialState, RunnableConfig config, String startNode) {
 
-        // 创建上下文
-        GraphRunnerContext context = GraphRunnerContext.create(initialState, config);
+        // 创建上下文（使用 stateInitializer）
+        GraphRunnerContext context = GraphRunnerContext.create(initialState, config, stateInitializer);
         context.setCurrentNodeId(startNode);
 
         // 使用 defer() 实现响应式递归
@@ -259,7 +259,8 @@ public class GraphRunner {
                 context.getConfig().onComplete().accept(GraphResult.success(currentState,
                         new ArrayList<>(), java.time.Instant.now(), java.time.Instant.now()));
             }
-            return Flux.empty();
+            // 发送图完成事件
+            return Flux.just(GraphResponse.complete());
         }
 
         // 创建下一个迭代的上下文
@@ -321,6 +322,14 @@ public class GraphRunner {
 
     /**
      * 查找下一个节点
+     * <p>
+     * 对于没有出边的节点，返回 {@link GraphConstants#END} 表示正常结束执行
+     * </p>
+     *
+     * @param currentNodeId 当前节点ID
+     * @param state         当前状态
+     * @return 下一个节点ID，如果没有下一个节点则返回 {@link GraphConstants#END}
+     * @throws GraphException.EdgeConfigurationException 如果条件边的路由值没有对应的目标节点
      */
     private String findNextNode(String currentNodeId, State state) {
         for (Edge edge : edges) {
@@ -332,13 +341,15 @@ public class GraphRunner {
                     String targetNode = edge.routeMapping().get(conditionValue);
                     if (targetNode == null) {
                         throw new GraphException.EdgeConfigurationException(
-                                "No route mapping for condition value: " + conditionValue);
+                                String.format("No route mapping for condition value '%s' from node '%s'. " +
+                                        "Available routes: %s", conditionValue, currentNodeId, edge.routeMapping().keySet()));
                     }
                     return targetNode;
                 }
             }
         }
-        return null;  // 没有找到下一个节点，结束执行
+        // 没有找到下一个节点，正常结束执行
+        return GraphConstants.END;
     }
 
     /**

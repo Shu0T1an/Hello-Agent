@@ -3,12 +3,15 @@ package cn.ts.graph.state;
 import cn.ts.graph.state.strategy.AppendStrategy;
 import cn.ts.graph.state.strategy.KeyStrategy;
 import cn.ts.graph.state.strategy.ReplaceStrategy;
+import org.slf4j.Logger;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+
+import static org.slf4j.LoggerFactory.getLogger;
 
 /**
  * 基于 Map 的状态实现
@@ -19,8 +22,10 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * @author tianshuo
  */
+
 public class MapState implements State {
 
+    private final Logger logger = getLogger(MapState.class);
     private final ConcurrentHashMap<String, Object> data;
     /**
      * 策略注册表，使用 ConcurrentHashMap 保证线程安全
@@ -80,12 +85,14 @@ public class MapState implements State {
         if (key != null) {
             Object existingValue = data.get(key);
             // 使用策略合并值
-            @SuppressWarnings("unchecked")
             KeyStrategy<Object> objectStrategy = (KeyStrategy<Object>) strategy;
+//            logger.debug("采用的策略为{}", strategy);
+//            logger.debug("正在进行数据的合并 {}", key);
             Object mergedValue = objectStrategy.merge(existingValue, value);
             if (mergedValue == null) {
                 data.remove(key);
             } else {
+
                 data.put(key, mergedValue);
             }
         }

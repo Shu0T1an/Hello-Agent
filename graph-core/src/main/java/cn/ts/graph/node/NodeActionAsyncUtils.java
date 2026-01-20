@@ -86,7 +86,7 @@ public final class NodeActionAsyncUtils {
     /**
      * 创建带重试机制的异步节点动作
      * <p>
-     * 当执行失败时，会自动重试指定次数
+     * 当执行失败时，会自动重试指定次数，使用非阻塞延迟
      * </p>
      *
      * @param action      异步节点动作
@@ -96,30 +96,32 @@ public final class NodeActionAsyncUtils {
      */
     public static AsyncNodeAction withRetry(AsyncNodeAction action, int maxRetries, Duration delayBetweenRetries) {
         return state -> {
-            CompletableFuture<Map<String, Object>> future = new CompletableFuture<>();
-            retry(action, state, maxRetries, delayBetweenRetries, 0, future);
-            return future;
+            CompletableFuture<Map<String, Object>> result = new CompletableFuture<>();
+            retryWithBackoff(action, state, maxRetries, delayBetweenRetries, 0, result);
+            return result;
         };
     }
 
-    private static void retry(AsyncNodeAction action, cn.ts.graph.state.State state,
-                             int maxRetries, Duration delay, int attempt,
-                             CompletableFuture<Map<String, Object>> result) {
+    /**
+     * 使用 CompletableFuture.delayedExecutor 进行非阻塞延迟重试
+     *
+     * @param action  异步节点动作
+     * @param state   当前状态
+     * @param maxRetries 最大重试次数
+     * @param delay   重试延迟
+     * @param attempt 当前尝试次数
+     * @param result  结果 Future
+     */
+    private static void retryWithBackoff(AsyncNodeAction action, cn.ts.graph.state.State state,
+                                         int maxRetries, Duration delay, int attempt,
+                                         CompletableFuture<Map<String, Object>> result) {
         action.applyAsync(state).whenComplete((r, e) -> {
             if (e == null) {
                 result.complete(r);
             } else if (attempt < maxRetries) {
-                DEFAULT_POOL.execute(() -> {
-                    try {
-                        Thread.sleep(delay.toMillis());
-                    } catch (InterruptedException ie) {
-                        // 恢复中断状态
-                        Thread.currentThread().interrupt();
-                        result.completeExceptionally(ie);
-                        return;
-                    }
-                    retry(action, state, maxRetries, delay, attempt + 1, result);
-                });
+                // 使用 delayedExecutor 进行非阻塞延迟
+                CompletableFuture.delayedExecutor(delay.toMillis(), TimeUnit.MILLISECONDS)
+                        .execute(() -> retryWithBackoff(action, state, maxRetries, delay, attempt + 1, result));
             } else {
                 result.completeExceptionally(e);
             }

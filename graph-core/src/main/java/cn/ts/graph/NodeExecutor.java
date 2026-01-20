@@ -203,6 +203,7 @@ public class NodeExecutor {
      * 聚合多个 ChatResponse 为消息列表
      * <p>
      * 从 context 获取原始消息列表，追加聚合后的完整消息
+     * 修复: 保留 toolCalls 信息以支持 ReAct Agent 流式输出
      * </p>
      */
     private List<Message> aggregateChatResponses(GraphRunnerContext context, List<ChatResponse> responses) {
@@ -214,26 +215,46 @@ public class NodeExecutor {
         // 创建新的消息列表副本
         List<Message> result = new ArrayList<>(messages);
 
-        // 累积所有文本内容
+        // 累积所有文本内容和 toolCalls
         StringBuilder fullContent = new StringBuilder();
         ChatResponse lastResponse = null;
-
+        List<AssistantMessage.ToolCall> toolCalls = new ArrayList<>();
+        Map<String, Object> messageMetadata = new HashMap<>();
         for (ChatResponse response : responses) {
             lastResponse = response;
-            if (response.getResult() != null
-                    && response.getResult().getOutput() != null
-                    && response.getResult().getOutput().getText() != null) {
-                fullContent.append(response.getResult().getOutput().getText());
+            var output = response.getResult() != null ? response.getResult().getOutput() : null;
+
+            if (output != null) {
+                // 累加文本内容
+                if (output.getText() != null) {
+                    fullContent.append(output.getText());
+                }
+                // 收集 toolCalls（通常在最后一个响应中）
+                if (output.getToolCalls() != null && !output.getToolCalls().isEmpty()) {
+                    toolCalls = output.getToolCalls();
+                }
             }
         }
 
         // 创建完整的 AssistantMessage
         if (lastResponse != null && lastResponse.getResult() != null) {
-            AssistantMessage fullMessage = new AssistantMessage(
-                    fullContent.toString(),
-                    lastResponse.getResult().getOutput().getMetadata()
-            );
-            result.add(fullMessage);
+            var output = lastResponse.getResult().getOutput();
+            // 使用构造函数创建 AssistantMessage（Spring AI 1.0.0 不支持 builder）
+            // 构造函数：AssistantMessage(String content, Map<String, Object> metadata)
+            AssistantMessage assistantMessage;
+            output.getMetadata();
+            if (!output.getMetadata().isEmpty()) {
+                // 带 metadata 的构造函数
+                messageMetadata = new HashMap<>(output.getMetadata());
+                // 将 toolCalls 信息也加入 metadata
+
+                assistantMessage = new AssistantMessage(fullContent.toString(), messageMetadata,toolCalls);
+            } else {
+                // 只有 content 的构造函数
+                assistantMessage = new AssistantMessage(fullContent.toString(), messageMetadata, toolCalls);
+            }
+
+            result.add(assistantMessage);
         }
 
         return result;

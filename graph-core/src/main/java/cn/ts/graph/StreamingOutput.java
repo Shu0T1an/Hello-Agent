@@ -3,7 +3,9 @@ package cn.ts.graph;
 import cn.ts.graph.node.Node;
 import cn.ts.graph.state.State;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.metadata.Usage;
 
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -27,8 +29,9 @@ public class StreamingOutput<T> extends NodeOutput {
             T originData,
             String chunk,
             OutputType outputType,
-            State state) {
-        super(nodeId, node, chunk, state, null, null);  // chunk 作为 resultValue，暂不传 usage 和 metadata
+            State state,
+            Usage usage) {
+        super(nodeId, node, chunk, state, usage, Map.of());
         this.originData = originData;
         this.chunk = chunk;
         this.outputType = outputType;
@@ -43,6 +46,7 @@ public class StreamingOutput<T> extends NodeOutput {
      * @param chunk      提取的文本片段
      * @param outputType 输出类型
      * @param state      执行后的状态快照
+     * @param usage      Token 使用统计（可选）
      * @param <T>        原始数据类型
      * @return StreamingOutput 实例
      */
@@ -52,12 +56,16 @@ public class StreamingOutput<T> extends NodeOutput {
             T originData,
             String chunk,
             OutputType outputType,
-            State state) {
-        return new StreamingOutput<>(nodeId, node, originData, chunk, outputType, state);
+            State state,
+            Usage usage) {
+        return new StreamingOutput<>(nodeId, node, originData, chunk, outputType, state, usage);
     }
 
     /**
      * 创建一个 ChatResponse 类型的流式输出
+     * <p>
+     * 自动从 ChatResponse 中提取文本内容和 usage 信息
+     * </p>
      *
      * @param nodeId      节点ID
      * @param node        节点对象
@@ -73,7 +81,14 @@ public class StreamingOutput<T> extends NodeOutput {
         String chunk = chatResponse.getResult() != null && chatResponse.getResult().getOutput() != null
                 ? chatResponse.getResult().getOutput().getText()
                 : "";
-        return new StreamingOutput<>(nodeId, node, chatResponse, chunk, OutputType.CHAT_RESPONSE, state);
+
+        // 提取 usage 信息
+        Usage usage = null;
+        if (chatResponse.getResult() != null && chatResponse.getMetadata() != null) {
+            usage = chatResponse.getMetadata().getUsage();
+        }
+
+        return new StreamingOutput<>(nodeId, node, chatResponse, chunk, OutputType.CHAT_RESPONSE, state, usage);
     }
 
     /**
@@ -90,7 +105,7 @@ public class StreamingOutput<T> extends NodeOutput {
             Node node,
             String chunk,
             State state) {
-        return new StreamingOutput<>(nodeId, node, chunk, chunk, OutputType.CHUNK, state);
+        return new StreamingOutput<>(nodeId, node, chunk, chunk, OutputType.CHUNK, state, null);
     }
 
     /**
