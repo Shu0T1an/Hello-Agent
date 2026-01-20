@@ -1,7 +1,10 @@
 package cn.ts.web.controller;
 
 import cn.ts.web.service.ChatTestService;
+import org.springframework.http.MediaType;
+import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
 
 /**
  * ChatModel 测试控制器
@@ -47,4 +50,25 @@ public class ChatTestController {
      * 聊天请求记录
      */
     record ChatRequest(String message) {}
+
+
+    @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<ServerSentEvent<String>> streamChat(@RequestParam String message) {
+        return chatTestService.streamChat(message)
+                .map(chunk -> ServerSentEvent.<String>builder()
+                        .data(chunk)
+                        .event("message")
+                        .build());
+    }
+
+
+    @GetMapping(value = "/streamHistory", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<ServerSentEvent<String>> streamHistoryChat(@RequestParam String message) {
+        return chatTestService.streamHistoryChat(message)
+                .map(chunk -> ServerSentEvent.<String>builder()
+                        .data(chunk)
+                        .event("message")
+                        .build());
+    }
+
 }

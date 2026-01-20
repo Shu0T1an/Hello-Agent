@@ -4,6 +4,22 @@ spring:
     name: demo
   profiles:
     active: dev
+  # 强制使用 UTF-8 编码
+  web:
+    resources:
+      encoding: UTF-8
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
 
 server:
   port: 8080
+  # 强制请求和响应使用 UTF-8 编码
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+      force-request: true
+      force-response: true

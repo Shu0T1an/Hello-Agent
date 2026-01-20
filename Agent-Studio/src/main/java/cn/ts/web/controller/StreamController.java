@@ -1,12 +1,16 @@
 package cn.ts.web.controller;
 
+import cn.ts.web.dto.AgentResponse;
 import cn.ts.web.service.AgentExecutionService;
+import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -39,20 +43,27 @@ public class StreamController {
      * @return SSE 事件流
      */
     @GetMapping(value = "/agent/{agentName}/execute", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<String> executeAgentStream(
+    public Flux<ServerSentEvent<AgentResponse>> executeAgentStream(
             @PathVariable String agentName,
+            @RequestParam(required = false) String input,
             @RequestParam(required = false) Map<String, Object> initialState) {
 
-        return agentExecutionService.executeAgentStream(agentName, initialState)
-                .doOnSubscribe(subscription -> {
-                    // 发送连接成功事件
-                })
-                .doOnComplete(() -> {
-                    // 流完成
-                })
-                .doOnError(error -> {
-                    // 流错误
-                });
+        // 合并参数：支持 input 参数或 initialState
+        Map<String, Object> mergedState = new HashMap<>();
+        if (initialState != null) {
+            mergedState.putAll(initialState);
+        }
+        if (input != null && !input.isEmpty()) {
+            mergedState.put("messages", List.of(new UserMessage(input)));
+        }
+
+        return agentExecutionService.executeAgentStream(
+                        agentName,
+                        mergedState.isEmpty() ? null : mergedState)
+                .map(response -> ServerSentEvent.<AgentResponse>builder()
+                        .data(response)
+                        .id(response.getExecutionId())
+                        .build());
     }
 
     /**
@@ -64,16 +75,28 @@ public class StreamController {
      * @return SSE 事件流
      */
     @GetMapping(value = "/agent/{agentName}/execute-with-timeout", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<String> executeAgentStreamWithTimeout(
+    public Flux<ServerSentEvent<AgentResponse>> executeAgentStreamWithTimeout(
             @PathVariable String agentName,
             @RequestParam(defaultValue = "300") int timeout,
+            @RequestParam(required = false) String input,
             @RequestParam(required = false) Map<String, Object> initialState) {
+
+        // 合并参数：支持 input 参数或 initialState
+        Map<String, Object> mergedState = new HashMap<>();
+        if (initialState != null) {
+            mergedState.putAll(initialState);
+        }
+        if (input != null && !input.isEmpty()) {
+            mergedState.put("messages", List.of(new UserMessage(input)));
+        }
 
         return agentExecutionService.executeAgentStream(
                 agentName,
-                initialState != null ? initialState : Map.of(),
+                mergedState.isEmpty() ? Map.of() : mergedState,
                 Duration.ofSeconds(timeout)
-        );
+        ).map(response -> ServerSentEvent.<AgentResponse>builder()
+                .data(response)
+                .build());
     }
 
     /**
@@ -85,12 +108,11 @@ public class StreamController {
      * @return 定时心跳事件
      */
     @GetMapping(value = "/heartbeat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<ServerSentEvent<String>> heartbeat() {
+    public Flux<ServerSentEvent<AgentResponse>> heartbeat() {
         return Flux.interval(Duration.ofSeconds(30))
-                .map(sequence -> ServerSentEvent.<String>builder()
+                .map(sequence -> ServerSentEvent.<AgentResponse>builder()
                         .id(String.valueOf(sequence))
-                        .event("heartbeat")
-                        .data("ping")
+                        .data(AgentResponse.heartbeat(sequence))
                         .build());
     }
 
