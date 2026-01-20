@@ -65,6 +65,16 @@ public class GraphResponse<T> {
     }
 
     /**
+     * 创建一个图完成响应（整个流程完成）
+     *
+     * @param <T> 数据类型
+     * @return GraphResponse 实例
+     */
+    public static <T> GraphResponse<T> complete() {
+        return new GraphResponse<>(null, null, false, null, true);
+    }
+
+    /**
      * 创建一个错误响应
      *
      * @param error 错误信息
@@ -109,6 +119,30 @@ public class GraphResponse<T> {
      */
     public boolean isComplete() {
         return isComplete;
+    }
+
+    /**
+     * 是否为流式完成信号
+     * <p>
+     * 当为 true 时，表示节点流式输出已完成
+     * </p>
+     *
+     * @return true 如果是流式完成信号
+     */
+    public boolean isStreamEnd() {
+        return isStream && isComplete;
+    }
+
+    /**
+     * 是否为正常完成
+     * <p>
+     * 当为 true 时，表示节点正常执行完成（非流式）
+     * </p>
+     *
+     * @return true 如果是正常完成
+     */
+    public boolean isNormalComplete() {
+        return !isStream && isComplete;
     }
 
     /**

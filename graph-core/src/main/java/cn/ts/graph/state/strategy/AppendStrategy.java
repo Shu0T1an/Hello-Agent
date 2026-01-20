@@ -97,6 +97,7 @@ public final class AppendStrategy<T> implements KeyStrategy<T> {
         return newValue;
     }
 
+
     @Override
     public String toString() {
         return "AppendStrategy";

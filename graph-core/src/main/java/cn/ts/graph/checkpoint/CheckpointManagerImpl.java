@@ -37,7 +37,7 @@ public class CheckpointManagerImpl implements CheckpointManager {
 
     @Override
     public String createCheckpoint(GraphRunnerContext context, String source) {
-        String threadId = getThreadId(context);
+        String threadId = getSessionId(context);
 
         // 创建元数据
         CheckpointMetadata metadata = CheckpointMetadata.builder()
@@ -155,17 +155,23 @@ public class CheckpointManagerImpl implements CheckpointManager {
     }
 
     /**
-     * 从上下文中获取会话ID
+     * 获取会话标识符
+     * <p>
+     * 优先使用 threadId，其次使用 executionId，最后生成新的 UUID
+     * </p>
      *
      * @param context 执行上下文
-     * @return 会话ID
+     * @return 会话标识符
      */
-    private String getThreadId(GraphRunnerContext context) {
-        String threadId = context.getConfig().executionId();
-        if (threadId == null) {
-            threadId = UUID.randomUUID().toString();
+    private String getSessionId(GraphRunnerContext context) {
+        String sessionId = context.getConfig().threadId();
+        if (sessionId == null) {
+            sessionId = context.getConfig().executionId();
         }
-        return threadId;
+        if (sessionId == null) {
+            sessionId = UUID.randomUUID().toString();
+        }
+        return sessionId;
     }
 
     /**

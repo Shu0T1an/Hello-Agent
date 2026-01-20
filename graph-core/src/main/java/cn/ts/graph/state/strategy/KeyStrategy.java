@@ -21,4 +21,9 @@ public interface KeyStrategy<T> {
      * @return 合并后的值
      */
     T merge(T existingValue, T newValue);
+
+    // 改为 default 方法
+    default String name() {
+        return "DefaultStrategy";
+    }
 }

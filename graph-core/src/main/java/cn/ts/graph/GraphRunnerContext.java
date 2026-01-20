@@ -50,10 +50,11 @@ public class GraphRunnerContext {
      *
      * @param initialState 初始状态
      * @param config       运行配置
+     * @param stateInitializer 状态初始化器
      * @return GraphRunnerContext 实例
      */
-    public static GraphRunnerContext create(Map<String, Object> initialState, RunnableConfig config) {
-        State state = new MapState();
+    public static GraphRunnerContext create(Map<String, Object> initialState, RunnableConfig config, java.util.function.Supplier<State> stateInitializer) {
+        State state = stateInitializer != null ? stateInitializer.get() : new MapState();
         if (initialState != null && !initialState.isEmpty()) {
             state.merge(initialState);
         }
