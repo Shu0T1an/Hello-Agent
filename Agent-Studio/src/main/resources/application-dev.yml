@@ -1,3 +1,10 @@
+# 日志配置
+logging:
+  level:
+    root: INFO
+    cn.ts: DEBUG  # 项目包下的日志级别设为 DEBUG
+    org.springframework.ai: DEBUG
+
 spring:
   datasource:
     username: root
@@ -15,6 +22,13 @@ spring:
       connection-timeout: 30000 #数据库连接超时时间,默认30秒，即30000
       connection-test-query: SELECT 1
 
+  ai:
+    openai:
+      api-key: sk-1c7794d42765440fa4913b1cbb097fb2 #ms-89889fc4-c573-4a04-85ac-e5ac323c2374
+      base-url: https://dashscope.aliyuncs.com/compatible-mode #https://api-inference.modelscope.cn/
+      chat:
+        options:
+          model: qwen-flash #Qwen/Qwen3-235B-A22B-Instruct-2507
   # Redis配置
 #redis:
 #  sdk:
