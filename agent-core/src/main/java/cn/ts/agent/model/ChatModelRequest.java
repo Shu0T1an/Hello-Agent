@@ -84,12 +84,12 @@ public class ChatModelRequest implements ModelRequest {
     private List<Message> buildMessages() {
         List<Message> result = new ArrayList<>();
 
-        // 优先使用 state 中的 messages
+        // 优先使用 state 中的 messages（如果非空）
         Optional<List<Message>> existingMessages = state.value("messages");
-        if (existingMessages.isPresent() && existingMessages.get() != null) {
+        if (existingMessages.isPresent() && existingMessages.get() != null && !existingMessages.get().isEmpty()) {
             result.addAll(existingMessages.get());
         } else {
-            // 如果没有 messages，从 input 构建 UserMessage
+            // 如果 messages 不存在或为空，从 input 构建 UserMessage
             Optional<String> input = state.value("input");
             if (input.isPresent()) {
                 result.add(new UserMessage(input.get()));
