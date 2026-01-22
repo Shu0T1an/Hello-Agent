@@ -1,6 +1,7 @@
 package cn.ts.web.controller;
 
 import cn.ts.web.service.ChatTestService;
+import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
@@ -55,6 +56,16 @@ public class ChatTestController {
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<String>> streamChat(@RequestParam String message) {
         return chatTestService.streamChat(message)
+                .doOnNext(chatResponse -> {
+                    // 检查元数据中是否有 Usage
+                    Usage usage = chatResponse.getMetadata().getUsage();
+                    if (usage != null && usage.getTotalTokens() > 0) {
+                        System.out.println("Input Tokens: " + usage.getPromptTokens());
+                        System.out.println("Output Tokens: " + usage.getCompletionTokens());
+                        System.out.println("Total Tokens: " + usage.getTotalTokens());
+                    }
+                })
+                .map(chatResponse -> chatResponse.getResult().getOutput().getText())
                 .map(chunk -> ServerSentEvent.<String>builder()
                         .data(chunk)
                         .event("message")

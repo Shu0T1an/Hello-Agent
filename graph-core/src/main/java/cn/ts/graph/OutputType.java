@@ -39,5 +39,15 @@ public enum OutputType {
     /**
      * 元数据
      */
-    METADATA
+    METADATA,
+
+    /**
+     * 节点开始执行
+     */
+    STARTING,
+
+    /**
+     * 节点执行完成
+     */
+    COMPLETE
 }

@@ -1,7 +1,11 @@
 package cn.ts.web.controller;
 
 import cn.ts.web.dto.AgentResponse;
+import cn.ts.web.dto.SessionDetailDTO;
 import cn.ts.web.service.AgentExecutionService;
+import cn.ts.web.service.SessionService;
+import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
@@ -9,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,9 +32,11 @@ import java.util.Map;
 public class StreamController {
 
     private final AgentExecutionService agentExecutionService;
+    private final SessionService sessionService;
 
-    public StreamController(AgentExecutionService agentExecutionService) {
+    public StreamController(AgentExecutionService agentExecutionService, SessionService sessionService) {
         this.agentExecutionService = agentExecutionService;
+        this.sessionService = sessionService;
     }
 
     /**
@@ -39,6 +46,8 @@ public class StreamController {
      * </p>
      *
      * @param agentName    Agent 名称
+     * @param input        用户输入
+     * @param sessionId    会话ID（可选，用于保持连续对话）
      * @param initialState 初始状态（可选）
      * @return SSE 事件流
      */
@@ -46,24 +55,59 @@ public class StreamController {
     public Flux<ServerSentEvent<AgentResponse>> executeAgentStream(
             @PathVariable String agentName,
             @RequestParam(required = false) String input,
+            @RequestParam(required = false) String sessionId,
             @RequestParam(required = false) Map<String, Object> initialState) {
+
+        // 构建消息列表（包含历史消息）
+        List<Message> messages = new ArrayList<>();
+
+        // 如果有 sessionId，从会话服务加载历史消息
+        if (sessionId != null && !sessionId.isEmpty()) {
+            sessionService.getSession(sessionId).ifPresent(sessionDetail -> {
+                if (sessionDetail.getMessages() != null) {
+                    for (SessionDetailDTO.SessionMessage msg : sessionDetail.getMessages()) {
+                        Message message = convertToSpringAIMessage(msg);
+                        if (message != null) {
+                            messages.add(message);
+                        }
+                    }
+                }
+            });
+        }
+
+        // 添加当前用户输入
+        if (input != null && !input.isEmpty()) {
+            messages.add(new UserMessage(input));
+        }
 
         // 合并参数：支持 input 参数或 initialState
         Map<String, Object> mergedState = new HashMap<>();
         if (initialState != null) {
             mergedState.putAll(initialState);
         }
-        if (input != null && !input.isEmpty()) {
-            mergedState.put("messages", List.of(new UserMessage(input)));
+        if (!messages.isEmpty()) {
+            mergedState.put("messages", messages);
         }
 
-        return agentExecutionService.executeAgentStream(
+        return agentExecutionService.executeAgentStreamWithSession(
                         agentName,
-                        mergedState.isEmpty() ? null : mergedState)
+                        mergedState.isEmpty() ? null : mergedState,
+                        sessionId)
                 .map(response -> ServerSentEvent.<AgentResponse>builder()
                         .data(response)
                         .id(response.getExecutionId())
                         .build());
+    }
+
+    /**
+     * 将后端会话消息转换为 Spring AI Message
+     */
+    private Message convertToSpringAIMessage(SessionDetailDTO.SessionMessage msg) {
+        return switch (msg.getRole()) {
+            case "user" -> new UserMessage(msg.getContent());
+            case "assistant" -> new AssistantMessage(msg.getContent());
+            default -> null;
+        };
     }
 
     /**

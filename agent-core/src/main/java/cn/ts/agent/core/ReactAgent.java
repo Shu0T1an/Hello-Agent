@@ -19,6 +19,7 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -100,7 +101,9 @@ public class ReactAgent implements Agent {
                     "input", input,
                     "max_iterations", config.getMaxIterations(),
                     "iteration", 0,
-                    "messages", new ArrayList<Message>()
+                    "messages", new ArrayList<Message>(),
+                    "execute_record",new ArrayList<Map<String,Object>>()
+
             );
 
             // 执行图
@@ -201,6 +204,7 @@ public class ReactAgent implements Agent {
             state.registerKeyStrategy("iteration", ReplaceStrategy.getInstance());
             // max_iterations 使用替换策略
             state.registerKeyStrategy("max_iterations", ReplaceStrategy.getInstance());
+            state.registerKeyStrategy("execute_record", AppendStrategy.getInstance());
             return state;
         });
 
