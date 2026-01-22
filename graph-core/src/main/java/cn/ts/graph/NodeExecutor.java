@@ -88,9 +88,18 @@ public class NodeExecutor {
 
         // 普通结果 - 合并状态
         context.mergeIntoCurrentState(updates);
-        // 包装为 NodeOutput
-        NodeOutput output = NodeOutput.of(context.getCurrentNodeId(), node, updates, context.getOverallState());
-        return Flux.just(GraphResponse.of(context.getCurrentNodeId(), output));
+
+        String nodeId = context.getCurrentNodeId();
+
+        // 记录开始时间
+        java.time.Instant startTime = java.time.Instant.now();
+
+        // 创建 STARTING 和 COMPLETED 响应
+        GraphResponse<NodeOutput> startingResponse = GraphResponse.of(nodeId, NodeOutput.starting(nodeId, node));
+        GraphResponse<NodeOutput> completedResponse = GraphResponse.of(nodeId, NodeOutput.completed(nodeId, node, updates, context.getOverallState(), startTime));
+
+        // 返回 STARTING → COMPLETED 流
+        return Flux.just(completedResponse).startWith(startingResponse);
     }
 
     /**
@@ -162,6 +171,7 @@ public class NodeExecutor {
      * 同时支持实时流式输出和流完成时的消息聚合。
      * 使用 ConcurrentLinkedQueue 保证线程安全的响应收集。
      * 对于 ChatResponse 类型的元素进行聚合，其他类型直接流式输出。
+     * 流状态：STARTING → RUNNING → RUNNING → ... → COMPLETED
      * </p>
      */
     private Flux<GraphResponse<NodeOutput>> handleChatResponseStream(
@@ -173,6 +183,15 @@ public class NodeExecutor {
         // 使用 ConcurrentLinkedQueue 保存响应列表，保证线程安全
         ConcurrentLinkedQueue<ChatResponse> responsesQueue = new ConcurrentLinkedQueue<>();
 
+        // 用于保存聚合后的完整内容（从流式 chunk 累积）
+        StringBuilder fullContentBuilder = new StringBuilder();
+
+        // 记录开始时间
+        java.time.Instant startTime = java.time.Instant.now();
+
+        // 创建 STARTING 响应
+        GraphResponse<NodeOutput> startingResponse = GraphResponse.of(nodeName, StreamingOutput.ofStarting(nodeName, node));
+
         return stream
                 // 收集 ChatResponse 响应用于聚合（副作用）
                 .doOnNext(chunk -> {
@@ -180,18 +199,44 @@ public class NodeExecutor {
                         responsesQueue.add(response);
                     }
                 })
-                // 实时流式输出
-                .map(chunk -> wrapToNodeOutput(nodeName, node, chunk, context))
+                // 实时流式输出，包装为 RUNNING 状态，同时累积文本内容
+                .map(chunk -> {
+                    GraphResponse<NodeOutput> response = wrapToNodeOutputWithStatus(nodeName, node, chunk, context, startTime);
+                    // 累积流式输出的文本内容
+                    if (response.getData() instanceof StreamingOutput<?> streamingOutput) {
+                        String chunkText = streamingOutput.getChunk();
+                        if (chunkText != null && !chunkText.isEmpty()) {
+                            fullContentBuilder.append(chunkText);
+                        }
+                    }
+                    return response;
+                })
                 // 流完成时聚合并更新 state
                 .doOnComplete(() -> {
                     if (!responsesQueue.isEmpty()) {
+                        // 1. 聚合 messages
                         List<Message> messages = aggregateChatResponses(context, new ArrayList<>(responsesQueue));
+
+                        // 2. 生成 LLM execution_record
+                        Map<String, Object> executionRecord = buildLLMExecutionRecord(
+                                context,
+                                responsesQueue,
+                                fullContentBuilder.toString(),
+                                startTime
+                        );
                         context.mergeIntoCurrentState(Map.of("messages", messages));
-                        logger.debug("Aggregated {} ChatResponses into messages", responsesQueue.size());
+                        context.mergeIntoCurrentState(Map.of("execution_record", executionRecord));
                     }
                 })
-                // 流完成信号
-                .concatWith(Flux.just(GraphResponse.streamComplete(nodeName)))
+                // 添加 COMPLETED 响应（包含完整内容）
+                // 使用 defer 确保在所有数据流完成后才评估 fullContentBuilder
+                .concatWith(Flux.defer(() ->
+                        Flux.just(GraphResponse.streamCompleteWithData(nodeName,
+                                StreamingOutput.ofCompletedWithContent(nodeName, node, context.getOverallState(), startTime, fullContentBuilder.toString())))
+
+                ))
+                // 在流开始前插入 STARTING 响应
+                .startWith(startingResponse)
                 .onErrorResume(error -> {
                     // 流异常时清理资源
                     responsesQueue.clear();
@@ -208,12 +253,12 @@ public class NodeExecutor {
      */
     private List<Message> aggregateChatResponses(GraphRunnerContext context, List<ChatResponse> responses) {
         // 获取原始消息列表
-        List<Message> messages = context.getOverallState()
-                .<List<Message>>value("messages")
-                .orElse(new ArrayList<>());
+//        List<Message> messages = context.getOverallState()
+//                .<List<Message>>value("messages")
+//                .orElse(new ArrayList<>());
 
         // 创建新的消息列表副本
-        List<Message> result = new ArrayList<>(messages);
+        List<Message> result = new ArrayList<>();
 
         // 累积所有文本内容和 toolCalls
         StringBuilder fullContent = new StringBuilder();
@@ -297,6 +342,176 @@ public class NodeExecutor {
         }
 
         return GraphResponse.stream(nodeName, output);
+    }
+
+    /**
+     * 将流元素包装为带 RUNNING 状态的 NodeOutput
+     * <p>
+     * 用于流式输出的中间帧，标记状态为 RUNNING
+     * </p>
+     *
+     * @param nodeName  节点名称
+     * @param node      节点对象
+     * @param chunk     流元素
+     * @param context   上下文
+     * @param startTime 开始时间
+     * @return GraphResponse
+     */
+    private GraphResponse<NodeOutput> wrapToNodeOutputWithStatus(
+            String nodeName,
+            Node node,
+            Object chunk,
+            GraphRunnerContext context,
+            java.time.Instant startTime) {
+
+        NodeOutput output;
+
+        // 检测 ChatResponse 类型
+        if (chunk instanceof ChatResponse chatResponse) {
+            output = StreamingOutput.ofRunningChatResponse(nodeName, node, chatResponse, context.getOverallState(), startTime);
+        }
+        // 检测 String 类型
+        else if (chunk instanceof String string) {
+            output = StreamingOutput.ofRunningChunk(nodeName, node, string, context.getOverallState(), startTime);
+        }
+        // 其他类型使用普通 NodeOutput（无状态）
+        else {
+            output = NodeOutput.of(nodeName, node, chunk, context.getOverallState());
+        }
+
+        return GraphResponse.stream(nodeName, output);
+    }
+
+    /**
+     * 构建 LLM 节点的执行记录
+     * <p>
+     * 在流完成时调用，聚合完整的执行信息
+     * </p>
+     *
+     * @param context        执行上下文
+     * @param responsesQueue ChatResponse 队列
+     * @param fullContent    聚合后的完整输出
+     * @param startTime      开始时间
+     * @return 执行记录 Map
+     */
+    private Map<String, Object> buildLLMExecutionRecord(
+            GraphRunnerContext context,
+            ConcurrentLinkedQueue<ChatResponse> responsesQueue,
+            String fullContent,
+            java.time.Instant startTime) {
+
+        Map<String, Object> record = new HashMap<>();
+        record.put("nodeType", "llm");
+        record.put("startTime", startTime.toString());
+        record.put("endTime", java.time.Instant.now().toString());
+
+        // 提取输入 messages（执行前的 messages）
+        List<Map<String, Object>> input = extractInputMessages(context);
+        record.put("input", input);
+
+        // 完整输出
+        record.put("output", fullContent);
+
+        // 提取 toolCalls
+        List<Map<String, Object>> toolCalls = extractToolCallsFromResponses(responsesQueue);
+        record.put("toolCalls", toolCalls);
+
+        // 提取 usage
+        Map<String, Object> usage = aggregateUsage(responsesQueue);
+        record.put("usage", usage);
+
+        return record;
+    }
+
+    /**
+     * 从上下文中提取输入 messages
+     * <p>
+     * 将 Message 对象简化为可序列化的 Map 格式
+     * </p>
+     *
+     * @param context 执行上下文
+     * @return 简化的 messages 列表
+     */
+    private List<Map<String, Object>> extractInputMessages(GraphRunnerContext context) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        List<Message> messages = context.getOverallState()
+                .<List<Message>>value("messages")
+                .orElse(new ArrayList<>());
+
+        for (Message message : messages) {
+            Map<String, Object> msgMap = new HashMap<>();
+            msgMap.put("role", message.getMessageType().getValue());
+
+            // 根据消息类型获取内容
+            String content = null;
+            if (message instanceof AssistantMessage am) {
+                content = am.getText();
+            } else if (message instanceof org.springframework.ai.chat.messages.UserMessage um) {
+                content = um.getText();
+            } else if (message instanceof org.springframework.ai.chat.messages.SystemMessage sm) {
+                content = sm.getText();
+            } else if(message instanceof  org.springframework.ai.chat.messages.ToolResponseMessage tm){
+                content = tm.getResponses().toString();
+            }
+
+            if (content != null) {
+                msgMap.put("content", content);
+            }
+
+            result.add(msgMap);
+        }
+
+        return result;
+    }
+
+    /**
+     * 从响应列表中提取 toolCalls
+     *
+     * @param responses ChatResponse 队列
+     * @return toolCalls 列表
+     */
+    private List<Map<String, Object>> extractToolCallsFromResponses(ConcurrentLinkedQueue<ChatResponse> responses) {
+        List<Map<String, Object>> toolCalls = new ArrayList<>();
+        for (ChatResponse response : responses) {
+            var output = response.getResult() != null ? response.getResult().getOutput() : null;
+            if (output != null && output.getToolCalls() != null && !output.getToolCalls().isEmpty()) {
+                for (AssistantMessage.ToolCall tc : output.getToolCalls()) {
+                    Map<String, Object> tcMap = new HashMap<>();
+                    tcMap.put("id", tc.id());
+                    tcMap.put("name", tc.name());
+                    tcMap.put("arguments", tc.arguments());
+                    toolCalls.add(tcMap);
+                }
+            }
+        }
+        return toolCalls;
+    }
+
+    /**
+     * 聚合所有响应的 token 使用统计
+     *
+     * @param responses ChatResponse 队列
+     * @return usage 统计
+     */
+    private Map<String, Object> aggregateUsage(ConcurrentLinkedQueue<ChatResponse> responses) {
+        long promptTokens = 0;
+        long completionTokens = 0;
+        long totalTokens = 0;
+
+        for (ChatResponse response : responses) {
+            if (response.getMetadata() != null && response.getMetadata().getUsage() != null) {
+                var usage = response.getMetadata().getUsage();
+                promptTokens += usage.getPromptTokens();
+                completionTokens += usage.getCompletionTokens();
+                totalTokens += usage.getTotalTokens();
+            }
+        }
+
+        return Map.of(
+                "promptTokens", promptTokens,
+                "completionTokens", completionTokens,
+                "totalTokens", totalTokens
+        );
     }
 
     /**

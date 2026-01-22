@@ -154,6 +154,7 @@ public class LLMNode implements NodeAction {
         logger.debug("LLMNode processing state: {}, streaming: {}", state, streaming);
 
         // 1. 构建请求
+
         ChatModelRequest request = ChatModelRequest.builder(state)
                 .systemPrompt(systemPrompt)
                 .baseOptions(chatOptions)

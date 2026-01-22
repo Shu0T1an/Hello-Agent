@@ -1,10 +1,7 @@
 package cn.ts.web.service;
 
-import cn.ts.graph.CompiledGraph;
-import cn.ts.graph.GraphResponse;
-import cn.ts.graph.GraphResult;
-import cn.ts.graph.NodeOutput;
-import cn.ts.graph.StreamingOutput;
+import cn.ts.graph.*;
+import cn.ts.graph.constant.GraphConstants;
 import cn.ts.web.dto.AgentResponse;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -13,9 +10,11 @@ import reactor.core.publisher.Mono;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import reactor.core.scheduler.Schedulers;
 
 /**
  * Agent 执行服务
@@ -29,9 +28,13 @@ import java.util.concurrent.ConcurrentHashMap;
 public class AgentExecutionService {
 
     private final Map<String, CompiledGraph> graphRegistry;
+    private final SessionService sessionService;
+    private final TitleGeneratorService titleGeneratorService;
 
-    public AgentExecutionService() {
+    public AgentExecutionService(SessionService sessionService, TitleGeneratorService titleGeneratorService) {
         this.graphRegistry = new ConcurrentHashMap<>();
+        this.sessionService = sessionService;
+        this.titleGeneratorService = titleGeneratorService;
     }
 
     /**
@@ -52,6 +55,18 @@ public class AgentExecutionService {
      * @return SSE 事件流
      */
     public Flux<AgentResponse> executeAgentStream(String agentName, Map<String, Object> initialState) {
+        return executeAgentStreamWithSession(agentName, initialState, "");
+    }
+
+    /**
+     * 流式执行 Agent（支持会话）
+     *
+     * @param agentName    Agent 名称
+     * @param initialState 初始状态
+     * @param sessionId    会话ID（用于保持连续对话）
+     * @return SSE 事件流
+     */
+    public Flux<AgentResponse> executeAgentStreamWithSession(String agentName, Map<String, Object> initialState, String sessionId) {
         CompiledGraph graph = graphRegistry.get(agentName);
         if (graph == null) {
             return Flux.error(new IllegalArgumentException("Agent not found: " + agentName));
@@ -59,7 +74,71 @@ public class AgentExecutionService {
 
         String executionId = UUID.randomUUID().toString();
 
-        return graph.stream(initialState)
+        // 提取用户输入（用于保存到会话）
+        String userInput = extractUserInput(initialState);
+
+        // 构建 RunnableConfig，支持 threadId
+        cn.ts.graph.config.RunnableConfig.Builder configBuilder = cn.ts.graph.config.RunnableConfig.builder()
+                .executionId(executionId);
+
+        // 如果提供了 sessionId，设置为 threadId 以支持会话管理
+        if (sessionId != null && !sessionId.isEmpty()) {
+            configBuilder.threadId(sessionId);
+
+            // 如果会话不存在，先创建
+            if (!sessionService.sessionExists(sessionId)) {
+                sessionService.createSession(agentName, "新对话");
+            }
+        }
+
+        // 判断是否需要生成标题（仅当会话消息数为0时）
+        boolean shouldGenerateTitle = sessionId != null
+                && !sessionId.isEmpty()
+                && sessionService.getSession(sessionId)
+                        .map(s -> s.getMessageCount() == 0)
+                        .orElse(false);
+
+        // 收集完整的AI回复
+        StringBuilder fullResponse = new StringBuilder();
+
+        return graph.stream(initialState, configBuilder.build())
+                .doOnNext(response -> {
+                    // 收集流式输出
+                    if (response.getData() instanceof StreamingOutput) {
+                        StreamingOutput<?> streamingOutput = (StreamingOutput<?>) response.getData();
+                        String chunk = streamingOutput.getChunk();
+                        if (chunk != null) {
+                            fullResponse.append(chunk);
+                        }
+                    }
+                })
+                .doOnComplete(() -> {
+                    // 执行完成后保存消息到会话
+                    if (sessionId != null && !sessionId.isEmpty()) {
+                        // 保存用户消息
+                        if (userInput != null && !userInput.isEmpty()) {
+                            sessionService.addMessage(sessionId, "user", userInput);
+                        }
+                        // 保存AI回复
+                        if (fullResponse.length() > 0) {
+                            sessionService.addMessage(sessionId, "assistant", fullResponse.toString());
+                        }
+
+                        // 异步生成标题（不阻塞主流程）
+                        if (shouldGenerateTitle && userInput != null && !userInput.isEmpty()) {
+                            Schedulers.boundedElastic().schedule(() -> {
+                                try {
+                                    String title = titleGeneratorService.generateTitle(userInput);
+
+                                    sessionService.updateSession(sessionId, title);
+                                } catch (Exception e) {
+                                    // 标题生成失败不影响主流程
+                                    // logger.error("Failed to generate title", e);
+                                }
+                            });
+                        }
+                    }
+                })
                 .map(response -> toAgentResponse(response, executionId))
                 .onErrorResume(throwable -> Flux.just(AgentResponse.builder()
                         .eventType("ERROR")
@@ -68,6 +147,32 @@ public class AgentExecutionService {
                         .error(throwable.getMessage())
                         .message("执行错误: " + throwable.getMessage())
                         .build()));
+    }
+
+    /**
+     * 从初始状态中提取用户输入
+     */
+    private String extractUserInput(Map<String, Object> initialState) {
+        if (initialState == null) {
+            return null;
+        }
+        // 尝试从 "input" 键获取
+        Object input = initialState.get("input");
+        if (input != null) {
+            return input.toString();
+        }
+        // 尝试从 messages 列表获取最后一条用户消息
+        Object messages = initialState.get("messages");
+        if (messages instanceof List<?> && !((List<?>) messages).isEmpty()) {
+            Object lastMessage = ((List<?>) messages).get(((List<?>) messages).size() - 1);
+            if (lastMessage instanceof Map<?, ?>) {
+                Object content = ((Map<?, ?>) lastMessage).get("content");
+                if (content != null) {
+                    return content.toString();
+                }
+            }
+        }
+        return null;
     }
 
     /**
@@ -128,19 +233,42 @@ public class AgentExecutionService {
         String nodeId = response.getNodeId();
         NodeOutput output = response.getData();
 
-        if (response.hasError()) {
-            eventType = "ERROR";
-        } else if (nodeId == null && response.isNormalComplete()) {
-            // 图完成响应（nodeId 为 null，isNormalComplete 为 true）
-            eventType = "COMPLETE";
-        } else if (response.isStream()) {
-            if (response.isComplete()) {
-                eventType = "STREAM_COMPLETE";
+        // 判断节点类型
+        String nodeType = null;
+        if (nodeId != null) {
+            if (GraphConstants.AGENT_MODEL.equals(nodeId)) {
+                nodeType = "llm";
+            } else if (GraphConstants.AGENT_TOOL.equals(nodeId)) {
+                nodeType = "tool";
             } else {
-                eventType = "STREAM_DATA";
+                nodeType = "custom";
+            }
+        }
+
+        // 判断是否为图完成（整个流程结束）
+        // 图完成时：response.isComplete() 为 true 且 nodeId 为 null
+        boolean isGraphComplete = response.isComplete() && nodeId == null;
+
+        if (response.hasError()) {
+            eventType = NodeStatus.FAILED.getCode();
+        } else if (isGraphComplete) {
+            // 图完成：使用特殊事件类型，与节点完成区分
+            eventType = "GRAPH_COMPLETED";
+        } else if (output != null) {
+            // 有节点输出时，根据节点状态设置事件类型
+            NodeStatus status = output.getStatus();
+            if (status == NodeStatus.COMPLETED) {
+                eventType = NodeStatus.COMPLETED.getCode();
+            } else if (status == NodeStatus.STARTING) {
+                eventType = NodeStatus.STARTING.getCode();
+            } else if (status == NodeStatus.RUNNING) {
+                eventType = NodeStatus.RUNNING.getCode();
+            } else {
+                eventType = NodeStatus.PENDING.getCode();
             }
         } else {
-            eventType = "NODE_COMPLETE";
+            // 无节点输出时的默认处理
+            eventType = NodeStatus.PENDING.getCode();
         }
 
         Map<String, Object> stateData = null;
@@ -200,28 +328,52 @@ public class AgentExecutionService {
             }
         }
 
+        // ============ 提取节点状态信息 ============
+        String nodeStatus = null;
+        String title = null;
+        Instant startTime = null;
+        Instant endTime = null;
+        List<String> logs = null;
+        String nodeErrorMessage = null;
+
+        if (output != null) {
+            nodeStatus = output.getStatus() != null ? output.getStatus().getCode() : null;
+            title = output.getTitle();
+            startTime = output.getStartTime();
+            endTime = output.getEndTime();
+            logs = output.getLogs();
+            nodeErrorMessage = output.getErrorMessage();
+        }
+
         // 如果 message 还没被设置（非流式或 chunk 为空），使用原有的 switch 逻辑
         // 注意：STREAM_DATA 且 chunk 为空时，不设置默认消息（避免显示无关内容）
-        if (message == null && !"STREAM_DATA".equals(eventType)) {
-            message = switch (eventType) {
-                case "COMPLETE" -> "Graph execution completed";
-                case "NODE_COMPLETE" -> "Node execution completed: " + nodeId;
-                case "STREAM_DATA" -> "";  // 不设置默认消息
-                case "STREAM_COMPLETE" -> "Stream completed for: " + nodeId;
-                case "ERROR" -> "Error in node: " + nodeId;
-                default -> "Event: " + eventType;
-            };
-        }
+//        if (message == null && !NodeStatus.STREAM_DATA.getCode().equals(eventType)) {
+//            message = switch (eventType) {
+//                case NodeStatus.COMPLETED.getCode() -> "Graph execution completed";
+//                case "NODE_COMPLETE" -> "Node execution completed: " + nodeId;
+//                case "STREAM_DATA" -> "";  // 不设置默认消息
+//                case "STREAM_COMPLETE" -> "Stream completed for: " + nodeId;
+//                case "ERROR" -> "Error in node: " + nodeId;
+//                default -> "Event: " + eventType;
+//            };
+//        }
 
         return AgentResponse.builder()
                 .eventType(eventType)
                 .nodeId(nodeId)
+                .nodeType(nodeType)
                 .stateData(stateData)
                 .message(message)
                 .timestamp(Instant.now())
                 .executionId(executionId)
                 .error(response.hasError() ? response.getError().getMessage() : null)
                 .metadata(metadata)
+                .nodeStatus(nodeStatus)
+                .title(title)
+                .startTime(startTime)
+                .endTime(endTime)
+                .logs(logs)
+                .nodeErrorMessage(nodeErrorMessage)
                 .build();
     }
 

@@ -3,6 +3,7 @@ package cn.ts.web.service;
 import cn.ts.web.tools.SimpleTools;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.model.tool.ToolCallingChatOptions;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -31,18 +32,21 @@ public class ChatTestService {
      * @return AI 模型的响应
      */
     public String simpleChat(String message) {
-        return chatClient.prompt()
+
+        ChatResponse chatResponse = chatClient.prompt()
                 .tools(new SimpleTools())
                 .user(message)
-                .call()
-                .content();
+                .call().chatResponse();
+        return chatResponse.getResult().getOutput().getText();
     }
 
-    public Flux<String> streamChat(String message) {
-        return chatClient.prompt()
+    public Flux<ChatResponse> streamChat(String message) {
+
+        Flux<ChatResponse> chatResponseFlux = chatClient.prompt()
                 .user(message)
                 .stream()
-                .content();
+                .chatResponse();
+        return chatResponseFlux;
     }
 
     public Flux<String> streamHistoryChat(String message){
