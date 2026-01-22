@@ -19,8 +19,10 @@ import org.springframework.util.ClassUtils;
 import org.springframework.util.ReflectionUtils;
 
 import java.lang.reflect.Method;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -90,6 +92,7 @@ public class ToolNode implements NodeAction {
 
     @Override
     public Map<String, Object> apply(State state) throws Exception {
+        Instant startTime = Instant.now();
         logger.debug("ToolNode processing state: {}", state);
 
         // 1. 获取当前消息列表
@@ -118,8 +121,10 @@ public class ToolNode implements NodeAction {
             return Map.of();
         }
 
-        // 6. 执行所有工具调用
+        // 6. 执行所有工具调用并收集执行记录
         List<ToolResponseMessage.ToolResponse> responses = new ArrayList<>();
+        List<Map<String, Object>> executions = new ArrayList<>();
+
         for (AssistantMessage.ToolCall tc : am.getToolCalls()) {
             logger.debug("Executing tool call: {}", tc.name());
             ToolCallback tool = findTool(tc.name());
@@ -128,16 +133,41 @@ public class ToolNode implements NodeAction {
                     String result = tool.call(tc.arguments(), new ToolContext(Map.of()));
                     responses.add(new ToolResponseMessage.ToolResponse(tc.id(), tc.name(), result));
                     logger.debug("Tool {} executed successfully", tc.name());
+
+                    // 记录执行详情
+                    executions.add(Map.of(
+                        "id", tc.id(),
+                        "name", tc.name(),
+                        "arguments", tc.arguments(),
+                        "result", result,
+                        "success", true
+                    ));
                 } catch (Exception e) {
                     logger.error("Tool {} execution failed: {}", tc.name(), e.getMessage());
-                    responses.add(new ToolResponseMessage.ToolResponse(
-                            tc.id(), tc.name(), "Error: " + e.getMessage()
+                    String errorMsg = "Error: " + e.getMessage();
+                    responses.add(new ToolResponseMessage.ToolResponse(tc.id(), tc.name(), errorMsg));
+
+                    // 记录执行详情（失败）
+                    executions.add(Map.of(
+                        "id", tc.id(),
+                        "name", tc.name(),
+                        "arguments", tc.arguments(),
+                        "result", errorMsg,
+                        "success", false
                     ));
                 }
             } else {
                 logger.warn("Tool not found: {}", tc.name());
-                responses.add(new ToolResponseMessage.ToolResponse(
-                        tc.id(), tc.name(), "Error: Tool not found: " + tc.name()
+                String errorMsg = "Error: Tool not found: " + tc.name();
+                responses.add(new ToolResponseMessage.ToolResponse(tc.id(), tc.name(), errorMsg));
+
+                // 记录执行详情（工具未找到）
+                executions.add(Map.of(
+                    "id", tc.id(),
+                    "name", tc.name(),
+                    "arguments", tc.arguments(),
+                    "result", errorMsg,
+                    "success", false
                 ));
             }
         }
@@ -150,10 +180,18 @@ public class ToolNode implements NodeAction {
         int nextIteration = iteration + 1;
         logger.debug("ToolNode completed, iteration: {} -> {}", iteration, nextIteration);
 
-        // 只返回新增的 ToolResponseMessage，让 AppendStrategy 追加到现有列表
+        // 9. 创建执行记录
+        Map<String, Object> executionRecord = new HashMap<>();
+        executionRecord.put("nodeType", "tool");
+        executionRecord.put("startTime", startTime.toString());
+        executionRecord.put("endTime", Instant.now().toString());
+        executionRecord.put("executions", executions);
+
+        // 返回消息、迭代次数和执行记录
         return Map.of(
                 "messages", List.of(toolResponseMessage),
-                "iteration", nextIteration
+                "iteration", nextIteration,
+                "execution_record", executionRecord
         );
     }
 

@@ -1,0 +1,10 @@
+GET http://localhost:8080/api/chat/test?message={"你是谁"}Content-Type: application/json
+User-Agent: IntelliJ HTTP Client/IntelliJ IDEA 2024.2.3
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+content-length: 0
+
+<> 2026-01-19T232554.500.json
+
+###
+
