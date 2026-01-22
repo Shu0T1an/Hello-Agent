@@ -5,6 +5,7 @@ import cn.ts.graph.state.State;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.metadata.Usage;
 
+import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 
@@ -30,11 +31,26 @@ public class StreamingOutput<T> extends NodeOutput {
             String chunk,
             OutputType outputType,
             State state,
-            Usage usage) {
-        super(nodeId, node, chunk, state, usage, Map.of());
+            Usage usage,
+            NodeStatus status,
+            Instant startTime,
+            String title,
+            String errorMessage) {
+        super(nodeId, node, chunk, state, usage, Map.of(), status, startTime, null, title, null, errorMessage);
         this.originData = originData;
         this.chunk = chunk;
         this.outputType = outputType;
+    }
+
+    private StreamingOutput(
+            String nodeId,
+            Node node,
+            T originData,
+            String chunk,
+            OutputType outputType,
+            State state,
+            Usage usage) {
+        this(nodeId, node, originData, chunk, outputType, state, usage, null, null, null, null);
     }
 
     /**
@@ -106,6 +122,122 @@ public class StreamingOutput<T> extends NodeOutput {
             String chunk,
             State state) {
         return new StreamingOutput<>(nodeId, node, chunk, chunk, OutputType.CHUNK, state, null);
+    }
+
+    // ============ 状态相关工厂方法 ============
+
+    /**
+     * 创建一个 STARTING 状态的流式输出
+     *
+     * @param nodeId 节点ID
+     * @param node   节点对象
+     * @return StreamingOutput 实例，状态为 STARTING
+     */
+    public static <T> StreamingOutput<T> ofStarting(String nodeId, Node node) {
+        String title = node != null && node.hasDescription() ? node.description() : nodeId;
+        return new StreamingOutput<>(
+                nodeId, node, null, "", OutputType.STARTING, null, null,
+                NodeStatus.STARTING, Instant.now(), title, null
+        );
+    }
+
+    /**
+     * 创建一个 RUNNING 状态的 ChatResponse 流式输出
+     *
+     * @param nodeId      节点ID
+     * @param node        节点对象
+     * @param chatResponse ChatResponse 原始数据
+     * @param state       执行后的状态快照
+     * @param startTime   开始时间
+     * @return StreamingOutput 实例，状态为 RUNNING
+     */
+    public static StreamingOutput<ChatResponse> ofRunningChatResponse(
+            String nodeId,
+            Node node,
+            ChatResponse chatResponse,
+            State state,
+            Instant startTime) {
+        String chunk = chatResponse.getResult() != null && chatResponse.getResult().getOutput() != null
+                ? chatResponse.getResult().getOutput().getText()
+                : "";
+        String title = node != null && node.hasDescription() ? node.description() : nodeId;
+
+        Usage usage = null;
+        if (chatResponse.getResult() != null && chatResponse.getMetadata() != null) {
+            usage = chatResponse.getMetadata().getUsage();
+        }
+
+        return new StreamingOutput<>(
+                nodeId, node, chatResponse, chunk, OutputType.CHAT_RESPONSE, state, usage,
+                NodeStatus.RUNNING, startTime, title, null
+        );
+    }
+
+    /**
+     * 创建一个 RUNNING 状态的纯文本片段流式输出
+     *
+     * @param nodeId    节点ID
+     * @param node      节点对象
+     * @param chunk     文本片段
+     * @param state     执行后的状态快照
+     * @param startTime 开始时间
+     * @return StreamingOutput 实例，状态为 RUNNING
+     */
+    public static StreamingOutput<String> ofRunningChunk(
+            String nodeId,
+            Node node,
+            String chunk,
+            State state,
+            Instant startTime) {
+        String title = node != null && node.hasDescription() ? node.description() : nodeId;
+        return new StreamingOutput<>(
+                nodeId, node, chunk, chunk, OutputType.CHUNK, state, null,
+                NodeStatus.RUNNING, startTime, title, null
+        );
+    }
+
+    /**
+     * 创建一个 COMPLETED 状态的流式输出
+     *
+     * @param nodeId    节点ID
+     * @param node      节点对象
+     * @param state     执行后的状态快照
+     * @param startTime 开始时间
+     * @return StreamingOutput 实例，状态为 COMPLETED
+     */
+    public static <T> StreamingOutput<T> ofCompleted(
+            String nodeId,
+            Node node,
+            State state,
+            Instant startTime) {
+        String title = node != null && node.hasDescription() ? node.description() : nodeId;
+        return new StreamingOutput<>(
+                nodeId, node, null, "", OutputType.COMPLETE, state, null,
+                NodeStatus.COMPLETED, startTime, title, null
+        );
+    }
+
+    /**
+     * 创建一个 COMPLETED 状态的流式输出（带完整内容）
+     *
+     * @param nodeId      节点ID
+     * @param node        节点对象
+     * @param state       执行后的状态快照
+     * @param startTime   开始时间
+     * @param fullContent 聚合后的完整文本内容
+     * @return StreamingOutput 实例，状态为 COMPLETED
+     */
+    public static <T> StreamingOutput<T> ofCompletedWithContent(
+            String nodeId,
+            Node node,
+            State state,
+            Instant startTime,
+            String fullContent) {
+        String title = node != null && node.hasDescription() ? node.description() : nodeId;
+        return new StreamingOutput<>(
+                nodeId, node, null, fullContent, OutputType.COMPLETE, state, null,
+                NodeStatus.COMPLETED, startTime, title, null
+        );
     }
 
     /**

@@ -19,12 +19,9 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import static cn.ts.graph.constant.GraphConstants.AGENT_MODEL;
-import static cn.ts.graph.constant.GraphConstants.AGENT_TOOL;
-import static cn.ts.graph.constant.GraphConstants.AGENT_END;
 
 /**
  * ReAct Agent：组合 LLMNode 和 ToolNode
@@ -39,6 +36,18 @@ import static cn.ts.graph.constant.GraphConstants.AGENT_END;
  */
 public class ReactAgent implements Agent {
 
+    /**
+     * 节点名称常量
+     * <p>
+     * 使用内部常量类避免硬编码字符串散布在代码中
+     * </p>
+     */
+    private static final class NodeNames {
+        static final String MODEL = GraphConstants.AGENT_MODEL;
+        static final String TOOL = GraphConstants.AGENT_TOOL;
+        static final String END = GraphConstants.AGENT_END;
+    }
+
     private final String name;
     private final String description;
     private final CompiledGraph graph;
@@ -49,10 +58,10 @@ public class ReactAgent implements Agent {
     /**
      * 创建 ReAct Agent
      *
-     * @param name Agent 名称
+     * @param name        Agent 名称
      * @param description Agent 描述
-     * @param chatModel ChatModel 实例
-     * @param tools Spring AI 工具对象（使用 @Tool 注解的方法所在类）
+     * @param chatModel   ChatModel 实例
+     * @param tools       Spring AI 工具对象（使用 @Tool 注解的方法所在类）
      */
     public ReactAgent(String name, String description, ChatModel chatModel, Object... tools) {
         this(name, description, chatModel, false, tools);
@@ -61,9 +70,9 @@ public class ReactAgent implements Agent {
     /**
      * 创建 ReAct Agent（使用默认描述）
      *
-     * @param name Agent 名称
-     * @param chatModel ChatModel 实例
-     * @param tools Spring AI 工具对象
+     * @param name       Agent 名称
+     * @param chatModel  ChatModel 实例
+     * @param tools      Spring AI 工具对象
      */
     public ReactAgent(String name, ChatModel chatModel, Object... tools) {
         this(name, "ReAct Agent with tool calling capabilities", chatModel, false, tools);
@@ -72,11 +81,11 @@ public class ReactAgent implements Agent {
     /**
      * 创建 ReAct Agent（支持流式配置）
      *
-     * @param name Agent 名称
+     * @param name        Agent 名称
      * @param description Agent 描述
-     * @param chatModel ChatModel 实例
-     * @param streaming 是否启用流式输出
-     * @param tools Spring AI 工具对象
+     * @param chatModel   ChatModel 实例
+     * @param streaming   是否启用流式输出
+     * @param tools       Spring AI 工具对象
      */
     public ReactAgent(String name, String description, ChatModel chatModel, boolean streaming, Object... tools) {
         this.name = name;
@@ -100,7 +109,8 @@ public class ReactAgent implements Agent {
                     "input", input,
                     "max_iterations", config.getMaxIterations(),
                     "iteration", 0,
-                    "messages", new ArrayList<Message>()
+                    "messages", new ArrayList<Message>(),
+                    "execute_record", new ArrayList<Map<String, Object>>()
             );
 
             // 执行图
@@ -182,16 +192,51 @@ public class ReactAgent implements Agent {
 
     /**
      * 构建 ReAct 循环图
+     * <p>
+     * 使用内部常量和提取的私有方法，提高代码可读性和可维护性
+     * </p>
      *
      * @param chatModel ChatModel 实例
      * @param streaming 是否启用流式输出
-     * @param tools 工具对象数组
+     * @param tools     工具对象数组
      * @return 编译后的图
      */
     private CompiledGraph buildReActGraph(ChatModel chatModel, boolean streaming, Object[] tools) {
         StateGraph graph = new StateGraph();
 
-        // 设置状态初始化器，注册策略
+        // 配置状态初始化器
+        configureStateInitializer(graph);
+
+        // 创建节点
+        LLMNode llmNode = new LLMNode(chatModel, "You are a helpful assistant.", streaming, tools);
+        ToolNode toolNode = new ToolNode(tools);
+
+        // 添加节点到图
+        graph.addNode(NodeNames.MODEL, llmNode);
+        graph.addNode(NodeNames.TOOL, toolNode);
+        // 添加 AGENT_END 空节点，作为流程的终点中转站
+        graph.addNode(NodeNames.END, NodeAction.of(state -> Map.of()));
+
+        // 条件边1：判断最后一条消息是否有 toolCalls
+        graph.addConditionalEdge(NodeNames.MODEL, this::routeFromModel, modelRouteMapping());
+
+        // 条件边2：判断是否继续迭代
+        graph.addConditionalEdge(NodeNames.TOOL, this::routeFromTool, toolRouteMapping());
+
+        // 连接
+        graph.addEdge(GraphConstants.START, NodeNames.MODEL);
+        graph.addEdge(NodeNames.END, GraphConstants.END);
+
+        return graph.compile();
+    }
+
+    /**
+     * 配置状态初始化器
+     * <p>
+     * 提取为私有方法，提高代码可读性
+     * </p>
+     */
+    private void configureStateInitializer(StateGraph graph) {
         graph.setStateInitializer(() -> {
             MapState state = new MapState();
             // messages 使用追加策略，这样多个节点的输出可以追加到同一个列表
@@ -201,53 +246,66 @@ public class ReactAgent implements Agent {
             state.registerKeyStrategy("iteration", ReplaceStrategy.getInstance());
             // max_iterations 使用替换策略
             state.registerKeyStrategy("max_iterations", ReplaceStrategy.getInstance());
+            state.registerKeyStrategy("execute_record", AppendStrategy.getInstance());
             return state;
         });
+    }
 
-        // 创建节点
-        LLMNode llmNode = new LLMNode(chatModel, "You are a helpful assistant.", streaming, tools);
-        ToolNode toolNode = new ToolNode(tools);
+    /**
+     * 从 LLM 节点路由
+     * <p>
+     * 根据最后一条消息决定下一个节点：
+     * - 有 toolCalls → 工具节点
+     * - 是 ToolResponseMessage → LLM 节点（继续循环）
+     * - 其他 → 结束节点
+     * </p>
+     */
+    private String routeFromModel(State state) {
+        List<Message> messages = state.value("messages", new ArrayList<Message>());
+        if (messages.isEmpty()) {
+            return NodeNames.END;
+        }
 
-        // 添加节点到图
-        graph.addNode(AGENT_MODEL, llmNode);
-        graph.addNode(AGENT_TOOL, toolNode);
-        // 添加 AGENT_END 空节点，作为流程的终点中转站
-        graph.addNode(AGENT_END, NodeAction.of(state -> Map.of()));
+        Message last = messages.get(messages.size() - 1);
+        if (last instanceof AssistantMessage am && am.hasToolCalls()) {
+            return NodeNames.TOOL;
+        } else if (last instanceof ToolResponseMessage) {
+            return NodeNames.MODEL;
+        }
+        return NodeNames.END;
+    }
 
-        // 条件边1：判断最后一条消息是否有 toolCalls
-        graph.addConditionalEdge(AGENT_MODEL,
-                state -> {
-                    List<Message> messages = state.value("messages", new ArrayList<Message>());
-                    if (messages.isEmpty()) {
-                        return AGENT_END;
-                    }
+    /**
+     * 从工具节点路由
+     * <p>
+     * 根据迭代次数决定是否继续循环
+     * </p>
+     */
+    private String routeFromTool(State state) {
+        int iteration = state.<Integer>value("iteration").orElse(0);
+        int maxIterations = state.<Integer>value("max_iterations").orElse(10);
+        // iteration 已在 ToolNode 中递增
+        return (iteration < maxIterations) ? NodeNames.MODEL : NodeNames.END;
+    }
 
-                    Message last = messages.get(messages.size() - 1);
-                    if (last instanceof AssistantMessage am && am.hasToolCalls()) {
-                        return AGENT_TOOL;
-                    }else if(last instanceof ToolResponseMessage){
-                        return AGENT_MODEL;
-                    }
-                    return AGENT_END;
-                },
-                Map.of(AGENT_TOOL, AGENT_TOOL, AGENT_END, AGENT_END, AGENT_MODEL, AGENT_MODEL)
+    /**
+     * LLM 节点的路由映射
+     */
+    private Map<String, String> modelRouteMapping() {
+        return Map.of(
+                NodeNames.TOOL, NodeNames.TOOL,
+                NodeNames.MODEL, NodeNames.MODEL,
+                NodeNames.END, NodeNames.END
         );
+    }
 
-        // 条件边2：判断是否继续迭代
-        graph.addConditionalEdge(AGENT_TOOL,
-                state -> {
-                    int iteration = state.<Integer>value("iteration").orElse(0);
-                    int maxIterations = state.<Integer>value("max_iterations").orElse(10);
-                    // iteration 已在 ToolNode 中递增
-                    return (iteration < maxIterations) ? AGENT_MODEL : AGENT_END;
-                },
-                Map.of(AGENT_MODEL, AGENT_MODEL, AGENT_END, AGENT_END)
+    /**
+     * 工具节点的路由映射
+     */
+    private Map<String, String> toolRouteMapping() {
+        return Map.of(
+                NodeNames.MODEL, NodeNames.MODEL,
+                NodeNames.END, NodeNames.END
         );
-
-        // 连接
-        graph.addEdge(GraphConstants.START, AGENT_MODEL);
-        graph.addEdge(AGENT_END, GraphConstants.END);
-
-        return graph.compile();
     }
 }

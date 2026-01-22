@@ -65,6 +65,21 @@ public class GraphResponse<T> {
     }
 
     /**
+     * 创建一个流完成响应（带数据）
+     * <p>
+     * 用于流式输出的最终完成事件，携带完整数据（如聚合后的完整文本）
+     * </p>
+     *
+     * @param nodeId 节点ID
+     * @param data   完整数据
+     * @param <T>    数据类型
+     * @return GraphResponse 实例
+     */
+    public static <T> GraphResponse<T> streamCompleteWithData(String nodeId, T data) {
+        return new GraphResponse<>(nodeId, data, true, null, true);
+    }
+
+    /**
      * 创建一个图完成响应（整个流程完成）
      *
      * @param <T> 数据类型
