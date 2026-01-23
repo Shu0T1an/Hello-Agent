@@ -1,6 +1,8 @@
 package cn.ts.web.controller;
 
 import cn.ts.web.service.ChatTestService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
@@ -16,9 +18,12 @@ import reactor.core.publisher.Flux;
 @CrossOrigin(origins = "*")
 public class ChatTestController {
 
+    private final ObjectMapper objectMapper;
+
     private final ChatTestService chatTestService;
 
-    public ChatTestController(ChatTestService chatTestService) {
+    public ChatTestController(ObjectMapper objectMapper, ChatTestService chatTestService) {
+        this.objectMapper = objectMapper;
         this.chatTestService = chatTestService;
     }
 
@@ -57,13 +62,22 @@ public class ChatTestController {
     public Flux<ServerSentEvent<String>> streamChat(@RequestParam String message) {
         return chatTestService.streamChat(message)
                 .doOnNext(chatResponse -> {
-                    // 检查元数据中是否有 Usage
-                    Usage usage = chatResponse.getMetadata().getUsage();
-                    if (usage != null && usage.getTotalTokens() > 0) {
-                        System.out.println("Input Tokens: " + usage.getPromptTokens());
-                        System.out.println("Output Tokens: " + usage.getCompletionTokens());
-                        System.out.println("Total Tokens: " + usage.getTotalTokens());
+
+                    String fullJson = null;
+                    try {
+                        fullJson = objectMapper.writeValueAsString(chatResponse);
+                        System.out.println(">>> 完整原始数据帧: " + fullJson);
+                        // 检查元数据中是否有 Usage
+                        Usage usage = chatResponse.getMetadata().getUsage();
+                        if (usage != null && usage.getTotalTokens() > 0) {
+                            System.out.println("Input Tokens: " + usage.getPromptTokens());
+                            System.out.println("Output Tokens: " + usage.getCompletionTokens());
+                            System.out.println("Total Tokens: " + usage.getTotalTokens());
+                        }
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException("序列化打印失败");
                     }
+
                 })
                 .map(chatResponse -> chatResponse.getResult().getOutput().getText())
                 .map(chunk -> ServerSentEvent.<String>builder()

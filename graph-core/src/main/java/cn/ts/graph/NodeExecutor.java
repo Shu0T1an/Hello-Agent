@@ -180,6 +180,7 @@ public class NodeExecutor {
             GraphRunnerContext context,
             Flux<Object> stream) {
 
+
         // 使用 ConcurrentLinkedQueue 保存响应列表，保证线程安全
         ConcurrentLinkedQueue<ChatResponse> responsesQueue = new ConcurrentLinkedQueue<>();
 
@@ -499,11 +500,13 @@ public class NodeExecutor {
         long totalTokens = 0;
 
         for (ChatResponse response : responses) {
-            if (response.getMetadata() != null && response.getMetadata().getUsage() != null) {
+            if(response.getMetadata() != null && response.getMetadata().getUsage() != null ){
                 var usage = response.getMetadata().getUsage();
-                promptTokens += usage.getPromptTokens();
-                completionTokens += usage.getCompletionTokens();
-                totalTokens += usage.getTotalTokens();
+                if(usage != null && usage.getTotalTokens() > 0){
+                    promptTokens = usage.getPromptTokens();
+                    completionTokens = usage.getCompletionTokens();
+                    totalTokens = usage.getTotalTokens();
+                }
             }
         }
 
