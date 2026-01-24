@@ -23,3 +23,23 @@ server:
       force: true
       force-request: true
       force-response: true
+
+# Agent 执行配置
+agent:
+  execution:
+    timeout: 300s              # 执行超时时间
+    heartbeat-interval: 30s    # 心跳间隔
+    max-title-length: 15        # 标题最大长度
+    default-max-iterations: 10  # 默认最大迭代次数
+    debug-mode: false           # 调试模式
+
+# MCP 管理器配置
+mcp:
+  manager:
+    health-check-interval: 1m    # 健康检查间隔
+    default-timeout: 30s         # 默认连接超时时间
+    auto-connect-on-startup: true # 启动时自动连接
+    max-retries: 3               # 最大重试次数
+    retry-interval: 5s           # 重试间隔
+    enable-health-check: true    # 是否启用健康检查
+    health-check-timeout: 10s    # 健康检查超时时间

@@ -150,12 +150,22 @@ public class StateGraph {
 
     /**
      * 编译图为可执行的结构
+     * <p>
+     * 使用 GraphConfig 封装图数据，然后创建 CompiledGraph
+     * </p>
      *
      * @return 编译后的图
      */
     public CompiledGraph compile() {
         validateGraphStructure();
-        return new CompiledGraph(new HashMap<>(nodes), new ArrayList<>(edges), entryPoint, stateInitializer, checkpointManager);
+        GraphConfig graphConfig = new GraphConfig(
+                new HashMap<>(nodes),
+                new ArrayList<>(edges),
+                entryPoint,
+                stateInitializer,
+                checkpointManager
+        );
+        return new CompiledGraph(graphConfig);
     }
 
     /**

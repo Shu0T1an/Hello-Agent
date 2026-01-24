@@ -1,5 +1,6 @@
 package cn.ts.web.controller;
 
+import cn.ts.web.config.AgentExecutionConfig;
 import cn.ts.web.dto.AgentResponse;
 import cn.ts.web.dto.SessionDetailDTO;
 import cn.ts.web.service.AgentExecutionService;
@@ -12,16 +13,16 @@ import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * SSE 流式控制器
+ * SSE 流式控制器（重构版）
  * <p>
  * 提供 SSE 端点用于向前端实时推送 Agent 执行事件
+ * 使用配置外部化，支持通过配置文件调整超时和心跳间隔
  * </p>
  *
  * @author tianshuo
@@ -33,10 +34,15 @@ public class StreamController {
 
     private final AgentExecutionService agentExecutionService;
     private final SessionService sessionService;
+    private final AgentExecutionConfig config;
 
-    public StreamController(AgentExecutionService agentExecutionService, SessionService sessionService) {
+    public StreamController(
+            AgentExecutionService agentExecutionService,
+            SessionService sessionService,
+            AgentExecutionConfig config) {
         this.agentExecutionService = agentExecutionService;
         this.sessionService = sessionService;
+        this.config = config;
     }
 
     /**
@@ -112,18 +118,26 @@ public class StreamController {
 
     /**
      * 流式执行 Agent（带超时配置）
+     * <p>
+     * 使用配置文件中的默认超时时间，可通过参数覆盖
+     * </p>
      *
      * @param agentName    Agent 名称
-     * @param timeout      超时时间（秒）
+     * @param timeout      超时时间（秒），默认使用配置值
      * @param initialState 初始状态（可选）
      * @return SSE 事件流
      */
     @GetMapping(value = "/agent/{agentName}/execute-with-timeout", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<AgentResponse>> executeAgentStreamWithTimeout(
             @PathVariable String agentName,
-            @RequestParam(defaultValue = "300") int timeout,
+            @RequestParam(required = false) Integer timeout,
             @RequestParam(required = false) String input,
             @RequestParam(required = false) Map<String, Object> initialState) {
+
+        // 使用配置的超时时间，或参数覆盖
+        java.time.Duration actualTimeout = timeout != null
+                ? java.time.Duration.ofSeconds(timeout)
+                : config.getTimeout();
 
         // 合并参数：支持 input 参数或 initialState
         Map<String, Object> mergedState = new HashMap<>();
@@ -137,7 +151,7 @@ public class StreamController {
         return agentExecutionService.executeAgentStream(
                 agentName,
                 mergedState.isEmpty() ? Map.of() : mergedState,
-                Duration.ofSeconds(timeout)
+                actualTimeout
         ).map(response -> ServerSentEvent.<AgentResponse>builder()
                 .data(response)
                 .build());
@@ -146,14 +160,14 @@ public class StreamController {
     /**
      * 心跳端点
      * <p>
-     * 用于保持 SSE 连接活跃
+     * 用于保持 SSE 连接活跃，使用配置文件中的心跳间隔
      * </p>
      *
      * @return 定时心跳事件
      */
     @GetMapping(value = "/heartbeat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<AgentResponse>> heartbeat() {
-        return Flux.interval(Duration.ofSeconds(30))
+        return Flux.interval(config.getHeartbeatInterval())
                 .map(sequence -> ServerSentEvent.<AgentResponse>builder()
                         .id(String.valueOf(sequence))
                         .data(AgentResponse.heartbeat(sequence))
