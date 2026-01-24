@@ -266,8 +266,13 @@ public class NodeExecutor {
         ChatResponse lastResponse = null;
         List<AssistantMessage.ToolCall> toolCalls = new ArrayList<>();
         Map<String, Object> messageMetadata = new HashMap<>();
+
+//        如果是tool 的话会生成两条信息，一个是toolcall 一个是token
         for (ChatResponse response : responses) {
-            lastResponse = response;
+
+            if(response.getResult()!=null){
+                lastResponse = response;
+            }
             var output = response.getResult() != null ? response.getResult().getOutput() : null;
 
             if (output != null) {
@@ -282,6 +287,8 @@ public class NodeExecutor {
             }
         }
 
+
+
         // 创建完整的 AssistantMessage
         if (lastResponse != null && lastResponse.getResult() != null) {
             var output = lastResponse.getResult().getOutput();
@@ -293,7 +300,6 @@ public class NodeExecutor {
                 // 带 metadata 的构造函数
                 messageMetadata = new HashMap<>(output.getMetadata());
                 // 将 toolCalls 信息也加入 metadata
-
                 assistantMessage = new AssistantMessage(fullContent.toString(), messageMetadata,toolCalls);
             } else {
                 // 只有 content 的构造函数

@@ -23,7 +23,9 @@
       "mcp__zai-mcp-server__analyze_image",
       "Bash(npm run build:*)",
       "Bash(ping:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(mvn:*)",
+      "Bash(findstr:*)"
     ]
   }
 }

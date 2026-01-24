@@ -11,7 +11,7 @@ import java.time.format.DateTimeFormatter;
  *
  * @author tianshuo
  */
-@Component
+
 public class SimpleTools {
 
     @Tool(description = "获取当前日期和时间")
