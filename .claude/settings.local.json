@@ -25,7 +25,9 @@
       "Bash(ping:*)",
       "Bash(git checkout:*)",
       "Bash(mvn:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(netstat:*)"
     ]
   }
 }

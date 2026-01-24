@@ -22,35 +22,30 @@ import { computed } from 'vue'
 import { ArrowLeft } from 'lucide-vue-next'
 import type { Strategy } from '@/types/message'
 import { useChatStore } from '@/stores/chat'
+import { STRATEGY_LABELS } from '@/utils/constants'
 import BaseDropdown from '@/components/base/BaseDropdown.vue'
 
 const chatStore = useChatStore()
 
+// 当前会话 ID
 const currentId = computed(() => {
   return chatStore.currentSessionId || 'No active session'
 })
 
+// 当前策略标签
 const currentMode = computed(() => {
-  const modeMap: Record<Strategy, string> = {
-    'deep-research': 'Deep Research',
-    'quick': 'Quick',
-    'detailed': 'Detailed'
-  }
-  return modeMap[chatStore.currentStrategy]
+  return STRATEGY_LABELS[chatStore.currentStrategy] || chatStore.currentStrategy
 })
 
+// 策略下拉选项
 const modeDropdownItems = computed(() => {
-  const modes: { label: string; value: Strategy }[] = [
-    { label: 'Deep Research', value: 'deep-research' },
-    { label: 'Quick', value: 'quick' },
-    { label: 'Detailed', value: 'detailed' }
-  ]
-  return modes.map(mode => ({
-    label: mode.label,
-    value: mode.value,
+  return Object.entries(STRATEGY_LABELS).map(([value, label]) => ({
+    label,
+    value: value as Strategy
   }))
 })
 
+// 处理模式切换
 function handleModeChange(mode: string) {
   chatStore.setStrategy(mode as Strategy)
 }
@@ -91,5 +86,6 @@ function handleModeChange(mode: string) {
 .nav-right {
   display: flex;
   align-items: center;
+  gap: 12px;
 }
 </style>

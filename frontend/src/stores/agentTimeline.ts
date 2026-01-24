@@ -103,7 +103,7 @@ export const useAgentTimelineStore = defineStore('agentTimeline', () => {
    */
   function getLatestEvent(): AgentEvent | null {
     if (events.value.length === 0) return null
-    return events.value[events.value.length - 1]
+    return events.value[events.value.length - 1] ?? null
   }
 
   /**
