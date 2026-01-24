@@ -12,6 +12,7 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.model.tool.ToolCallingChatOptions;
+import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.tool.ToolCallback;
 import reactor.core.publisher.Flux;
 
@@ -74,7 +75,8 @@ public class LLMNode implements NodeAction {
     public LLMNode(ChatModel chatModel, String systemPrompt, boolean streaming, Object... tools) {
         this.systemPrompt = systemPrompt;
         this.streaming = streaming;
-        this.chatOptions = ToolCallingChatOptions.builder()
+        this.chatOptions = OpenAiChatOptions.builder()
+                .streamUsage(true)
                 .internalToolExecutionEnabled(false)
                 .build();
         this.toolCallbacks = new ArrayList<>();

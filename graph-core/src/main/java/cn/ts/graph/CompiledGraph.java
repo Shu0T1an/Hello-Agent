@@ -17,24 +17,29 @@ import java.util.Optional;
 import java.util.function.Supplier;
 
 /**
- * 编译后的图
+ * 编译后的图（重构版）
  * <p>
- * 包含编译后的节点和边，可以直接执行
- * 参考 Spring AI Alibaba Graph 的 CompiledGraph 设计
+ * 使用 GraphConfig 统一管理图的结构数据
  * </p>
  *
  * @author tianshuo
  */
 public class CompiledGraph {
 
-    private final Map<String, Node> nodes;
-    private final List<Edge> edges;
-    private final String entryPoint;
-    private final Supplier<State> stateInitializer;
-    private final CheckpointManager checkpointManager;
+    private final GraphConfig config;
 
     /**
-     * 创建编译后的图
+     * 创建编译后的图（使用 GraphConfig，内部使用）
+     *
+     * @param config 图配置
+     */
+    CompiledGraph(GraphConfig config) {
+        this.config = config;
+        this.config.validate(); // 编译时验证
+    }
+
+    /**
+     * 创建编译后的图（向后兼容构造函数）
      *
      * @param nodes            节点映射
      * @param edges            边列表
@@ -44,15 +49,11 @@ public class CompiledGraph {
      */
     CompiledGraph(Map<String, Node> nodes, List<Edge> edges, String entryPoint,
                   Supplier<State> stateInitializer, CheckpointManager checkpointManager) {
-        this.nodes = Map.copyOf(nodes);
-        this.edges = List.copyOf(edges);
-        this.entryPoint = entryPoint;
-        this.stateInitializer = stateInitializer != null ? stateInitializer : MapState::new;
-        this.checkpointManager = checkpointManager;
+        this(new GraphConfig(nodes, edges, entryPoint, stateInitializer, checkpointManager));
     }
 
     /**
-     * 创建编译后的图（不带检查点管理器）
+     * 创建编译后的图（不带检查点管理器，向后兼容）
      *
      * @param nodes            节点映射
      * @param edges            边列表
@@ -61,7 +62,7 @@ public class CompiledGraph {
      */
     CompiledGraph(Map<String, Node> nodes, List<Edge> edges, String entryPoint,
                   Supplier<State> stateInitializer) {
-        this(nodes, edges, entryPoint, stateInitializer, null);
+        this(new GraphConfig(nodes, edges, entryPoint, stateInitializer));
     }
 
     /**
@@ -71,7 +72,7 @@ public class CompiledGraph {
      * @return 执行结果
      */
     public GraphResult invoke(Map<String, Object> initialState) {
-        GraphRunner runner = new GraphRunner(nodes, edges, entryPoint, stateInitializer);
+        GraphRunner runner = new GraphRunner(config);
         return runner.run(initialState);
     }
 
@@ -83,7 +84,7 @@ public class CompiledGraph {
      * @return 执行结果
      */
     public GraphResult invoke(Map<String, Object> initialState, RunnableConfig config) {
-        GraphRunner runner = new GraphRunner(nodes, edges, entryPoint, stateInitializer);
+        GraphRunner runner = new GraphRunner(this.config);
         return runner.run(initialState, config);
     }
 
@@ -100,7 +101,7 @@ public class CompiledGraph {
      *         - 流式节点：GraphResponse<NodeOutput>（单个流元素，如 String token）
      */
     public Flux<GraphResponse<NodeOutput>> stream(Map<String, Object> initialState) {
-        GraphRunner runner = new GraphRunner(nodes, edges, entryPoint, stateInitializer);
+        GraphRunner runner = new GraphRunner(config);
         return runner.runStream(initialState);
     }
 
@@ -119,7 +120,7 @@ public class CompiledGraph {
      */
     public Flux<GraphResponse<NodeOutput>> stream(
             Map<String, Object> initialState, RunnableConfig config) {
-        GraphRunner runner = new GraphRunner(nodes, edges, entryPoint, stateInitializer);
+        GraphRunner runner = new GraphRunner(this.config);
         return runner.runStream(initialState, config);
     }
 
@@ -129,7 +130,7 @@ public class CompiledGraph {
      * @return 节点映射
      */
     public Map<String, Node> getNodes() {
-        return nodes;
+        return config.nodes();
     }
 
     /**
@@ -138,7 +139,7 @@ public class CompiledGraph {
      * @return 边列表
      */
     public List<Edge> getEdges() {
-        return edges;
+        return config.edges();
     }
 
     /**
@@ -147,7 +148,7 @@ public class CompiledGraph {
      * @return 入口点节点标识
      */
     public String getEntryPoint() {
-        return entryPoint;
+        return config.entryPoint();
     }
 
     /**
@@ -179,10 +180,10 @@ public class CompiledGraph {
      * @return 状态快照的 Optional
      */
     public Optional<StateSnapshot> getState(String threadId) {
-        if (checkpointManager == null) {
+        if (config.checkpointManager() == null) {
             throw new IllegalStateException("CheckpointManager not configured. Use StateGraph.setCheckpointManager() to enable checkpoint functionality.");
         }
-        return checkpointManager.getState(threadId);
+        return config.checkpointManager().getState(threadId);
     }
 
     /**
@@ -195,10 +196,10 @@ public class CompiledGraph {
      * @return 状态历史列表
      */
     public List<StateSnapshot> getStateHistory(String threadId) {
-        if (checkpointManager == null) {
+        if (config.checkpointManager() == null) {
             throw new IllegalStateException("CheckpointManager not configured. Use StateGraph.setCheckpointManager() to enable checkpoint functionality.");
         }
-        return checkpointManager.getStateHistory(threadId);
+        return config.checkpointManager().getStateHistory(threadId);
     }
 
     /**
@@ -212,10 +213,10 @@ public class CompiledGraph {
      * @param asNode   作为哪个节点更新
      */
     public void updateState(String threadId, Map<String, Object> updates, String asNode) {
-        if (checkpointManager == null) {
+        if (config.checkpointManager() == null) {
             throw new IllegalStateException("CheckpointManager not configured. Use StateGraph.setCheckpointManager() to enable checkpoint functionality.");
         }
-        checkpointManager.updateState(threadId, updates, asNode);
+        config.checkpointManager().updateState(threadId, updates, asNode);
     }
 
     /**
@@ -227,10 +228,10 @@ public class CompiledGraph {
      * @param threadId 会话ID
      */
     public void deleteThread(String threadId) {
-        if (checkpointManager == null) {
+        if (config.checkpointManager() == null) {
             throw new IllegalStateException("CheckpointManager not configured. Use StateGraph.setCheckpointManager() to enable checkpoint functionality.");
         }
-        checkpointManager.deleteThread(threadId);
+        config.checkpointManager().deleteThread(threadId);
     }
 
     /**
@@ -239,16 +240,16 @@ public class CompiledGraph {
      * @return true 如果配置了检查点管理器
      */
     public boolean hasCheckpointManager() {
-        return checkpointManager != null;
+        return config.checkpointManager() != null;
     }
 
     @Override
     public String toString() {
         return "CompiledGraph{" +
-                "nodes=" + nodes.keySet() +
-                ", edges=" + edges.size() +
-                ", entryPoint='" + entryPoint + '\'' +
-                ", hasCheckpointManager=" + (checkpointManager != null) +
+                "nodes=" + config.nodes().keySet() +
+                ", edges=" + config.edges().size() +
+                ", entryPoint='" + config.entryPoint() + '\'' +
+                ", hasCheckpointManager=" + (config.checkpointManager() != null) +
                 '}';
     }
 }

@@ -7,7 +7,6 @@ import cn.ts.graph.node.Node;
 import cn.ts.graph.state.MapState;
 import cn.ts.graph.state.State;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -15,36 +14,38 @@ import java.util.*;
 import java.util.function.Supplier;
 
 /**
- * 图执行器
+ * 图执行器（重构版）
  * <p>
- * 负责执行编译后的图，管理节点之间的状态流转
- * 参考 Spring AI Alibaba Graph 的执行器设计
+ * 使用 GraphConfig 统一管理图数据，减少数据重复传递
  * </p>
  *
  * @author tianshuo
  */
 public class GraphRunner {
 
-    private final Map<String, Node> nodes;
-    private final List<Edge> edges;
-    private final String entryPoint;
-    private final Supplier<State> stateInitializer;
+    private final GraphConfig config;
     private final NodeExecutor nodeExecutor;
 
     /**
-     * 创建图执行器
+     * 创建图执行器（使用 GraphConfig）
      *
-     * @param nodes      节点映射
-     * @param edges      边列表
-     * @param entryPoint 入口点节点标识
+     * @param config 图配置
+     */
+    public GraphRunner(GraphConfig config) {
+        this.config = Objects.requireNonNull(config, "GraphConfig cannot be null");
+        this.nodeExecutor = NodeExecutor.create();
+    }
+
+    /**
+     * 创建图执行器（向后兼容构造函数）
+     *
+     * @param nodes            节点映射
+     * @param edges            边列表
+     * @param entryPoint       入口点节点标识
      * @param stateInitializer 状态初始化器
      */
     public GraphRunner(Map<String, Node> nodes, List<Edge> edges, String entryPoint, Supplier<State> stateInitializer) {
-        this.nodes = Objects.requireNonNull(nodes, "Nodes cannot be null");
-        this.edges = Objects.requireNonNull(edges, "Edges cannot be null");
-        this.entryPoint = Objects.requireNonNull(entryPoint, "Entry point cannot be null");
-        this.stateInitializer = stateInitializer != null ? stateInitializer : MapState::new;
-        this.nodeExecutor = NodeExecutor.create();
+        this(new GraphConfig(nodes, edges, entryPoint, stateInitializer));
     }
 
     /**
@@ -70,11 +71,14 @@ public class GraphRunner {
 
         try {
             // 使用状态初始化器创建状态
+            Supplier<State> stateInitializer = this.config.stateInitializer() != null
+                    ? this.config.stateInitializer()
+                    : MapState::new;
             State state = stateInitializer.get();
             if (initialState != null && !initialState.isEmpty()) {
                 state.merge(initialState);
             }
-            String currentNodeId = entryPoint;
+            String currentNodeId = this.config.entryPoint();
             int iteration = 0;
             int maxIter = config.maxIterations();
 
@@ -163,7 +167,7 @@ public class GraphRunner {
     public Flux<GraphResponse<NodeOutput>> runStream(
             Map<String, Object> initialState, RunnableConfig config) {
 
-        return runStreamInternal(initialState, config, entryPoint);
+        return runStreamInternal(initialState, config, this.config.entryPoint());
     }
 
     /**
@@ -181,6 +185,9 @@ public class GraphRunner {
             Map<String, Object> initialState, RunnableConfig config, String startNode) {
 
         // 创建上下文（使用 stateInitializer）
+        Supplier<State> stateInitializer = this.config.stateInitializer() != null
+                ? this.config.stateInitializer()
+                : MapState::new;
         GraphRunnerContext context = GraphRunnerContext.create(initialState, config, stateInitializer);
         context.setCurrentNodeId(startNode);
 
@@ -208,7 +215,7 @@ public class GraphRunner {
             return Flux.error(new GraphException("Max iterations exceeded: " + context.getConfig().maxIterations()));
         }
 
-        Node node = nodes.get(nodeId);
+        Node node = this.config.nodes().get(nodeId);
         if (node == null) {
             return Flux.error(new GraphException.NodeNotFoundException(nodeId));
         }
@@ -284,7 +291,7 @@ public class GraphRunner {
         Map<String, Object> stateUpdates = new HashMap<>();
 
         try {
-            Node node = nodes.get(nodeId);
+            Node node = this.config.nodes().get(nodeId);
             if (node == null) {
                 throw new GraphException.NodeNotFoundException(nodeId);
             }
@@ -332,7 +339,7 @@ public class GraphRunner {
      * @throws GraphException.EdgeConfigurationException 如果条件边的路由值没有对应的目标节点
      */
     private String findNextNode(String currentNodeId, State state) {
-        for (Edge edge : edges) {
+        for (Edge edge : this.config.edges()) {
             if (edge.from().equals(currentNodeId)) {
                 if (edge.isNormal()) {
                     return edge.to();

@@ -2,6 +2,8 @@ package cn.ts.graph;
 
 import cn.ts.graph.node.Node;
 import cn.ts.graph.state.State;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.metadata.Usage;
 
@@ -19,6 +21,8 @@ import java.util.Optional;
  * @author tianshuo
  */
 public class StreamingOutput<T> extends NodeOutput {
+
+    private static final Logger logger = LoggerFactory.getLogger(StreamingOutput.class);
 
     private final T originData;        // 原始数据（如完整 ChatResponse）
     private final String chunk;         // 提取的文本片段
@@ -163,8 +167,12 @@ public class StreamingOutput<T> extends NodeOutput {
         String title = node != null && node.hasDescription() ? node.description() : nodeId;
 
         Usage usage = null;
-        if (chatResponse.getResult() != null && chatResponse.getMetadata() != null) {
-            usage = chatResponse.getMetadata().getUsage();
+        Usage usageObj = chatResponse.getMetadata().getUsage();
+
+        // 只有当有实际 Token 消耗时才赋值
+        if (usageObj != null && usageObj.getTotalTokens() != null && usageObj.getTotalTokens() > 0) {
+            usage = usageObj;
+            logger.info("Usage: {}", usage);
         }
 
         return new StreamingOutput<>(

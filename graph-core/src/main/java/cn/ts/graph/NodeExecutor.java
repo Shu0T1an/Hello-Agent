@@ -180,6 +180,7 @@ public class NodeExecutor {
             GraphRunnerContext context,
             Flux<Object> stream) {
 
+
         // 使用 ConcurrentLinkedQueue 保存响应列表，保证线程安全
         ConcurrentLinkedQueue<ChatResponse> responsesQueue = new ConcurrentLinkedQueue<>();
 
@@ -265,8 +266,13 @@ public class NodeExecutor {
         ChatResponse lastResponse = null;
         List<AssistantMessage.ToolCall> toolCalls = new ArrayList<>();
         Map<String, Object> messageMetadata = new HashMap<>();
+
+//        如果是tool 的话会生成两条信息，一个是toolcall 一个是token
         for (ChatResponse response : responses) {
-            lastResponse = response;
+
+            if(response.getResult()!=null){
+                lastResponse = response;
+            }
             var output = response.getResult() != null ? response.getResult().getOutput() : null;
 
             if (output != null) {
@@ -281,6 +287,8 @@ public class NodeExecutor {
             }
         }
 
+
+
         // 创建完整的 AssistantMessage
         if (lastResponse != null && lastResponse.getResult() != null) {
             var output = lastResponse.getResult().getOutput();
@@ -292,7 +300,6 @@ public class NodeExecutor {
                 // 带 metadata 的构造函数
                 messageMetadata = new HashMap<>(output.getMetadata());
                 // 将 toolCalls 信息也加入 metadata
-
                 assistantMessage = new AssistantMessage(fullContent.toString(), messageMetadata,toolCalls);
             } else {
                 // 只有 content 的构造函数
@@ -499,11 +506,13 @@ public class NodeExecutor {
         long totalTokens = 0;
 
         for (ChatResponse response : responses) {
-            if (response.getMetadata() != null && response.getMetadata().getUsage() != null) {
+            if(response.getMetadata() != null && response.getMetadata().getUsage() != null ){
                 var usage = response.getMetadata().getUsage();
-                promptTokens += usage.getPromptTokens();
-                completionTokens += usage.getCompletionTokens();
-                totalTokens += usage.getTotalTokens();
+                if(usage != null && usage.getTotalTokens() > 0){
+                    promptTokens = usage.getPromptTokens();
+                    completionTokens = usage.getCompletionTokens();
+                    totalTokens = usage.getTotalTokens();
+                }
             }
         }
 

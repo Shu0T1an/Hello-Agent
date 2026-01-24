@@ -4,7 +4,9 @@ import cn.ts.web.tools.SimpleTools;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.model.tool.ToolCallingChatOptions;
+import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
@@ -41,9 +43,12 @@ public class ChatTestService {
     }
 
     public Flux<ChatResponse> streamChat(String message) {
-
+        OpenAiChatOptions openAiChatOptions = OpenAiChatOptions.builder()
+                .streamUsage(true)
+                .build();
         Flux<ChatResponse> chatResponseFlux = chatClient.prompt()
                 .user(message)
+                .options(openAiChatOptions)
                 .stream()
                 .chatResponse();
         return chatResponseFlux;
