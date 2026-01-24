@@ -5,12 +5,17 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0e294f23-af53-4e42-af50-c9a578c991d4" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/McpManagerAutoConfiguration.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/controller/McpController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.claude/settings.local.json" beforeDir="false" afterPath="$PROJECT_DIR$/.claude/settings.local.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/controller/ChatTestController.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/controller/ChatTestController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/ChatTestService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/ChatTestService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/node/LLMNode.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/node/LLMNode.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Agent-Studio/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/AgentConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/AgentConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/tools/SimpleTools.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/tools/SimpleTools.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/resources/application.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-core/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/node/ToolNode.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/node/ToolNode.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java" beforeDir="false" afterPath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/StreamingOutput.java" beforeDir="false" afterPath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/StreamingOutput.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -25,6 +30,11 @@
     </option>
   </component>
   <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="f96cb11ed52b0bda65b7df9338b0fe4c95ac2e7a" />
+      </map>
+    </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="KubernetesApiPersistence">{}</component>
@@ -166,10 +176,10 @@
     <recent_temporary>
       <list>
         <item itemvalue="Spring Boot.Application" />
-        <item itemvalue="HTTP Request.generated-requests | #8" />
-        <item itemvalue="Application.EmailProcessingExample" />
         <item itemvalue="JUnit.MermaidGraphVisualizerTest.testConditionalEdges" />
         <item itemvalue="JUnit.MermaidGraphVisualizerTest.testCompiledGraph" />
+        <item itemvalue="HTTP Request.generated-requests | #8" />
+        <item itemvalue="Application.EmailProcessingExample" />
       </list>
     </recent_temporary>
   </component>
@@ -200,6 +210,7 @@
       <workItem from="1769040633142" duration="15930000" />
       <workItem from="1769097204765" duration="1423000" />
       <workItem from="1769128699247" duration="3547000" />
+      <workItem from="1769241288814" duration="8376000" />
     </task>
     <servers />
   </component>
@@ -226,102 +237,117 @@
           <option name="timeStamp" value="3" />
         </line-breakpoint>
         <line-breakpoint type="java-line">
-          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java</url>
-          <line>308</line>
-          <option name="timeStamp" value="28" />
-        </line-breakpoint>
-        <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/node/ToolNode.java</url>
-          <line>190</line>
+          <line>316</line>
           <option name="timeStamp" value="32" />
-        </line-breakpoint>
-        <line-breakpoint type="java-line">
-          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/ChatTestService.java</url>
-          <line>41</line>
-          <option name="timeStamp" value="50" />
-        </line-breakpoint>
-        <line-breakpoint type="java-line">
-          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/StreamingOutput.java</url>
-          <line>108</line>
-          <option name="timeStamp" value="51" />
-        </line-breakpoint>
-        <line-breakpoint type="java-line">
-          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/StreamingOutput.java</url>
-          <line>107</line>
-          <option name="timeStamp" value="52" />
-        </line-breakpoint>
-        <line-breakpoint type="java-line">
-          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/StreamingOutput.java</url>
-          <line>105</line>
-          <option name="timeStamp" value="53" />
         </line-breakpoint>
         <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeOutput.java</url>
           <line>200</line>
           <option name="timeStamp" value="64" />
         </line-breakpoint>
-        <line-breakpoint type="java-line">
-          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java</url>
-          <line>85</line>
-          <option name="timeStamp" value="65" />
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/GraphRunner.java</url>
+          <line>259</line>
+          <option name="timeStamp" value="88" />
         </line-breakpoint>
-        <line-breakpoint type="java-line">
-          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java</url>
-          <line>100</line>
-          <option name="timeStamp" value="68" />
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/GraphRunner.java</url>
+          <line>346</line>
+          <option name="timeStamp" value="91" />
         </line-breakpoint>
-        <line-breakpoint type="java-line">
-          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java</url>
-          <line>440</line>
-          <option name="timeStamp" value="69" />
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/GraphRunner.java</url>
+          <line>347</line>
+          <option name="timeStamp" value="92" />
         </line-breakpoint>
-        <line-breakpoint type="java-line">
-          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java</url>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/core/ReactAgent.java</url>
+          <line>268</line>
+          <option name="timeStamp" value="100" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/core/ReactAgent.java</url>
           <line>263</line>
-          <option name="timeStamp" value="72" />
+          <option name="timeStamp" value="102" />
         </line-breakpoint>
-        <line-breakpoint type="java-line">
+        <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java</url>
-          <line>307</line>
-          <option name="timeStamp" value="73" />
+          <line>218</line>
+          <option name="timeStamp" value="107" />
         </line-breakpoint>
-        <line-breakpoint type="java-line">
+        <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java</url>
-          <line>415</line>
-          <option name="timeStamp" value="74" />
+          <line>311</line>
+          <option name="timeStamp" value="109" />
         </line-breakpoint>
-        <line-breakpoint type="java-line">
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java</url>
+          <line>308</line>
+          <option name="timeStamp" value="110" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/node/LLMNode.java</url>
           <line>165</line>
-          <option name="timeStamp" value="75" />
-        </line-breakpoint>
-        <line-breakpoint type="java-line">
-          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java</url>
-          <line>466</line>
-          <option name="timeStamp" value="76" />
-        </line-breakpoint>
-        <line-breakpoint type="java-line">
-          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java</url>
-          <line>456</line>
-          <option name="timeStamp" value="77" />
-        </line-breakpoint>
-        <line-breakpoint type="java-line">
-          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/StreamingOutput.java</url>
-          <line>166</line>
-          <option name="timeStamp" value="79" />
+          <option name="timeStamp" value="112" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/StreamingOutput.java</url>
-          <line>173</line>
-          <option name="timeStamp" value="82" />
+          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/mcp/McpManagerImpl.java</url>
+          <line>191</line>
+          <option name="timeStamp" value="116" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java</url>
-          <line>230</line>
-          <option name="timeStamp" value="84" />
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/AgentConfig.java</url>
+          <line>63</line>
+          <option name="timeStamp" value="119" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>jar://$PROJECT_DIR$/../../Java/IDEAReports/org/springframework/ai/spring-ai-model/1.0.0/spring-ai-model-1.0.0-sources.jar!/org/springframework/ai/tool/method/MethodToolCallbackProvider.java</url>
+          <line>139</line>
+          <option name="timeStamp" value="121" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>jar://$PROJECT_DIR$/../../Java/IDEAReports/org/springframework/ai/spring-ai-model/1.0.0/spring-ai-model-1.0.0-sources.jar!/org/springframework/ai/tool/method/MethodToolCallbackProvider.java</url>
+          <line>58</line>
+          <option name="timeStamp" value="122" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/AgentConfig.java</url>
+          <line>58</line>
+          <option name="timeStamp" value="123" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/node/ToolNode.java</url>
+          <line>75</line>
+          <option name="timeStamp" value="125" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/core/ReactAgent.java</url>
+          <line>211</line>
+          <option name="timeStamp" value="127" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/core/ReactAgent.java</url>
+          <line>95</line>
+          <option name="timeStamp" value="128" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>jar://$PROJECT_DIR$/../../Java/IDEAReports/org/springframework/ai/spring-ai-model/1.0.0/spring-ai-model-1.0.0-sources.jar!/org/springframework/ai/tool/method/MethodToolCallbackProvider.java</url>
+          <line>65</line>
+          <option name="timeStamp" value="130" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/core/ReactAgent.java</url>
+          <line>210</line>
+          <option name="timeStamp" value="131" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
+    <pin-to-top-manager>
+      <pinned-members>
+        <PinnedItemInfo parentTag="org.springframework.ai.chat.messages.AssistantMessage" memberName="toolCalls" />
+      </pinned-members>
+    </pin-to-top-manager>
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />
