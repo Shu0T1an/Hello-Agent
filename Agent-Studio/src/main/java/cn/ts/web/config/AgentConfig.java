@@ -2,8 +2,7 @@ package cn.ts.web.config;
 
 import cn.ts.agent.core.ReactAgent;
 import cn.ts.agent.mcp.McpManager;
-import cn.ts.agent.mcp.model.McpConnectionConfig;
-import cn.ts.agent.mcp.model.McpConnectionType;
+import cn.ts.agent.mcp.model.McpStatistics;
 import cn.ts.web.service.AgentExecutionService;
 import cn.ts.web.tools.SimpleTools;
 import org.slf4j.Logger;
@@ -15,10 +14,7 @@ import org.springframework.context.event.EventListener;
 
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Agent 配置类
@@ -34,13 +30,22 @@ public class AgentConfig {
     private final ChatModel chatModel;
     private final AgentExecutionService agentExecutionService;
     private final McpManager mcpManager;
+    private final McpServerConfig mcpServerConfig;
+    private final NodeJsConfig nodeJsConfig;
+    private final ApiKeyConfig apiKeyConfig;
 
     public AgentConfig(ChatModel chatModel,
                        AgentExecutionService agentExecutionService,
-                       McpManager mcpManager) {
+                       McpManager mcpManager,
+                       McpServerConfig mcpServerConfig,
+                       NodeJsConfig nodeJsConfig,
+                       ApiKeyConfig apiKeyConfig) {
         this.chatModel = chatModel;
         this.agentExecutionService = agentExecutionService;
         this.mcpManager = mcpManager;
+        this.mcpServerConfig = mcpServerConfig;
+        this.nodeJsConfig = nodeJsConfig;
+        this.apiKeyConfig = apiKeyConfig;
     }
 
     /**
@@ -48,17 +53,16 @@ public class AgentConfig {
      */
     @EventListener(ApplicationReadyEvent.class)
     public void registerAgents() {
-//         先注册 MCP 服务（高德地图等）
+        // 注册 MCP 服务
         registerMcpServers();
-
         // 等待 MCP 连接建立
         waitForMcpConnections();
 
-//         准备工具列表（包括普通工具和 MCP 客户端）
+        // 准备工具列表（包括普通工具和 MCP 客户端）
         List<Object> tools = new ArrayList<>();
         tools.add(new SimpleTools());
 
-//         添加所有 MCP 客户端作为工具
+        // 添加所有 MCP 客户端作为工具
         tools.addAll(mcpManager.getAllMcpClients());
 
         logger.info("注册 Agent，工具数量: {}", tools.size());
@@ -100,54 +104,83 @@ public class AgentConfig {
     private void registerMcpServers() {
         logger.info("开始注册 MCP 服务器...");
 
-        // 注册高德地图 MCP
-        registerAmapMcp();
+        if (mcpServerConfig.getServers() == null || mcpServerConfig.getServers().isEmpty()) {
+            logger.warn("未配置任何 MCP 服务器");
+            return;
+        }
 
-        // 可以在这里添加更多 MCP 服务器
-        // registerWeatherMcp();
-        // registerFileSystemMcp();
+        // 从配置文件读取并注册所有 MCP 服务器
+        for (McpServerConfig.ServerConfig serverConfig : mcpServerConfig.getServers()) {
+            registerMcpServer(serverConfig);
+        }
 
-        logger.info("MCP 服务器注册完成");
+        logger.info("MCP 服务器注册完成，共 {} 个", mcpServerConfig.getServers().size());
     }
 
     /**
-     * 注册高德地图 MCP 服务
+     * 注册单个 MCP 服务器
+     *
+     * @param serverConfig MCP 服务器配置
      */
-    private void registerAmapMcp() {
-        logger.info("注册高德地图 MCP 服务...");
+    private void registerMcpServer(McpServerConfig.ServerConfig serverConfig) {
+        logger.info("注册 MCP 服务器: {} ({})", serverConfig.getName(), serverConfig.getDescription());
 
-        // 构建环境变量
-        Map<String, String> env = new HashMap<>();
-        // 如果需要高德 API Key，在这里添加
-         env.put("AMAP_MAPS_API_KEY", "7553ed7c2b3727253b52f522543f77ee");
+        // 解析环境变量占位符
+        McpServerConfig.ServerConfig resolvedConfig = resolveConfigPlaceholders(serverConfig);
 
-        // 构建 STDIO 配置
-        McpConnectionConfig.StdioConfig stdioConfig = McpConnectionConfig.StdioConfig.builder()
-                .command("D:\\Java\\nodejs\\npx.cmd")
-                .args(Arrays.asList("-y", "@amap/amap-maps-mcp-server"))
-                .env(env)
-                .build();
-
-        // 构建连接配置
-        McpConnectionConfig config = McpConnectionConfig.builder()
-                .name("amap")
-                .type(McpConnectionType.STDIO)
-                .description("高德地图 MCP 服务")
-                .stdioConfig(stdioConfig)
-                .timeout(Duration.ofSeconds(30))
-                .autoReconnect(true)
-                .maxRetries(3)
-                .retryInterval(Duration.ofSeconds(5))
-                .build();
-
-        // 注册连接
-        boolean success = mcpManager.registerConnection(config);
+        // 转换为 McpConnectionConfig 并注册
+        boolean success = mcpManager.registerConnection(resolvedConfig.toMcpConnectionConfig());
 
         if (success) {
-            logger.info("高德地图 MCP 服务注册成功");
+            logger.info("MCP 服务器 '{}' 注册成功", serverConfig.getName());
         } else {
-            logger.error("高德地图 MCP 服务注册失败");
+            logger.error("MCP 服务器 '{}' 注册失败", serverConfig.getName());
         }
+    }
+
+    /**
+     * 解析配置中的占位符（如 ${nodejs.npx-path}）
+     *
+     * @param serverConfig 原始配置
+     * @return 解析后的配置
+     */
+    private McpServerConfig.ServerConfig resolveConfigPlaceholders(McpServerConfig.ServerConfig serverConfig) {
+        // 解析 STDIO 命令路径
+        if (serverConfig.getStdio() != null && serverConfig.getStdio().getCommand() != null) {
+            String command = serverConfig.getStdio().getCommand();
+            if ("${nodejs.npx-path}".equals(command)) {
+                serverConfig.getStdio().setCommand(nodeJsConfig.getNpxPathOrDefault());
+            }
+        }
+
+        // 解析环境变量中的 API 密钥
+        if (serverConfig.getStdio() != null && serverConfig.getStdio().getEnv() != null) {
+            serverConfig.getStdio().getEnv().forEach((key, value) -> {
+                if (value != null && value.startsWith("${api.keys.")) {
+                    String serviceName = extractServiceNameFromPlaceholder(value);
+                    String apiKey = apiKeyConfig.getKey(serviceName);
+                    if (apiKey != null) {
+                        serverConfig.getStdio().getEnv().put(key, apiKey);
+                    }
+                }
+            });
+        }
+
+        return serverConfig;
+    }
+
+    /**
+     * 从占位符中提取服务名称
+     * 例如: "${api.keys.amap}" -> "amap"
+     *
+     * @param placeholder 占位符字符串
+     * @return 服务名称
+     */
+    private String extractServiceNameFromPlaceholder(String placeholder) {
+        if (placeholder != null && placeholder.startsWith("${api.keys.") && placeholder.endsWith("}")) {
+            return placeholder.substring("${api.keys.".length(), placeholder.length() - 1);
+        }
+        return placeholder;
     }
 
     /**
@@ -156,22 +189,63 @@ public class AgentConfig {
     private void waitForMcpConnections() {
         logger.info("等待 MCP 连接建立...");
 
-        // 等待 3 秒让 MCP 连接有时间建立
-        try {
-            Thread.sleep(3000);
-        } catch (InterruptedException e) {
-            logger.warn("等待 MCP 连接被中断", e);
-            Thread.currentThread().interrupt();
+        boolean connected = waitForConnections(Duration.ofSeconds(30));
+
+        var statistics = mcpManager.getStatistics();
+        logConnectionStatistics(statistics);
+
+        if (!connected) {
+            logger.warn("MCP 连接等待超时");
+        }
+    }
+
+    /**
+     * 等待所有连接完成
+     *
+     * @param timeout 超时时间
+     * @return 是否所有连接都已建立
+     */
+    private boolean waitForConnections(Duration timeout) {
+        long startTime = System.currentTimeMillis();
+        long timeoutMs = timeout.toMillis();
+
+        while (System.currentTimeMillis() - startTime < timeoutMs) {
+            if (areAllConnectionsSettled()) {
+                logger.info("MCP 连接建立完成");
+                return true;
+            }
+
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                logger.warn("等待 MCP 连接被中断", e);
+                Thread.currentThread().interrupt();
+                return false;
+            }
         }
 
-        // 输出连接状态
+        return false;
+    }
+
+    /**
+     * 检查是否所有连接都已稳定（成功或失败）
+     */
+    private boolean areAllConnectionsSettled() {
         var statistics = mcpManager.getStatistics();
-        logger.info("MCP 连接状态 - 总数: {}, 已连接: {}, 错误: {}",
+        int total = statistics.getTotalConnections();
+        int settled = statistics.getConnectedCount() + statistics.getErrorCount();
+        return total > 0 && settled >= total;
+    }
+
+    /**
+     * 记录连接统计信息
+     */
+    private void logConnectionStatistics(McpStatistics statistics) {
+        logger.info("MCP 连接状态 - 总数: {}, 已连接: {}, 错误: {}, 连接中: {}",
                 statistics.getTotalConnections(),
                 statistics.getConnectedCount(),
-                statistics.getErrorCount());
-
-        // 输出工具数量
+                statistics.getErrorCount(),
+                statistics.getConnectingCount());
         logger.info("MCP 工具总数: {}", statistics.getTotalTools());
     }
 }

@@ -24,11 +24,11 @@ spring:
 
   ai:
     openai:
-      api-key: sk-1c7794d42765440fa4913b1cbb097fb2 #ms-89889fc4-c573-4a04-85ac-e5ac323c2374
-      base-url: https://dashscope.aliyuncs.com/compatible-mode #https://api-inference.modelscope.cn/
+      api-key: ms-89889fc4-c573-4a04-85ac-e5ac323c2374  # sk-1c7794d42765440fa4913b1cbb097fb2
+      base-url: https://api-inference.modelscope.cn/ # https://dashscope.aliyuncs.com/compatible-mode #
       chat:
         options:
-          model: qwen-flash #Qwen/Qwen3-235B-A22B-Instruct-2507
+          model:  Qwen/Qwen3-235B-A22B-Instruct-2507 # qwen-flash
   # Redis配置
 #redis:
 #  sdk:
@@ -56,4 +56,33 @@ jwt:
 #  type-aliases-package: cn.ts.shop.module
 #  configuration:
 #    map-underscore-to-camel-case: true
+
+# MCP 服务器配置（开发环境）
+mcp:
+  servers:
+    servers:
+      - name: amap
+        type: STDIO
+        description: 高德地图 MCP 服务
+        stdio:
+          command: ${nodejs.npx-path}
+          args:
+            - "-y"
+            - "@amap/amap-maps-mcp-server"
+          env:
+            AMAP_MAPS_API_KEY: ${api.keys.amap}
+        timeout-seconds: 30
+        auto-reconnect: true
+        max-retries: 3
+        retry-interval-seconds: 5
+
+# Node.js 路径配置（开发环境）
+nodejs:
+  npx-path: ${NPX_PATH:D:\\Java\\nodejs\\npx.cmd}
+
+# API 密钥配置（开发环境）
+api:
+  keys:
+    keys:
+      amap: ${AMAP_API_KEY:7553ed7c2b3727253b52f522543f77ee}
 

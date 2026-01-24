@@ -25,7 +25,7 @@
                 <span v-if="event.nodeId" class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-mono">{{ event.nodeId }}</span>
               </div>
               <div class="flex items-center gap-2">
-                <span class="text-xs text-slate-500">{{ formatTimestamp(event.timestamp) }}</span>
+                <span class="text-xs text-slate-500">{{ formatDateTime(event.timestamp) }}</span>
                 <ChevronDown v-if="isExpanded(getEventId(event, index))" :size="16" class="text-slate-400" />
                 <ChevronRight v-else :size="16" class="text-slate-400" />
               </div>
@@ -112,14 +112,16 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Activity, Play, Bot, Terminal, ChevronDown, ChevronRight, Sparkles, MessageSquare, Wrench, Cog, Loader, Eye, EyeOff, Palette } from 'lucide-vue-next'
-import { type AgentEvent } from '@/types/agent'
+import { Activity, ChevronDown, ChevronRight, Sparkles, MessageSquare, Wrench, Cog, Loader, Eye, EyeOff, Palette } from 'lucide-vue-next'
+import type { AgentEvent } from '@/types/agent'
+import { formatDateTime, formatJSON } from '@/utils/helpers'
+import { isToolNode, isLLMToolCall, isLLMResponse, getNodeConfig, getEventId } from '@/utils/agentEvents'
 
 // Raw Data 风格类型定义
 type RawDataStyle = 'dark' | 'light' | 'solarized'
 
 // Raw Data 风格配置
-const rawDataStyles: Record<RawDataStyle, { bg: string, text: string }> = {
+const rawDataStyles: Record<RawDataStyle, { bg: string; text: string }> = {
   dark: { bg: 'bg-slate-900', text: 'text-slate-100' },
   light: { bg: 'bg-slate-100', text: 'text-slate-900' },
   solarized: { bg: 'bg-amber-50', text: 'text-amber-950' }
@@ -140,39 +142,12 @@ const currentStyle = ref<RawDataStyle>('dark')
 
 const processedEvents = computed(() => props.events)
 
-function getEventId(event: AgentEvent, index: number): string {
-  return `${event.nodeId}-${event.timestamp}-${index}`
-}
-
-function formatTimestamp(ts: string): string {
-  try {
-    const date = new Date(ts)
-    return date.toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    })
-  } catch {
-    return ts
-  }
-}
-
-function formatJSON(jsonStr: string): string {
-  try {
-    const parsed = JSON.parse(jsonStr)
-    return JSON.stringify(parsed, null, 2)
-  } catch {
-    return jsonStr
-  }
-}
-
+// 判断事件是否展开
 function isExpanded(eventId: string): boolean {
   return expandedEvents.value.has(eventId)
 }
 
+// 切换事件展开状态
 function toggleExpand(eventId: string): void {
   if (expandedEvents.value.has(eventId)) {
     expandedEvents.value.delete(eventId)
@@ -181,76 +156,19 @@ function toggleExpand(eventId: string): void {
   }
 }
 
+// 切换原始数据显示
 function toggleRawData(eventId: string): void {
   showRawData.value[eventId] = !showRawData.value[eventId]
 }
 
+// 循环切换 Raw Data 风格
 function cycleStyle(): void {
   const styles: RawDataStyle[] = ['dark', 'light', 'solarized']
   const currentIndex = styles.indexOf(currentStyle.value)
-  currentStyle.value = styles[(currentIndex + 1) % styles.length]
-}
-
-function isToolNode(event: AgentEvent): boolean {
-  return event.nodeType === 'tool'
-}
-
-function isLLMToolCall(event: AgentEvent): boolean {
-  if (event.nodeType !== 'llm') return false
-  const toolCalls = event.stateData?.execution_record?.toolCalls
-  return toolCalls !== undefined && toolCalls.length > 0
-}
-
-function isLLMResponse(event: AgentEvent): boolean {
-  if (event.nodeType !== 'llm') return false
-  const toolCalls = event.stateData?.execution_record?.toolCalls
-  return !toolCalls || toolCalls.length === 0
-}
-
-const colorThemes = {
-  starting: {
-    icon: Play,
-    label: '已启动',
-    dotBg: 'bg-slate-400',
-    borderClass: 'border-slate-200',
-    labelClass: 'text-slate-600'
-  },
-  llm_tool_call: {
-    icon: Bot,
-    label: 'AI Thinking',
-    dotBg: 'bg-indigo-500',
-    borderClass: 'border-indigo-200',
-    labelClass: 'text-indigo-700'
-  },
-  llm_response: {
-    icon: MessageSquare,
-    label: 'AI Response',
-    dotBg: 'bg-emerald-500',
-    borderClass: 'border-emerald-200',
-    labelClass: 'text-emerald-700'
-  },
-  tool_execution: {
-    icon: Terminal,
-    label: 'Tool Execution',
-    dotBg: 'bg-amber-500',
-    borderClass: 'border-amber-200',
-    labelClass: 'text-amber-700'
-  },
-  custom: {
-    icon: Cog,
-    label: 'System Node',
-    dotBg: 'bg-slate-500',
-    borderClass: 'border-slate-200',
-    labelClass: 'text-slate-700'
+  const nextStyle = styles[(currentIndex + 1) % styles.length]
+  if (nextStyle) {
+    currentStyle.value = nextStyle
   }
-}
-
-function getNodeConfig(event: AgentEvent) {
-  if (event.eventType === 'starting') return colorThemes.starting
-  if (isLLMToolCall(event)) return colorThemes.llm_tool_call
-  if (isLLMResponse(event)) return colorThemes.llm_response
-  if (isToolNode(event)) return colorThemes.tool_execution
-  return colorThemes.custom
 }
 </script>
 

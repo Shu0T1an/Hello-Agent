@@ -11,6 +11,8 @@ import cn.ts.graph.state.MapState;
 import cn.ts.graph.state.State;
 import cn.ts.graph.state.strategy.AppendStrategy;
 import cn.ts.graph.state.strategy.ReplaceStrategy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
@@ -35,6 +37,8 @@ import java.util.Map;
  * @author tianshuo
  */
 public class ReactAgent implements Agent {
+
+    private static final Logger logger = LoggerFactory.getLogger(ReactAgent.class);
 
     /**
      * 节点名称常量
@@ -208,7 +212,11 @@ public class ReactAgent implements Agent {
         configureStateInitializer(graph);
 
         // 创建节点
-        LLMNode llmNode = new LLMNode(chatModel, "You are a helpful assistant.", streaming, tools);
+        LLMNode llmNode = LLMNode.builder(chatModel)
+                .systemPrompt("You are a helpful assistant.")
+                .streaming(streaming)
+                .tools(tools)
+                .build();
         ToolNode toolNode = new ToolNode(tools);
 
         // 添加节点到图
@@ -239,14 +247,11 @@ public class ReactAgent implements Agent {
     private void configureStateInitializer(StateGraph graph) {
         graph.setStateInitializer(() -> {
             MapState state = new MapState();
-            // messages 使用追加策略，这样多个节点的输出可以追加到同一个列表
             state.registerKeyStrategy("messages", AppendStrategy.getInstance());
-            System.out.println("State initialized with keys: " + state.keys());
-            // iteration 使用替换策略（这是默认策略，但显式声明更清晰）
             state.registerKeyStrategy("iteration", ReplaceStrategy.getInstance());
-            // max_iterations 使用替换策略
             state.registerKeyStrategy("max_iterations", ReplaceStrategy.getInstance());
             state.registerKeyStrategy("execute_record", AppendStrategy.getInstance());
+            logger.debug("State initialized with keys: {}", state.keys());
             return state;
         });
     }

@@ -5,17 +5,35 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0e294f23-af53-4e42-af50-c9a578c991d4" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/McpManagerAutoConfiguration.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/controller/McpController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/.gitignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/uiDesigner.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/ApiKeyConfig.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/McpServerConfig.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/NodeJsConfig.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/Tool/ToolUtils.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.claude/settings.local.json" beforeDir="false" afterPath="$PROJECT_DIR$/.claude/settings.local.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Agent-Studio/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/pom.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/AgentConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/AgentConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/tools/SimpleTools.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/tools/SimpleTools.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/resources/application-dev.yml" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/resources/application-dev.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/resources/application.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent-core/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/test/java/cn/ts/AppTest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/CLAUDE.md" beforeDir="false" afterPath="$PROJECT_DIR$/CLAUDE.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/config/LLMNodeConfig.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/core/ReactAgent.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/core/ReactAgent.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/node/LLMNode.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/node/LLMNode.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/node/ToolNode.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/node/ToolNode.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java" beforeDir="false" afterPath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/agent/AgentTimeline.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/agent/AgentTimeline.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/chat/ChatContainer.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/chat/ChatContainer.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/chat/ChatMessage.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/chat/ChatMessage.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/chat/MessageInput.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/chat/MessageInput.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/common/TopNav.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/common/TopNav.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/main.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/main.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/stores/agentTimeline.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/stores/agentTimeline.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/stores/chat.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/stores/chat.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/graph-core/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/graph-core/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -67,6 +85,7 @@
   "keyToString": {
     "Application.EmailProcessingExample.executor": "Run",
     "HTTP Request.generated-requests | #8.executor": "Run",
+    "JUnit.KeyStrategyTest.executor": "Run",
     "JUnit.MermaidGraphVisualizerTest.executor": "Run",
     "JUnit.MermaidGraphVisualizerTest.testCompiledGraph.executor": "Run",
     "JUnit.MermaidGraphVisualizerTest.testConditionalEdges.executor": "Run",
@@ -76,8 +95,9 @@
     "RequestMappingsPanelWidth0": "75",
     "RequestMappingsPanelWidth1": "75",
     "RunOnceActivity.ShowReadmeOnStart": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
     "Spring Boot.Application.executor": "Run",
-    "git-widget-placeholder": "refactor/architecture-decoupling",
+    "git-widget-placeholder": "master",
     "kotlin-language-version-configured": "true",
     "last_opened_file_path": "D:/JavaProject/Hello-Agent/graph-core/src/main/resources",
     "node.js.detected.package.eslint": "true",
@@ -101,9 +121,8 @@
       <recent name="D:\JavaProject\Hello-Agent\graph-core\src\main\resources" />
     </key>
   </component>
-  <component name="RunManager" selected="Spring Boot.Application">
-    <configuration name="EmailProcessingExample" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="cn.ts.graph.EmailProcessingExample" />
+  <component name="RunManager" selected="JUnit.CompiledGraphTest">
+    <configuration name="CompiledGraphTest" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
       <module name="graph-core" />
       <extension name="coverage">
         <pattern>
@@ -111,54 +130,72 @@
           <option name="ENABLED" value="true" />
         </pattern>
       </extension>
+      <option name="PACKAGE_NAME" value="cn.ts.graph" />
+      <option name="MAIN_CLASS_NAME" value="cn.ts.graph.CompiledGraphTest" />
+      <option name="TEST_OBJECT" value="class" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="generated-requests | #8" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$APPLICATION_CONFIG_DIR$/scratches/generated-requests.http" index="8" requestIdentifier="#8" runType="Run single request">
-      <method v="2" />
-    </configuration>
-    <configuration name="MermaidGraphVisualizerTest.testCompiledGraph" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+    <configuration name="CompiledGraphTest.testInvoke" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
       <module name="graph-core" />
       <extension name="coverage">
         <pattern>
-          <option name="PATTERN" value="cn.ts.graph.visualization.*" />
+          <option name="PATTERN" value="cn.ts.graph.*" />
           <option name="ENABLED" value="true" />
         </pattern>
       </extension>
-      <option name="PACKAGE_NAME" value="cn.ts.graph.visualization" />
-      <option name="MAIN_CLASS_NAME" value="cn.ts.graph.visualization.MermaidGraphVisualizerTest" />
-      <option name="METHOD_NAME" value="testCompiledGraph" />
+      <option name="PACKAGE_NAME" value="cn.ts.graph" />
+      <option name="MAIN_CLASS_NAME" value="cn.ts.graph.CompiledGraphTest" />
+      <option name="METHOD_NAME" value="testInvoke" />
       <option name="TEST_OBJECT" value="method" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="MermaidGraphVisualizerTest.testConditionalEdges" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+    <configuration name="KeyStrategyTest" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
       <module name="graph-core" />
       <extension name="coverage">
         <pattern>
-          <option name="PATTERN" value="cn.ts.graph.visualization.*" />
+          <option name="PATTERN" value="cn.ts.graph.state.strategy.*" />
           <option name="ENABLED" value="true" />
         </pattern>
       </extension>
-      <option name="PACKAGE_NAME" value="cn.ts.graph.visualization" />
-      <option name="MAIN_CLASS_NAME" value="cn.ts.graph.visualization.MermaidGraphVisualizerTest" />
-      <option name="METHOD_NAME" value="testConditionalEdges" />
+      <option name="PACKAGE_NAME" value="cn.ts.graph.state.strategy" />
+      <option name="MAIN_CLASS_NAME" value="cn.ts.graph.state.strategy.KeyStrategyTest" />
+      <option name="TEST_OBJECT" value="class" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="KeyStrategyTest.testAppendStrategyWithList" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="graph-core" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="cn.ts.graph.state.strategy.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="cn.ts.graph.state.strategy" />
+      <option name="MAIN_CLASS_NAME" value="cn.ts.graph.state.strategy.KeyStrategyTest" />
+      <option name="METHOD_NAME" value="testAppendStrategyWithList" />
       <option name="TEST_OBJECT" value="method" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="Application" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" temporary="true" nameIsGenerated="true">
-      <module name="Agent-Studio" />
-      <option name="SPRING_BOOT_MAIN_CLASS" value="cn.ts.Application" />
+    <configuration name="KeyStrategyTest.testReplaceStrategy" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="graph-core" />
       <extension name="coverage">
         <pattern>
-          <option name="PATTERN" value="cn.ts.*" />
+          <option name="PATTERN" value="cn.ts.graph.state.strategy.*" />
           <option name="ENABLED" value="true" />
         </pattern>
       </extension>
+      <option name="PACKAGE_NAME" value="cn.ts.graph.state.strategy" />
+      <option name="MAIN_CLASS_NAME" value="cn.ts.graph.state.strategy.KeyStrategyTest" />
+      <option name="METHOD_NAME" value="testReplaceStrategy" />
+      <option name="TEST_OBJECT" value="method" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
@@ -175,11 +212,11 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Spring Boot.Application" />
-        <item itemvalue="JUnit.MermaidGraphVisualizerTest.testConditionalEdges" />
-        <item itemvalue="JUnit.MermaidGraphVisualizerTest.testCompiledGraph" />
-        <item itemvalue="HTTP Request.generated-requests | #8" />
-        <item itemvalue="Application.EmailProcessingExample" />
+        <item itemvalue="JUnit.CompiledGraphTest" />
+        <item itemvalue="JUnit.CompiledGraphTest.testInvoke" />
+        <item itemvalue="JUnit.KeyStrategyTest" />
+        <item itemvalue="JUnit.KeyStrategyTest.testAppendStrategyWithList" />
+        <item itemvalue="JUnit.KeyStrategyTest.testReplaceStrategy" />
       </list>
     </recent_temporary>
   </component>
@@ -238,7 +275,7 @@
         </line-breakpoint>
         <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/node/ToolNode.java</url>
-          <line>316</line>
+          <line>287</line>
           <option name="timeStamp" value="32" />
         </line-breakpoint>
         <line-breakpoint type="java-line">
@@ -263,12 +300,12 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/core/ReactAgent.java</url>
-          <line>268</line>
+          <line>273</line>
           <option name="timeStamp" value="100" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/core/ReactAgent.java</url>
-          <line>263</line>
+          <line>268</line>
           <option name="timeStamp" value="102" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
@@ -287,19 +324,9 @@
           <option name="timeStamp" value="110" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/node/LLMNode.java</url>
-          <line>165</line>
-          <option name="timeStamp" value="112" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/mcp/McpManagerImpl.java</url>
           <line>191</line>
           <option name="timeStamp" value="116" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/AgentConfig.java</url>
-          <line>63</line>
-          <option name="timeStamp" value="119" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
           <url>jar://$PROJECT_DIR$/../../Java/IDEAReports/org/springframework/ai/spring-ai-model/1.0.0/spring-ai-model-1.0.0-sources.jar!/org/springframework/ai/tool/method/MethodToolCallbackProvider.java</url>
@@ -312,34 +339,49 @@
           <option name="timeStamp" value="122" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/AgentConfig.java</url>
-          <line>58</line>
-          <option name="timeStamp" value="123" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/node/ToolNode.java</url>
-          <line>75</line>
-          <option name="timeStamp" value="125" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/core/ReactAgent.java</url>
-          <line>211</line>
-          <option name="timeStamp" value="127" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/core/ReactAgent.java</url>
-          <line>95</line>
-          <option name="timeStamp" value="128" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
           <url>jar://$PROJECT_DIR$/../../Java/IDEAReports/org/springframework/ai/spring-ai-model/1.0.0/spring-ai-model-1.0.0-sources.jar!/org/springframework/ai/tool/method/MethodToolCallbackProvider.java</url>
           <line>65</line>
           <option name="timeStamp" value="130" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/core/ReactAgent.java</url>
-          <line>210</line>
-          <option name="timeStamp" value="131" />
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/AgentConfig.java</url>
+          <line>248</line>
+          <option name="timeStamp" value="133" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/AgentConfig.java</url>
+          <line>65</line>
+          <option name="timeStamp" value="135" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/AgentConfig.java</url>
+          <line>56</line>
+          <option name="timeStamp" value="136" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/AgentConfig.java</url>
+          <line>58</line>
+          <option name="timeStamp" value="137" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/AgentConfig.java</url>
+          <line>61</line>
+          <option name="timeStamp" value="138" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/AgentConfig.java</url>
+          <line>62</line>
+          <option name="timeStamp" value="139" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/mcp/McpManagerImpl.java</url>
+          <line>127</line>
+          <option name="timeStamp" value="140" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/mcp/McpManagerImpl.java</url>
+          <line>339</line>
+          <option name="timeStamp" value="142" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>

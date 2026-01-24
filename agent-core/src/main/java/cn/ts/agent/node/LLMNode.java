@@ -1,5 +1,6 @@
 package cn.ts.agent.node;
 
+import cn.ts.agent.Tool.ToolUtils;
 import cn.ts.agent.model.ChatModelRequest;
 import cn.ts.graph.flux.GraphFlux;
 import cn.ts.graph.node.NodeAction;
@@ -11,7 +12,6 @@ import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.ChatOptions;
-import org.springframework.ai.model.tool.ToolCallingChatOptions;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.tool.ToolCallback;
 import reactor.core.publisher.Flux;
@@ -19,7 +19,8 @@ import reactor.core.publisher.Flux;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
+
+import static cn.ts.agent.Tool.ToolUtils.getAllToolCallbacksFromTools;
 
 /**
  * LLM 节点：调用 Spring AI ChatClient
@@ -29,6 +30,16 @@ import java.util.concurrent.atomic.AtomicInteger;
  * 2. 通过 ModelRequest 构建 ChatClient 请求
  * 3. 调用 ChatClient 进行 LLM 推理（支持流式和非流式）
  * 4. 返回包含响应内容和更新后消息列表的状态
+ * </p>
+ * <p>
+ * 使用 Builder 模式创建实例：
+ * <pre>{@code
+ * LLMNode node = LLMNode.builder(chatModel)
+ *     .systemPrompt("You are a helpful assistant.")
+ *     .streaming(true)
+ *     .tools(tool1, tool2)
+ *     .build();
+ * }</pre>
  * </p>
  *
  * @author tianshuo
@@ -44,111 +55,16 @@ public class LLMNode implements NodeAction {
     private final boolean streaming;
 
     /**
-     * 创建 LLM 节点（非流式）
-     *
-     * @param chatModel ChatModel 实例
-     * @param tools Spring AI 工具对象（使用 @Tool 注解的方法所在类）
+     * 私有构造函数，仅供 Builder 使用
      */
-    public LLMNode(ChatModel chatModel, Object... tools) {
-        this(chatModel, "You are a helpful assistant.", false, tools);
-    }
-
-    /**
-     * 创建 LLM 节点（带系统提示词）
-     *
-     * @param chatModel ChatModel 实例
-     * @param systemPrompt 系统提示词
-     * @param tools Spring AI 工具对象
-     */
-    public LLMNode(ChatModel chatModel, String systemPrompt, Object... tools) {
-        this(chatModel, systemPrompt, false, tools);
-    }
-
-    /**
-     * 创建 LLM 节点（支持流式配置）
-     *
-     * @param chatModel ChatModel 实例
-     * @param systemPrompt 系统提示词
-     * @param streaming 是否启用流式输出
-     * @param tools Spring AI 工具对象
-     */
-    public LLMNode(ChatModel chatModel, String systemPrompt, boolean streaming, Object... tools) {
-        this.systemPrompt = systemPrompt;
-        this.streaming = streaming;
-        this.chatOptions = OpenAiChatOptions.builder()
-                .streamUsage(true)
-                .internalToolExecutionEnabled(false)
-                .build();
-        this.toolCallbacks = new ArrayList<>();
-        this.chatClient = ChatClient.builder(chatModel)
-                .defaultOptions(this.chatOptions)
-                .defaultTools(tools)
-                .build();
-    }
-
-    /**
-     * 创建 LLM 节点（直接使用 ChatClient，非流式）
-     *
-     * @param chatClient ChatClient 实例
-     */
-    public LLMNode(ChatClient chatClient) {
-        this(chatClient, "You are a helpful assistant.", false);
-    }
-
-    /**
-     * 创建 LLM 节点（带系统提示词，直接使用 ChatClient，非流式）
-     *
-     * @param chatClient ChatClient 实例
-     * @param systemPrompt 系统提示词
-     */
-    public LLMNode(ChatClient chatClient, String systemPrompt) {
-        this(chatClient, systemPrompt, false);
-    }
-
-    /**
-     * 创建 LLM 节点（带系统提示词和流式配置，直接使用 ChatClient）
-     *
-     * @param chatClient ChatClient 实例
-     * @param systemPrompt 系统提示词
-     * @param streaming 是否启用流式输出
-     */
-    public LLMNode(ChatClient chatClient, String systemPrompt, boolean streaming) {
-        this.chatClient = chatClient;
-        this.systemPrompt = systemPrompt;
-        this.streaming = streaming;
-        this.chatOptions = null;
-        this.toolCallbacks = new ArrayList<>();
-    }
-
-    /**
-     * 创建 LLM 节点（完整配置）
-     *
-     * @param chatClient ChatClient 实例
-     * @param systemPrompt 系统提示词
-     * @param chatOptions 聊天选项
-     * @param toolCallbacks 工具回调列表
-     */
-    public LLMNode(ChatClient chatClient, String systemPrompt,
-                   ChatOptions chatOptions, List<ToolCallback> toolCallbacks) {
-        this(chatClient, systemPrompt, chatOptions, toolCallbacks, false);
-    }
-
-    /**
-     * 创建 LLM 节点（完整配置，支持流式）
-     *
-     * @param chatClient ChatClient 实例
-     * @param systemPrompt 系统提示词
-     * @param chatOptions 聊天选项
-     * @param toolCallbacks 工具回调列表
-     * @param streaming 是否启用流式输出
-     */
-    public LLMNode(ChatClient chatClient, String systemPrompt,
-                   ChatOptions chatOptions, List<ToolCallback> toolCallbacks, boolean streaming) {
-        this.chatClient = chatClient;
-        this.systemPrompt = systemPrompt;
-        this.chatOptions = chatOptions;
-        this.toolCallbacks = toolCallbacks != null ? toolCallbacks : new ArrayList<>();
-        this.streaming = streaming;
+    private LLMNode(Builder builder) {
+        this.chatClient = builder.chatClient;
+        this.systemPrompt = builder.systemPrompt;
+        this.chatOptions = builder.chatOptions;
+        this.toolCallbacks = builder.toolCallbacks != null
+                ? builder.toolCallbacks
+                : new ArrayList<>();
+        this.streaming = builder.streaming;
     }
 
     @Override
@@ -156,7 +72,6 @@ public class LLMNode implements NodeAction {
         logger.debug("LLMNode processing state: {}, streaming: {}", state, streaming);
 
         // 1. 构建请求
-
         ChatModelRequest request = ChatModelRequest.builder(state)
                 .systemPrompt(systemPrompt)
                 .baseOptions(chatOptions)
@@ -212,29 +127,136 @@ public class LLMNode implements NodeAction {
     }
 
     /**
-     * 获取系统提示词
+     * 创建基于 ChatModel 的 Builder
      *
-     * @return 系统提示词
+     * @param chatModel ChatModel 实例
+     * @return Builder 实例
      */
-    public String getSystemPrompt() {
-        return systemPrompt;
+    public static Builder builder(ChatModel chatModel) {
+        return new Builder(chatModel);
     }
 
     /**
-     * 获取 ChatClient
+     * 创建基于 ChatClient 的 Builder
      *
-     * @return ChatClient 实例
+     * @param chatClient ChatClient 实例
+     * @return Builder 实例
      */
-    public ChatClient getChatClient() {
-        return chatClient;
+    public static Builder builder(ChatClient chatClient) {
+        return new Builder(chatClient);
     }
 
     /**
-     * 是否启用流式输出
-     *
-     * @return true 如果启用流式输出
+     * LLMNode Builder 类
+     * <p>
+     * 使用示例：
+     * <pre>{@code
+     * LLMNode node = LLMNode.builder(chatModel)
+     *     .systemPrompt("You are a helpful assistant.")
+     *     .streaming(true)
+     *     .tools(tool1, tool2)
+     *     .build();
+     * }</pre>
+     * </p>
      */
-    public boolean isStreaming() {
-        return streaming;
+    public static class Builder {
+        private ChatClient chatClient;
+        private String systemPrompt = "You are a helpful assistant.";
+        private ChatOptions chatOptions;
+        private List<ToolCallback> toolCallbacks;
+        private boolean streaming = false;
+        private Object[] tools;
+
+        private Builder(ChatModel chatModel) {
+            this.chatClient = ChatClient.builder(chatModel)
+                    .defaultOptions(OpenAiChatOptions.builder()
+                            .streamUsage(true)
+                            .internalToolExecutionEnabled(false)
+                            .build())
+                    .build();
+        }
+
+        private Builder(ChatClient chatClient) {
+            this.chatClient = chatClient;
+        }
+
+        /**
+         * 设置系统提示词
+         *
+         * @param systemPrompt 系统提示词
+         * @return Builder 实例
+         */
+        public Builder systemPrompt(String systemPrompt) {
+            this.systemPrompt = systemPrompt;
+            return this;
+        }
+
+        /**
+         * 设置是否启用流式输出
+         *
+         * @param streaming 是否启用流式输出
+         * @return Builder 实例
+         */
+        public Builder streaming(boolean streaming) {
+            this.streaming = streaming;
+            return this;
+        }
+
+        /**
+         * 设置聊天选项
+         *
+         * @param chatOptions 聊天选项
+         * @return Builder 实例
+         */
+        public Builder chatOptions(ChatOptions chatOptions) {
+            this.chatOptions = chatOptions;
+            return this;
+        }
+
+        /**
+         * 设置工具回调列表
+         *
+         * @param toolCallbacks 工具回调列表
+         * @return Builder 实例
+         */
+        public Builder toolCallbacks(List<ToolCallback> toolCallbacks) {
+            this.toolCallbacks = toolCallbacks;
+            return this;
+        }
+
+        /**
+         * 添加工具回调
+         *
+         * @param toolCallback 工具回调
+         * @return Builder 实例
+         */
+        public Builder addToolCallback(ToolCallback toolCallback) {
+            if (this.toolCallbacks == null) {
+                this.toolCallbacks = new ArrayList<>();
+            }
+            this.toolCallbacks.add(toolCallback);
+            return this;
+        }
+
+        /**
+         * 设置工具对象（使用 @Tool 注解的方法所在类）
+         *
+         * @param tools 工具对象数组
+         * @return Builder 实例
+         */
+        public Builder tools(Object... tools) {
+            this.tools = tools;
+            this.toolCallbacks = getAllToolCallbacksFromTools(tools);
+            return this;
+        }
+
+        /**
+         * 构建 LLMNode 实例
+         *
+         * @return LLMNode 实例
+         */
+        public LLMNode build() {
+            return new LLMNode(this);
+        }
     }
 }

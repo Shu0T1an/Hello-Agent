@@ -18,6 +18,7 @@
 
       <!-- 输入框 -->
       <textarea
+        ref="textareaRef"
         v-model="inputContent"
         class="message-textarea"
         placeholder="输入消息..."
@@ -42,7 +43,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { Settings } from 'lucide-vue-next'
 import { useChatStore } from '@/stores/chat'
 import { useAgentStore } from '@/stores/agent'
@@ -52,42 +53,51 @@ import BaseDropdown from '@/components/base/BaseDropdown.vue'
 const chatStore = useChatStore()
 const agentStore = useAgentStore()
 const inputContent = ref('')
+const textareaRef = ref<HTMLTextAreaElement>()
 
+// Agent 列表
 const agents = computed(() => agentStore.agents)
+
+// 当前选中的 Agent
 const currentAgent = computed(() => agentStore.currentAgent)
 
+// Agent 下拉选项
 const agentDropdownItems = computed(() => {
   return agents.value.map(agent => ({
     label: agent,
     value: agent,
-    icon: Settings,
+    icon: Settings
   }))
 })
 
+// 是否可以发送消息
 const canSend = computed(() => {
   return inputContent.value.trim().length > 0 && !chatStore.isProcessing
 })
 
-function handleAgentChange(agentName: string) {
+// 处理 Agent 切换
+function handleAgentChange(agentName: string): void {
   agentStore.setCurrentAgent(agentName)
 }
 
-function handleSend() {
+// 发送消息
+function handleSend(): void {
   if (!canSend.value) return
 
   chatStore.sendMessage(inputContent.value)
   inputContent.value = ''
+
   // 重置 textarea 高度
-  const textarea = document.querySelector('.message-textarea') as HTMLTextAreaElement
-  if (textarea) {
-    textarea.style.height = 'auto'
+  if (textareaRef.value) {
+    textareaRef.value.style.height = 'auto'
   }
 }
 
-function autoResize(e: Event) {
-  const target = e.target as HTMLTextAreaElement
+// 自动调整 textarea 高度
+function autoResize(event: Event): void {
+  const target = event.target as HTMLTextAreaElement
   target.style.height = 'auto'
-  target.style.height = Math.min(target.scrollHeight, 200) + 'px'
+  target.style.height = `${Math.min(target.scrollHeight, 200)}px`
 }
 </script>
 
