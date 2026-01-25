@@ -80,30 +80,39 @@ import AgentTimeline from '@/components/agent/AgentTimeline.vue'
 const chatStore = useChatStore()
 const agentTimeline = useAgentTimelineStore()
 
+// 当前激活的标签页
 const activeTab = ref<'conversation' | 'summary'>('conversation')
+
+// 消息容器引用
 const messagesRef = ref<HTMLElement>()
 
-// 时间线显示状态（独立管理）
+// 时间线显示状态
 const timelineVisible = ref(false)
 
 // 自动滚动到底部
 watch(() => chatStore.messages.length, async () => {
   await nextTick()
-  if (messagesRef.value) {
-    messagesRef.value.scrollTop = messagesRef.value.scrollHeight
-  }
+  scrollToBottom()
 })
 
-// 监听会话变化，自动开始收集事件并显示时间线
+// 监听会话变化，自动开始收集事件
 watch(() => chatStore.currentSessionId, (newSessionId) => {
   if (newSessionId) {
     agentTimeline.startCollecting(newSessionId)
-    // 不自动展开时间线，等待用户手动点击
   }
 }, { immediate: true })
 
+// 滚动到底部
+function scrollToBottom() {
+  if (messagesRef.value) {
+    messagesRef.value.scrollTop = messagesRef.value.scrollHeight
+  }
+}
+
+// 切换时间线显示
 function toggleTimeline() {
   timelineVisible.value = !timelineVisible.value
+
   if (timelineVisible.value) {
     agentTimeline.startCollecting(chatStore.currentSessionId)
   } else {

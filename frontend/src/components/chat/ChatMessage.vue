@@ -11,7 +11,7 @@
     <div class="message-content-wrapper">
       <!-- 消息内容 -->
       <div class="message-content">
-        <div class="message-text" v-html="formatContent(message.content)"></div>
+        <div class="message-text prose prose-sm max-w-none dark:prose-invert" v-html="renderedContent"></div>
       </div>
 
       <!-- 消息底部信息 -->
@@ -19,11 +19,11 @@
         <span class="message-time">{{ formatTime(message.timestamp) }}</span>
         <BaseTag
           v-if="message.status && message.status !== 'idle'"
-          :variant="getStatusVariant(message.status)"
+          :variant="getMessageStatusVariant(message.status)"
           size="sm"
           class="message-status"
         >
-          {{ formatStatus(message.status) }}
+          {{ getMessageStatusLabel(message.status) }}
         </BaseTag>
       </div>
     </div>
@@ -36,51 +36,26 @@
 </template>
 
 <script setup lang="ts">
+import { ref, watch } from 'vue'
 import { Bot, User } from 'lucide-vue-next'
 import BaseTag from '@/components/base/BaseTag.vue'
 import type { Message } from '@/types/message'
+import { renderMarkdown } from '@/utils/markdown'
+import { formatTime, getMessageStatusLabel, getMessageStatusVariant } from '@/utils/helpers'
 
-defineProps<{
+const props = defineProps<{
   message: Message
 }>()
 
-function formatContent(content: string): string {
-  // 简单的换行和代码块处理
-  return content
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/\n/g, '<br>')
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/`(.*?)`/g, '<code>$1</code>')
+const renderedContent = ref('')
+
+// 异步渲染 markdown
+async function updateRenderedContent() {
+  renderedContent.value = await renderMarkdown(props.message.content)
 }
 
-function formatTime(timestamp: string): string {
-  const date = new Date(timestamp)
-  return date.toLocaleTimeString('zh-CN', {
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
-
-function formatStatus(status: string): string {
-  const statusMap: Record<string, string> = {
-    'thinking': '思考中...',
-    'taking-action': '执行中',
-    'completed': '完成',
-    'error': '错误'
-  }
-  return statusMap[status] || status
-}
-
-function getStatusVariant(status: string): 'default' | 'warning' | 'danger' | 'success' | 'info' | 'purple' {
-  const variantMap: Record<string, 'default' | 'warning' | 'danger' | 'success' | 'info' | 'purple'> = {
-    'thinking': 'warning',
-    'taking-action': 'purple',
-    'completed': 'success',
-    'error': 'danger'
-  }
-  return variantMap[status] || 'info'
-}
+// 监听消息内容变化，自动重新渲染
+watch(() => props.message.content, updateRenderedContent, { immediate: true })
 </script>
 
 <style scoped>

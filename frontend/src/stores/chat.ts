@@ -1,20 +1,22 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
-import type { Message, ChatSession, Strategy, MessageStatus } from '@/types/message'
+import type { Message, ChatSession, Strategy } from '@/types/message'
 import { useAgentStore } from './agent'
 import { useAgentTimelineStore } from './agentTimeline'
+import { API_BASE, DEFAULT_SESSION_TITLE } from '@/utils/constants'
+import { formatTimestamp, mapEventTypeToMessageStatus, generateSessionId } from '@/utils/helpers'
 
 // SSE 事件数据类型（与后端 AgentResponse 一致）
 interface AgentEvent {
   eventType: string
   nodeId?: string
   nodeType?: string  // 'llm' | 'tool' | 'custom'
-  stateData?: Record<string, any>
+  stateData?: Record<string, unknown>
   message?: string
   timestamp: string
   executionId?: string
   error?: string
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
   // 节点状态相关字段
   nodeStatus?: string           // 'starting' | 'running' | 'completed' | 'failed'
   title?: string                // 节点标题
@@ -45,31 +47,6 @@ interface BackendMessage {
   timestamp: string
 }
 
-// API 基础 URL
-const API_BASE = import.meta.env.DEV ? 'http://localhost:8080' : ''
-
-// 时间戳格式化
-function formatTimestamp(timestamp: string): string {
-  try {
-    const date = new Date(timestamp)
-    return date.toLocaleString('zh-CN')
-  } catch {
-    return timestamp
-  }
-}
-
-// 后端事件类型到前端消息状态的映射
-// eventType 现在是 NodeStatus.getCode()：'starting' | 'running' | 'completed' | 'failed'
-function mapEventTypeToMessageStatus(eventType: string): MessageStatus {
-  const statusMap: Record<string, MessageStatus> = {
-    'starting': 'thinking',
-    'running': 'thinking',
-    'completed': 'completed',
-    'failed': 'error'
-  }
-  return statusMap[eventType] || 'thinking'
-}
-
 // 后端消息转换为前端消息
 function backendMessageToFrontend(msg: BackendMessage): Message {
   return {
@@ -89,6 +66,18 @@ function backendSessionToFrontend(session: BackendSession | BackendSessionDetail
     messages: detail.messages ? detail.messages.map(backendMessageToFrontend) : [],
     createdAt: formatTimestamp(session.createdAt),
     updatedAt: formatTimestamp(session.updatedAt)
+  }
+}
+
+// 创建本地会话
+function createLocalSession(): ChatSession {
+  const now = new Date().toLocaleString('zh-CN')
+  return {
+    id: generateSessionId(),
+    title: DEFAULT_SESSION_TITLE,
+    messages: [],
+    createdAt: now,
+    updatedAt: now
   }
 }
 
@@ -123,7 +112,10 @@ export const useChatStore = defineStore('chat', () => {
         await createNewSession()
       } else if (!currentSessionId.value) {
         // 设置当前会话为第一个
-        currentSessionId.value = sessions.value[0].id
+        const firstSession = sessions.value[0]
+        if (firstSession) {
+          currentSessionId.value = firstSession.id
+        }
       }
     } catch (error) {
       console.error('加载会话列表失败:', error)
@@ -156,16 +148,22 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   async function createNewSession() {
+    const agentStore = useAgentStore()
+
     try {
       const response = await fetch(`${API_BASE}/api/sessions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          agentName: useAgentStore().currentAgent,
-          title: '新对话'
+          agentName: agentStore.currentAgent,
+          title: DEFAULT_SESSION_TITLE
         })
       })
-      if (!response.ok) throw new Error('创建会话失败')
+
+      if (!response.ok) {
+        throw new Error('创建会话失败')
+      }
+
       const backendSession: BackendSessionDetail = await response.json()
       const newSession = backendSessionToFrontend(backendSession)
       sessions.value.unshift(newSession)
@@ -174,13 +172,7 @@ export const useChatStore = defineStore('chat', () => {
     } catch (error) {
       console.error('创建会话失败:', error)
       // 降级：创建本地会话
-      const newSession: ChatSession = {
-        id: `session-${Date.now()}`,
-        title: '新对话',
-        messages: [],
-        createdAt: new Date().toLocaleString('zh-CN'),
-        updatedAt: new Date().toLocaleString('zh-CN')
-      }
+      const newSession = createLocalSession()
       sessions.value.unshift(newSession)
       currentSessionId.value = newSession.id
       return newSession
@@ -188,29 +180,31 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   async function deleteSession(sessionId: string) {
+    // 删除会话的通用逻辑
+    function removeSession() {
+      const index = sessions.value.findIndex(s => s.id === sessionId)
+      if (index > -1) {
+        sessions.value.splice(index, 1)
+        if (currentSessionId.value === sessionId && sessions.value.length > 0) {
+          currentSessionId.value = sessions.value[0]?.id || ''
+        }
+      }
+    }
+
     try {
       const response = await fetch(`${API_BASE}/api/sessions/${sessionId}`, {
         method: 'DELETE'
       })
-      if (!response.ok) throw new Error('删除会话失败')
 
-      const index = sessions.value.findIndex(s => s.id === sessionId)
-      if (index > -1) {
-        sessions.value.splice(index, 1)
-        if (currentSessionId.value === sessionId && sessions.value.length > 0) {
-          currentSessionId.value = sessions.value[0]?.id || ''
-        }
+      if (!response.ok) {
+        throw new Error('删除会话失败')
       }
+
+      removeSession()
     } catch (error) {
       console.error('删除会话失败:', error)
       // 降级：仅删除本地会话
-      const index = sessions.value.findIndex(s => s.id === sessionId)
-      if (index > -1) {
-        sessions.value.splice(index, 1)
-        if (currentSessionId.value === sessionId && sessions.value.length > 0) {
-          currentSessionId.value = sessions.value[0]?.id || ''
-        }
-      }
+      removeSession()
     }
   }
 
@@ -225,141 +219,186 @@ export const useChatStore = defineStore('chat', () => {
     if (!content.trim() || isProcessing.value) return
 
     const agentStore = useAgentStore()
+    const agentTimelineStore = useAgentTimelineStore()
 
-    const newMessage: Message = {
-      id: Date.now().toString(),
+    // 创建用户消息
+    const userMessage: Message = {
+      id: `${Date.now()}`,
       role: 'user',
       content,
       timestamp: new Date().toLocaleString('zh-CN')
     }
 
-    // 添加用户消息到本地状态
-    if (currentSession.value) {
-      currentSession.value.messages.push(newMessage)
-      currentSession.value.updatedAt = new Date().toLocaleString('zh-CN')
-    }
-
     // 创建 AI 消息占位符
     const aiMessage: Message = {
-      id: (Date.now() + 1).toString(),
+      id: `${Date.now() + 1}`,
       role: 'assistant',
       content: '',
       timestamp: new Date().toLocaleString('zh-CN'),
       status: 'thinking'
     }
 
+    // 添加消息到当前会话
     if (currentSession.value) {
-      currentSession.value.messages.push(aiMessage)
+      currentSession.value.messages.push(userMessage, aiMessage)
+      currentSession.value.updatedAt = new Date().toLocaleString('zh-CN')
     }
 
     // 连接 SSE
     isProcessing.value = true
-    const params = new URLSearchParams()
-    params.append('input', content)
-    // 传递会话ID以支持连续对话
-    if (currentSessionId.value) {
-      params.append('sessionId', currentSessionId.value)
-    }
+    const params = new URLSearchParams({
+      input: content,
+      ...(currentSessionId.value && { sessionId: currentSessionId.value })
+    })
+
     const url = `${API_BASE}/api/stream/agent/${encodeURIComponent(agentStore.currentAgent)}/execute?${params.toString()}`
     console.log('SSE URL:', url)
-    const eventSource = new EventSource(url)
 
-    // 标记连接是否正常完成
+    const eventSource = new EventSource(url)
     let completed = false
 
+    // SSE 连接打开
     eventSource.onopen = () => {
       console.log('SSE 连接已打开')
     }
 
+    // 处理 SSE 消息事件
     eventSource.onmessage = (event) => {
-      try {
-        const data: AgentEvent = JSON.parse(event.data)
-        console.log('收到事件:', data.eventType, data)
-
-        // 添加到 AgentTimeline（内部会过滤running的LLM事件）
-        const agentTimelineStore = useAgentTimelineStore()
-        agentTimelineStore.addEvent({
-          eventType: data.eventType as any,
-          nodeId: data.nodeId || '',
-          nodeType: data.nodeType as any || 'custom',
-          stateData: data.stateData || {},
-          message: data.message,
-          timestamp: data.timestamp || new Date().toISOString(),
-          title: data.title,
-          startTime: data.startTime,
-          endTime: data.endTime,
-          nodeErrorMessage: data.nodeErrorMessage,
-          logs: data.logs
-        })
-
-        // 处理标题生成事件
-        if (data.eventType === 'TITLE_GENERATED' && data.metadata?.title) {
-          const session = sessions.value.find(s => s.id === currentSessionId.value)
-          if (session) {
-            session.title = data.metadata.title as string
-          }
-        }
-
-        // 更新消息状态
-        const msgIndex = currentSession.value?.messages.findIndex(m => m.id === aiMessage.id)
-        if (msgIndex !== undefined && msgIndex >= 0 && currentSession.value) {
-          const msg = currentSession.value.messages[msgIndex]
-          msg.status = mapEventTypeToMessageStatus(data.eventType)
-
-          switch (data.eventType) {
-            case 'running':
-              // 流式输出：追加 message 内容
-              if (data.message) {
-                msg.content += data.message
-              }
-              break
-            case 'GRAPH_COMPLETED':
-              // 图完成：标记为已完成，关闭 SSE 连接
-              completed = true
-              isProcessing.value = false
-              msg.status = 'completed'
-              eventSource.close()
-              break
-            case 'completed':
-              // 节点完成：不关闭连接，继续等待后续节点
-              break
-            case 'failed':
-              // 失败：显示错误信息，关闭 SSE 连接
-              msg.content = `错误: ${data.nodeErrorMessage || data.error || '执行失败'}`
-              isProcessing.value = false
-              eventSource.close()
-              break
-          }
-        }
-
-        if (currentSession.value) {
-          currentSession.value.updatedAt = new Date().toLocaleString('zh-CN')
-        }
-      } catch (error) {
-        console.error('Failed to parse SSE event:', error)
-      }
-    }
-
-    eventSource.onerror = (error) => {
-      console.error('SSE connection error:', error)
-      console.error('EventSource readyState:', eventSource.readyState)
-      console.error('EventSource URL:', eventSource.url)
-      console.error('Completed:', completed)
-
-      if (completed) {
-        console.log('连接正常完成')
+      handleSSEMessage(event, aiMessage, agentTimelineStore, eventSource, () => {
+        completed = true
         isProcessing.value = false
-        return
+      })
+    }
+
+    // 处理 SSE 错误
+    eventSource.onerror = () => {
+      handleSSEError(eventSource, aiMessage, completed)
+    }
+  }
+
+  // 处理 SSE 消息事件
+  function handleSSEMessage(
+    event: MessageEvent,
+    aiMessage: Message,
+    agentTimelineStore: ReturnType<typeof useAgentTimelineStore>,
+    eventSource: EventSource,
+    onComplete: () => void
+  ) {
+    try {
+      const data: AgentEvent = JSON.parse(event.data)
+      console.log('收到事件:', data.eventType, data)
+
+      // 添加到时间线
+      agentTimelineStore.addEvent({
+        eventType: data.eventType as any,
+        nodeId: data.nodeId || '',
+        nodeType: data.nodeType as any || 'custom',
+        stateData: data.stateData || {},
+        message: data.message,
+        timestamp: data.timestamp || new Date().toISOString(),
+        title: data.title,
+        startTime: data.startTime,
+        endTime: data.endTime,
+        nodeErrorMessage: data.nodeErrorMessage,
+        logs: data.logs
+      })
+
+      // 处理标题生成事件
+      if (data.eventType === 'TITLE_GENERATED' && data.metadata?.title) {
+        const session = sessions.value.find(s => s.id === currentSessionId.value)
+        if (session) {
+          session.title = data.metadata.title as string
+        }
       }
 
-      const msgIndex = currentSession.value?.messages.findIndex(m => m.id === aiMessage.id)
-      if (msgIndex !== undefined && msgIndex >= 0 && currentSession.value) {
-        currentSession.value.messages[msgIndex].content = '连接错误，请稍后重试'
-        currentSession.value.messages[msgIndex].status = 'error'
+      // 更新 AI 消息
+      updateAIMessage(aiMessage, data, eventSource, onComplete)
+
+      // 更新会话时间戳
+      if (currentSession.value) {
+        currentSession.value.updatedAt = new Date().toLocaleString('zh-CN')
       }
-      isProcessing.value = false
-      eventSource.close()
+    } catch (error) {
+      console.error('Failed to parse SSE event:', error)
     }
+  }
+
+  // 更新 AI 消息状态
+  function updateAIMessage(
+    aiMessage: Message,
+    data: AgentEvent,
+    eventSource: EventSource,
+    onComplete: () => void
+  ) {
+    const msgIndex = currentSession.value?.messages.findIndex(m => m.id === aiMessage.id)
+
+    if (msgIndex === undefined || msgIndex < 0 || !currentSession.value) {
+      return
+    }
+
+    const messages = currentSession.value.messages
+    const msg = messages[msgIndex]
+
+    if (!msg) {
+      return
+    }
+
+    msg.status = mapEventTypeToMessageStatus(data.eventType)
+
+    switch (data.eventType) {
+      case 'running':
+        // 流式输出：追加消息内容
+        if (data.message) {
+          msg.content += data.message
+        }
+        break
+
+      case 'GRAPH_COMPLETED':
+        // 图完成：标记为已完成，关闭 SSE 连接
+        msg.status = 'completed'
+        onComplete()
+        eventSource.close()
+        break
+
+      case 'completed':
+        // 节点完成：不关闭连接，继续等待后续节点
+        break
+
+      case 'failed':
+        // 失败：显示错误信息，关闭 SSE 连接
+        msg.content = `错误: ${data.nodeErrorMessage || data.error || '执行失败'}`
+        onComplete()
+        eventSource.close()
+        break
+    }
+  }
+
+  // 处理 SSE 错误
+  function handleSSEError(eventSource: EventSource, aiMessage: Message, completed: boolean) {
+    console.error('SSE connection error:', {
+      readyState: eventSource.readyState,
+      url: eventSource.url,
+      completed
+    })
+
+    if (completed) {
+      console.log('连接正常完成')
+      isProcessing.value = false
+      return
+    }
+
+    // 更新消息为错误状态
+    const msgIndex = currentSession.value?.messages.findIndex(m => m.id === aiMessage.id)
+    if (msgIndex !== undefined && msgIndex >= 0 && currentSession.value) {
+      const msg = currentSession.value.messages[msgIndex]
+      if (msg) {
+        msg.content = '连接错误，请稍后重试'
+        msg.status = 'error'
+      }
+    }
+
+    isProcessing.value = false
+    eventSource.close()
   }
 
   function setStrategy(strategy: Strategy) {
