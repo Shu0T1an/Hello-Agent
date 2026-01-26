@@ -7,6 +7,7 @@ import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -25,10 +26,12 @@ public class McpManagerAutoConfiguration {
     private static final Logger logger = LoggerFactory.getLogger(McpManagerAutoConfiguration.class);
 
     private final McpManagerConfig config;
+    private final ApplicationEventPublisher eventPublisher;
     private McpManager mcpManager;
 
-    public McpManagerAutoConfiguration(McpManagerConfig config) {
+    public McpManagerAutoConfiguration(McpManagerConfig config, ApplicationEventPublisher eventPublisher) {
         this.config = config;
+        this.eventPublisher = eventPublisher;
     }
 
     /**
@@ -42,7 +45,7 @@ public class McpManagerAutoConfiguration {
         logger.info("启动时自动连接: {}", config.isAutoConnectOnStartup());
         logger.info("启用健康检查: {}", config.isEnableHealthCheck());
 
-        McpManager manager = new McpManagerImpl(config);
+        McpManager manager = new McpManagerImpl(config, eventPublisher);
 
         // 如果配置了启动时自动连接，则启动管理器
         if (config.isAutoConnectOnStartup()) {

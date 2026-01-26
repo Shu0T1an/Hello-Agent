@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:17
+    container_name: agent_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: admin           # 数据库用户名
+      POSTGRES_PASSWORD: 123456 # 数据库密码
+      POSTGRES_DB: agent_studio_db   # 默认创建的数据库名
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data # 数据持久化挂载到当前目录
+    networks:
+      - agent-net
+
+networks:
+  agent-net:
+    driver: bridge

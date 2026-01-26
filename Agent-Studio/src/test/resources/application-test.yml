@@ -1,0 +1,66 @@
+# 测试环境配置
+spring:
+  application:
+    name: agent-studio-test
+  datasource:
+    username: admin
+    password: 123456
+    url: jdbc:postgresql://127.0.0.1:5432/agent_studio_db?currentSchema=public&useSSL=false
+    driver-class-name: org.postgresql.Driver
+    type: com.zaxxer.hikari.HikariDataSource
+    hikari:
+      pool-name: Test_HikariCP
+      minimum-idle: 2
+      maximum-pool-size: 5
+      connection-timeout: 30000
+  ai:
+    openai:
+      api-key: ms-89889fc4-c573-4a04-85ac-e5ac323c2374  # sk-1c7794d42765440fa4913b1cbb097fb2
+      base-url: https://api-inference.modelscope.cn/ # https://dashscope.aliyuncs.com/compatible-mode #
+      chat:
+        options:
+          model: Qwen/Qwen3-235B-A22B-Instruct-2507 # qwen-flash
+
+# MyBatis配置（由于使用注解方式，不需要 mapper-locations）
+mybatis:
+  type-aliases-package: cn.ts.web.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    cn.ts.web.mapper: DEBUG  # 打印 SQL 语句
+    org.springframework.test: DEBUG
+
+
+# MCP 服务器配置（开发环境）
+mcp:
+  servers:
+    servers:
+      - name: amap
+        type: STDIO
+        description: 高德地图 MCP 服务
+        stdio:
+          command: ${nodejs.npx-path}
+          args:
+            - "-y"
+            - "@amap/amap-maps-mcp-server"
+          env:
+            AMAP_MAPS_API_KEY: ${api.keys.amap}
+        timeout-seconds: 30
+        auto-reconnect: true
+        max-retries: 3
+        retry-interval-seconds: 5
+
+# Node.js 路径配置（开发环境）
+nodejs:
+  npx-path: ${NPX_PATH:D:\\Java\\nodejs\\npx.cmd}
+
+# API 密钥配置（开发环境）
+api:
+  keys:
+    keys:
+      amap: ${AMAP_API_KEY:7553ed7c2b3727253b52f522543f77ee}

@@ -27,7 +27,12 @@
       "Bash(mvn:*)",
       "Bash(findstr:*)",
       "Bash(taskkill:*)",
-      "Bash(netstat:*)"
+      "Bash(netstat:*)",
+      "Bash(gh pr:*)",
+      "Bash(gh api:*)",
+      "Bash(gh repo view:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)"
     ]
   }
 }

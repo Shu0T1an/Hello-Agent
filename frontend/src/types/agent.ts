@@ -1,4 +1,6 @@
+// ============================================================================
 // Agent Timeline 类型定义
+// ============================================================================
 
 export interface ToolCall {
   id: string
@@ -41,4 +43,83 @@ export interface AgentEvent {
   endTime?: string
   nodeErrorMessage?: string // 节点错误信息（来自后端）
   logs?: string[]           // 日志列表（来自后端）
+}
+
+// ============================================================================
+// Agent 配置管理类型定义
+// ============================================================================
+
+/**
+ * 模型配置简略信息
+ */
+export interface ModelConfigRef {
+  id: number
+  modelName: string
+  displayName: string
+  provider: string
+  modelId: string
+}
+
+/**
+ * 工具定义简略信息
+ */
+export interface ToolDefinitionRef {
+  id: number
+  toolName: string
+  displayName: string
+  description: string
+  toolType: 'LOCAL' | 'MCP'
+  mcpConnectionName?: string
+}
+
+/**
+ * Agent 配置接口
+ */
+export interface AgentConfig {
+  id: number
+  agentName: string
+  displayName: string
+  description?: string
+  modelId: number
+  modelConfig?: ModelConfigRef
+  systemPrompt?: string
+  maxIterations?: number
+  temperature?: number
+  enableStreaming?: boolean
+  isActive: boolean
+  createdBy?: string
+  createdAt: string
+  updatedAt: string
+  toolIds?: number[]
+  toolDefinitions?: ToolDefinitionRef[]
+}
+
+/**
+ * 创建 Agent DTO
+ */
+export interface CreateAgentDTO {
+  agentName: string
+  displayName: string
+  description?: string
+  modelId: number
+  systemPrompt?: string
+  maxIterations?: number
+  temperature?: number
+  enableStreaming?: boolean
+  toolIds?: number[]
+}
+
+/**
+ * 更新 Agent DTO
+ */
+export interface UpdateAgentDTO {
+  displayName?: string
+  description?: string
+  modelId?: number
+  systemPrompt?: string
+  maxIterations?: number
+  temperature?: number
+  enableStreaming?: boolean
+  isActive?: boolean
+  toolIds?: number[]
 }

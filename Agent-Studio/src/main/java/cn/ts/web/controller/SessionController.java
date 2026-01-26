@@ -1,10 +1,10 @@
 package cn.ts.web.controller;
 
+import cn.ts.web.controller.response.Result;
+import cn.ts.web.controller.response.ResultCode;
 import cn.ts.web.dto.SessionDetailDTO;
 import cn.ts.web.dto.SessionDTO;
 import cn.ts.web.service.SessionService;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -35,8 +35,8 @@ public class SessionController {
      * @return 会话列表
      */
     @GetMapping
-    public ResponseEntity<List<SessionDTO>> getAllSessions() {
-        return ResponseEntity.ok(sessionService.getAllSessions());
+    public Result<List<SessionDTO>> getAllSessions() {
+        return Result.success(sessionService.getAllSessions());
     }
 
     /**
@@ -46,10 +46,10 @@ public class SessionController {
      * @return 会话详情
      */
     @GetMapping("/{sessionId}")
-    public ResponseEntity<SessionDetailDTO> getSession(@PathVariable String sessionId) {
+    public Result<SessionDetailDTO> getSession(@PathVariable String sessionId) {
         return sessionService.getSession(sessionId)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+                .map(Result::success)
+                .orElse(Result.error(ResultCode.NOT_FOUND));
     }
 
     /**
@@ -59,12 +59,12 @@ public class SessionController {
      * @return 创建的会话
      */
     @PostMapping
-    public ResponseEntity<SessionDetailDTO> createSession(@RequestBody Map<String, String> body) {
+    public Result<SessionDetailDTO> createSession(@RequestBody Map<String, String> body) {
         String agentName = body.getOrDefault("agentName", "TestAgent");
         String title = body.get("title");
 
         SessionDetailDTO session = sessionService.createSession(agentName, title);
-        return ResponseEntity.status(HttpStatus.CREATED).body(session);
+        return Result.success("创建成功", session);
     }
 
     /**
@@ -75,16 +75,16 @@ public class SessionController {
      * @return 更新结果
      */
     @PutMapping("/{sessionId}")
-    public ResponseEntity<Void> updateSession(
+    public Result<Void> updateSession(
             @PathVariable String sessionId,
             @RequestBody Map<String, String> body) {
         if (!sessionService.sessionExists(sessionId)) {
-            return ResponseEntity.notFound().build();
+            return Result.error(ResultCode.NOT_FOUND);
         }
 
         String title = body.get("title");
         sessionService.updateSession(sessionId, title);
-        return ResponseEntity.ok().build();
+        return Result.success();
     }
 
     /**
@@ -94,13 +94,13 @@ public class SessionController {
      * @return 删除结果
      */
     @DeleteMapping("/{sessionId}")
-    public ResponseEntity<Void> deleteSession(@PathVariable String sessionId) {
+    public Result<Void> deleteSession(@PathVariable String sessionId) {
         if (!sessionService.sessionExists(sessionId)) {
-            return ResponseEntity.notFound().build();
+            return Result.error(ResultCode.NOT_FOUND);
         }
 
         sessionService.deleteSession(sessionId);
-        return ResponseEntity.noContent().build();
+        return Result.success();
     }
 
     /**
@@ -111,21 +111,21 @@ public class SessionController {
      * @return 添加结果
      */
     @PostMapping("/{sessionId}/messages")
-    public ResponseEntity<Void> addMessage(
+    public Result<Void> addMessage(
             @PathVariable String sessionId,
             @RequestBody Map<String, String> body) {
         if (!sessionService.sessionExists(sessionId)) {
-            return ResponseEntity.notFound().build();
+            return Result.error(ResultCode.NOT_FOUND);
         }
 
         String role = body.get("role");
         String content = body.get("content");
 
         if (role == null || content == null) {
-            return ResponseEntity.badRequest().build();
+            return Result.error(ResultCode.BAD_REQUEST);
         }
 
         sessionService.addMessage(sessionId, role, content);
-        return ResponseEntity.ok().build();
+        return Result.success();
     }
 }

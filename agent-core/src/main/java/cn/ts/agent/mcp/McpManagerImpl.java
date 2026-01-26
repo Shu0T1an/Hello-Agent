@@ -1,6 +1,7 @@
 package cn.ts.agent.mcp;
 
 import cn.ts.agent.mcp.config.McpManagerConfig;
+import cn.ts.agent.mcp.event.McpConnectionEvent;
 import cn.ts.agent.mcp.model.McpConnection;
 import cn.ts.agent.mcp.model.McpConnectionConfig;
 import cn.ts.agent.mcp.model.McpConnectionStatus;
@@ -15,6 +16,7 @@ import io.modelcontextprotocol.spec.McpClientTransport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.tool.ToolCallback;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.util.StringUtils;
 
 import java.io.File;
@@ -41,15 +43,28 @@ public class McpManagerImpl implements McpManager {
     private final Map<String, McpConnection> connections = new ConcurrentHashMap<>();
     private final ScheduledExecutorService scheduler;
     private final AtomicBoolean running = new AtomicBoolean(false);
+    private final ApplicationEventPublisher eventPublisher;
     private ScheduledFuture<?> healthCheckTask;
 
-    public McpManagerImpl(McpManagerConfig config) {
+    public McpManagerImpl(McpManagerConfig config, ApplicationEventPublisher eventPublisher) {
         this.config = config;
+        this.eventPublisher = eventPublisher;
         this.scheduler = Executors.newScheduledThreadPool(2, r -> {
             Thread thread = new Thread(r, "mcp-manager-scheduler");
             thread.setDaemon(true);
             return thread;
         });
+    }
+
+    /**
+     * 发布 MCP 连接事件
+     */
+    private void publishEvent(McpConnectionEvent event) {
+        try {
+            eventPublisher.publishEvent(event);
+        } catch (Exception e) {
+            logger.warn("Failed to publish MCP connection event: {}", event, e);
+        }
     }
 
     @Override
@@ -315,6 +330,9 @@ public class McpManagerImpl implements McpManager {
                 connection.setStatus(McpConnectionStatus.ERROR);
                 connection.setErrorMessage(e.getMessage());
 
+                // 发布错误事件
+                publishEvent(McpConnectionEvent.error(this, connection.getName(), e.getMessage()));
+
                 // 尝试重连
                 if (connection.getConfig().isAutoReconnect()) {
                     scheduleReconnect(connection);
@@ -338,6 +356,9 @@ public class McpManagerImpl implements McpManager {
         connection.setErrorMessage(null);
 
         logger.info("MCP 连接成功: {}, 类型: {}", config.getName(), config.getType());
+
+        // 发布连接成功事件
+        publishEvent(McpConnectionEvent.connected(this, config.getName()));
     }
 
     /**
@@ -380,6 +401,9 @@ public class McpManagerImpl implements McpManager {
             connection.setClient(null);
         }
         connection.setStatus(McpConnectionStatus.DISCONNECTED);
+
+        // 发布断开连接事件
+        publishEvent(McpConnectionEvent.disconnected(this, connection.getName()));
     }
 
     /**
@@ -389,6 +413,10 @@ public class McpManagerImpl implements McpManager {
         if (connection.getClient() == null) {
             connection.setStatus(McpConnectionStatus.ERROR);
             connection.setErrorMessage("客户端未初始化");
+
+            // 发布错误事件
+            publishEvent(McpConnectionEvent.error(this, connection.getName(), "客户端未初始化"));
+
             return false;
         }
 
@@ -407,6 +435,9 @@ public class McpManagerImpl implements McpManager {
             connection.getStatistics().recordFailure();
             connection.setStatus(McpConnectionStatus.ERROR);
             connection.setErrorMessage(e.getMessage());
+
+            // 发布错误事件
+            publishEvent(McpConnectionEvent.error(this, connection.getName(), e.getMessage()));
 
             // 尝试重连
             if (connection.getConfig().isAutoReconnect()) {

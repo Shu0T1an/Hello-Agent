@@ -4,6 +4,8 @@ import cn.ts.agent.mcp.McpManager;
 import cn.ts.agent.mcp.model.McpConnection;
 import cn.ts.agent.mcp.model.McpConnectionConfig;
 import cn.ts.agent.mcp.model.McpStatistics;
+import cn.ts.web.controller.response.Result;
+import cn.ts.web.controller.response.ResultCode;
 import cn.ts.web.dto.McpConnectionRequest;
 import cn.ts.web.dto.McpConnectionResponse;
 import cn.ts.web.dto.McpToolInfo;
@@ -11,8 +13,6 @@ import io.modelcontextprotocol.spec.McpSchema;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -45,7 +45,7 @@ public class McpController {
      * 注册新的 MCP 连接
      */
     @PostMapping("/connections")
-    public ResponseEntity<Map<String, Object>> registerConnection(
+    public Result<Map<String, Object>> registerConnection(
             @Valid @RequestBody McpConnectionRequest request) {
         try {
             logger.info("注册 MCP 连接: {}, 类型: {}", request.getName(), request.getType());
@@ -53,27 +53,20 @@ public class McpController {
             McpConnectionConfig config = request.toConfig();
             boolean success = mcpManager.registerConnection(config);
 
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", success);
-            response.put("message", success ? "连接注册成功" : "连接注册失败");
-            response.put("name", request.getName());
-
-            return ResponseEntity.status(success ? HttpStatus.CREATED : HttpStatus.BAD_REQUEST)
-                    .body(response);
+            if (success) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("name", request.getName());
+                return Result.success("连接注册成功", response);
+            } else {
+                return Result.error("连接注册失败");
+            }
 
         } catch (IllegalArgumentException e) {
             logger.warn("注册 MCP 连接失败: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(Map.of(
-                    "success", false,
-                    "message", e.getMessage()
-            ));
+            return Result.error(ResultCode.BAD_REQUEST.getCode(), e.getMessage());
         } catch (Exception e) {
             logger.error("注册 MCP 连接时发生错误", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(
-                            "success", false,
-                            "message", "服务器错误: " + e.getMessage()
-                    ));
+            return Result.error(ResultCode.ERROR.getCode(), "服务器错误: " + e.getMessage());
         }
     }
 
@@ -81,33 +74,33 @@ public class McpController {
      * 获取所有连接
      */
     @GetMapping("/connections")
-    public ResponseEntity<List<McpConnectionResponse>> getAllConnections() {
+    public Result<List<McpConnectionResponse>> getAllConnections() {
         List<McpConnectionResponse> responses = mcpManager.getAllConnections().stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
-        return ResponseEntity.ok(responses);
+        return Result.success(responses);
     }
 
     /**
      * 获取指定连接
      */
     @GetMapping("/connections/{name}")
-    public ResponseEntity<McpConnectionResponse> getConnection(@PathVariable String name) {
+    public Result<McpConnectionResponse> getConnection(@PathVariable String name) {
         return mcpManager.getConnection(name)
-                .map(conn -> ResponseEntity.ok(toResponse(conn)))
-                .orElse(ResponseEntity.notFound().build());
+                .map(conn -> Result.success(toResponse(conn)))
+                .orElse(Result.error(ResultCode.MCP_CONNECTION_NOT_FOUND));
     }
 
     /**
      * 删除连接
      */
     @DeleteMapping("/connections/{name}")
-    public ResponseEntity<Map<String, String>> deleteConnection(@PathVariable String name) {
+    public Result<Void> deleteConnection(@PathVariable String name) {
         try {
             mcpManager.unregisterConnection(name);
-            return ResponseEntity.ok(Map.of("message", "连接已删除: " + name));
+            return Result.success();
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
+            return Result.error(ResultCode.MCP_CONNECTION_NOT_FOUND);
         }
     }
 
@@ -115,26 +108,20 @@ public class McpController {
      * 更新连接
      */
     @PutMapping("/connections/{name}")
-    public ResponseEntity<Map<String, Object>> updateConnection(
+    public Result<Map<String, Object>> updateConnection(
             @PathVariable String name,
             @Valid @RequestBody McpConnectionRequest request) {
         try {
             McpConnectionConfig config = request.toConfig();
             mcpManager.updateConnection(name, config);
 
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", "连接已更新",
-                    "name", name
-            ));
+            Map<String, Object> response = new HashMap<>();
+            response.put("name", name);
+            return Result.success("连接已更新", response);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
+            return Result.error(ResultCode.MCP_CONNECTION_NOT_FOUND);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(
-                            "success", false,
-                            "message", e.getMessage()
-                    ));
+            return Result.error(ResultCode.ERROR.getCode(), e.getMessage());
         }
     }
 
@@ -142,15 +129,15 @@ public class McpController {
      * 获取统计信息
      */
     @GetMapping("/statistics")
-    public ResponseEntity<McpStatistics> getStatistics() {
-        return ResponseEntity.ok(mcpManager.getStatistics());
+    public Result<McpStatistics> getStatistics() {
+        return Result.success(mcpManager.getStatistics());
     }
 
     /**
      * 健康检查指定连接
      */
     @PostMapping("/connections/{name}/health-check")
-    public ResponseEntity<Map<String, Object>> healthCheck(@PathVariable String name) {
+    public Result<Map<String, Object>> healthCheck(@PathVariable String name) {
         boolean healthy = mcpManager.healthCheck(name);
 
         Map<String, Object> response = new HashMap<>();
@@ -158,30 +145,29 @@ public class McpController {
         response.put("healthy", healthy);
         response.put("timestamp", System.currentTimeMillis());
 
-        return ResponseEntity.ok(response);
+        return Result.success(response);
     }
 
     /**
      * 健康检查所有连接
      */
     @PostMapping("/health-check-all")
-    public ResponseEntity<Map<String, Boolean>> healthCheckAll() {
-        return ResponseEntity.ok(mcpManager.healthCheckAll());
+    public Result<Map<String, Boolean>> healthCheckAll() {
+        return Result.success(mcpManager.healthCheckAll());
     }
 
     /**
      * 手动重连
      */
     @PostMapping("/connections/{name}/reconnect")
-    public ResponseEntity<Map<String, String>> reconnect(@PathVariable String name) {
+    public Result<Map<String, String>> reconnect(@PathVariable String name) {
         try {
             mcpManager.reconnect(name);
-            return ResponseEntity.ok(Map.of(
-                    "message", "重连请求已发送: " + name,
-                    "name", name
-            ));
+            Map<String, String> response = new HashMap<>();
+            response.put("name", name);
+            return Result.success("重连请求已发送", response);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
+            return Result.error(ResultCode.MCP_CONNECTION_NOT_FOUND);
         }
     }
 
@@ -189,48 +175,48 @@ public class McpController {
      * 获取所有工具
      */
     @GetMapping("/tools")
-    public ResponseEntity<List<McpToolInfo>> getAllTools() {
+    public Result<List<McpToolInfo>> getAllTools() {
         // TODO: 实现 MCP 工具列表获取
         // 由于 MCP SDK API 可能变化，暂时返回空列表
-        return ResponseEntity.ok(new ArrayList<>());
+        return Result.success(new ArrayList<>());
     }
 
     /**
      * 启动 MCP 管理器
      */
     @PostMapping("/start")
-    public ResponseEntity<Map<String, String>> start() {
+    public Result<Void> start() {
         if (mcpManager.isRunning()) {
-            return ResponseEntity.ok(Map.of("message", "MCP 管理器已在运行"));
+            return Result.success("MCP 管理器已在运行", null);
         }
 
         mcpManager.start();
-        return ResponseEntity.ok(Map.of("message", "MCP 管理器已启动"));
+        return Result.success("MCP 管理器已启动", null);
     }
 
     /**
      * 停止 MCP 管理器
      */
     @PostMapping("/stop")
-    public ResponseEntity<Map<String, String>> stop() {
+    public Result<Void> stop() {
         if (!mcpManager.isRunning()) {
-            return ResponseEntity.ok(Map.of("message", "MCP 管理器未运行"));
+            return Result.success("MCP 管理器未运行", null);
         }
 
         mcpManager.stop();
-        return ResponseEntity.ok(Map.of("message", "MCP 管理器已停止"));
+        return Result.success("MCP 管理器已停止", null);
     }
 
     /**
      * 获取管理器状态
      */
     @GetMapping("/status")
-    public ResponseEntity<Map<String, Object>> getStatus() {
+    public Result<Map<String, Object>> getStatus() {
         Map<String, Object> status = new HashMap<>();
         status.put("running", mcpManager.isRunning());
         status.put("connections", mcpManager.getAllConnections().size());
         status.put("statistics", mcpManager.getStatistics());
-        return ResponseEntity.ok(status);
+        return Result.success(status);
     }
 
     /**

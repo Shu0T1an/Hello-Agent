@@ -104,7 +104,8 @@ export const useChatStore = defineStore('chat', () => {
       isLoading.value = true
       const response = await fetch(`${API_BASE}/api/sessions`)
       if (!response.ok) throw new Error('加载会话列表失败')
-      const backendSessions: BackendSession[] = await response.json()
+      const result: { code: number; message: string; data: BackendSession[] } = await response.json()
+      const backendSessions = result.data || []
       sessions.value = backendSessions.map(backendSessionToFrontend)
 
       // 如果没有会话，创建一个默认会话
@@ -132,8 +133,8 @@ export const useChatStore = defineStore('chat', () => {
     try {
       const response = await fetch(`${API_BASE}/api/sessions/${sessionId}`)
       if (!response.ok) throw new Error('加载会话详情失败')
-      const backendSession: BackendSessionDetail = await response.json()
-      const frontendSession = backendSessionToFrontend(backendSession)
+      const result: { code: number; message: string; data: BackendSessionDetail } = await response.json()
+      const frontendSession = backendSessionToFrontend(result.data)
 
       // 更新或添加会话
       const index = sessions.value.findIndex(s => s.id === sessionId)
@@ -164,8 +165,8 @@ export const useChatStore = defineStore('chat', () => {
         throw new Error('创建会话失败')
       }
 
-      const backendSession: BackendSessionDetail = await response.json()
-      const newSession = backendSessionToFrontend(backendSession)
+      const result: { code: number; message: string; data: BackendSessionDetail } = await response.json()
+      const newSession = backendSessionToFrontend(result.data)
       sessions.value.unshift(newSession)
       currentSessionId.value = newSession.id
       return newSession
