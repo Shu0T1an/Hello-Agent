@@ -1,68 +1,241 @@
 <template>
-  <div class="model-management">
-    <div class="page-header">
-      <h1>模型配置</h1>
-      <button class="btn-primary" @click="handleCreate">
-        <span>+</span> 添加模型
-      </button>
+  <div class="p-6 max-w-7xl mx-auto">
+    <!-- 页面头部 -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+      <div>
+        <h1 class="text-2xl font-semibold text-slate-900">模型配置</h1>
+        <p class="text-sm text-slate-500 mt-1">配置和管理 LLM 模型</p>
+      </div>
+      <BaseButton variant="primary" @click="handleCreate" class="btn-hover-lift">
+        <Plus :size="18" />
+        添加模型
+      </BaseButton>
     </div>
 
-    <div v-if="modelStore.loading" class="loading">加载中...</div>
-    <div v-else-if="modelStore.error" class="error">{{ modelStore.error }}</div>
-    <div v-else class="model-list">
-      <div v-for="model in modelStore.models" :key="model.id" class="model-item">
-        <div class="model-info">
-          <div class="model-header">
-            <h3>{{ model.displayName }}</h3>
-            <span :class="['status-badge', model.isActive ? 'active' : 'inactive']">
-              {{ model.isActive ? '激活' : '停用' }}
-            </span>
-          </div>
-          <p class="model-name">{{ model.modelName }}</p>
-          <div class="model-meta">
-            <span class="provider-badge">{{ model.provider }}</span>
-            <span class="model-id">{{ model.modelId }}</span>
-            <span v-if="model.baseUrl" class="base-url">{{ formatBaseUrl(model.baseUrl) }}</span>
-          </div>
-        </div>
-        <div class="model-actions">
-          <button @click="handleEdit(model)" class="btn-secondary">编辑</button>
-          <button @click="handleDelete(model.id)" class="btn-danger">删除</button>
-        </div>
+    <!-- 加载状态 -->
+    <BaseSkeleton v-if="modelStore.loading" type="card" :rows="3" />
+
+    <!-- 错误状态 -->
+    <BaseCard v-else-if="modelStore.error" class="p-8 text-center">
+      <div class="flex flex-col items-center gap-3">
+        <AlertCircle :size="48" class="text-error-500" />
+        <p class="text-error-600 font-medium">{{ modelStore.error }}</p>
+        <BaseButton variant="secondary" @click="modelStore.fetchModels()">
+          重试
+        </BaseButton>
+      </div>
+    </BaseCard>
+
+    <!-- 模型列表 -->
+    <div v-else>
+      <!-- 搜索 -->
+      <div class="mb-6">
+        <BaseInput
+          v-model="searchQuery"
+          placeholder="搜索模型..."
+          class="max-w-md"
+        >
+          <template #prefix>
+            <Search :size="18" class="text-slate-400" />
+          </template>
+        </BaseInput>
       </div>
 
-      <div v-if="modelStore.models.length === 0" class="empty-state">
-        <p>暂无模型配置，点击右上角添加</p>
+      <!-- 模型卡片网格 -->
+      <div v-if="filteredModels.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <BaseCard
+          v-for="model in filteredModels"
+          :key="model.id"
+          hoverable
+          class="group"
+        >
+          <template #default>
+            <div class="flex items-start justify-between mb-4">
+              <div class="flex-1 min-w-0">
+                <h3 class="text-lg font-semibold text-slate-900 truncate">
+                  {{ model.displayName }}
+                </h3>
+                <p class="text-sm text-slate-500 font-mono mt-1">
+                  {{ model.modelName }}
+                </p>
+              </div>
+              <span
+                :class="[
+                  'px-3 py-1 rounded-full text-xs font-medium flex-shrink-0 ml-2',
+                  model.isActive
+                    ? 'bg-success-100 text-success-700'
+                    : 'bg-slate-100 text-slate-600'
+                ]"
+              >
+                {{ model.isActive ? '激活' : '停用' }}
+              </span>
+            </div>
+
+            <!-- Provider 标签 -->
+            <div class="mb-4">
+              <span
+                :class="[
+                  'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold',
+                  getProviderBadgeClasses(model.provider)
+                ]"
+              >
+                <component :is="getProviderIcon(model.provider)" :size="14" />
+                {{ ProviderDisplayNames[model.provider] || model.provider }}
+              </span>
+            </div>
+
+            <!-- 模型元信息 -->
+            <div class="space-y-2 mb-4 text-sm">
+              <div v-if="model.modelId" class="flex items-center gap-2 text-slate-600">
+                <Hash :size="16" class="text-slate-400" />
+                <span class="truncate">{{ model.modelId }}</span>
+              </div>
+              <div v-if="model.baseUrl" class="flex items-center gap-2 text-slate-600">
+                <Globe :size="16" class="text-slate-400" />
+                <span class="truncate">{{ formatBaseUrl(model.baseUrl) }}</span>
+              </div>
+            </div>
+
+            <!-- 操作按钮 -->
+            <div class="flex items-center gap-2 pt-4 border-t border-slate-100">
+              <BaseButton
+                variant="ghost"
+                size="sm"
+                class="flex-1"
+                @click="handleEdit(model)"
+              >
+                <Edit :size="16" />
+                编辑
+              </BaseButton>
+              <BaseButton
+                variant="ghost"
+                size="sm"
+                class="text-error-600 hover:text-error-700 hover:bg-error-50"
+                @click="handleDelete(model.id)"
+              >
+                <Trash2 :size="16" />
+                删除
+              </BaseButton>
+            </div>
+          </template>
+        </BaseCard>
       </div>
+
+      <!-- 空状态 -->
+      <BaseEmpty
+        v-else-if="modelStore.models.length === 0"
+        type="inbox"
+        title="暂无模型配置"
+        description="点击右上角添加您的第一个模型配置"
+        action-text="添加模型"
+        @action="handleCreate"
+      />
+      <BaseEmpty
+        v-else
+        type="search"
+        title="未找到匹配的模型"
+        description="请尝试调整搜索关键词"
+        :show-action="false"
+      />
     </div>
 
-    <!-- 模型表单对话框 -->
-    <div v-if="showForm" class="modal-overlay" @click.self="showForm = false">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2>{{ editingModel ? '编辑模型' : '添加模型' }}</h2>
-          <button @click="showForm = false" class="btn-close">×</button>
-        </div>
-        <ModelForm
-          :model="editingModel"
-          @close="showForm = false"
-          @save="handleSave"
-        />
-      </div>
-    </div>
+    <!-- 模型表单模态框 -->
+    <BaseModal
+      v-model:visible="showForm"
+      :title="editingModel ? '编辑模型' : '添加模型'"
+      width="lg"
+    >
+      <ModelForm
+        :model="editingModel"
+        @close="showForm = false"
+        @save="handleSave"
+      />
+    </BaseModal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useModelConfigStore } from '@/stores/modelConfig'
-import { ProviderDisplayNames, type ModelConfig, type CreateModelDTO, type UpdateModelDTO } from '@/types/model'
+import { useToast } from '@/composables/useToast'
+import { ProviderDisplayNames, type ModelConfig, type CreateModelDTO, type UpdateModelDTO, type ModelProvider } from '@/types/model'
 import ModelForm from '@/components/agent/ModelForm.vue'
+import BaseButton from '@/components/base/BaseButton.vue'
+import BaseInput from '@/components/base/BaseInput.vue'
+import BaseCard from '@/components/base/BaseCard.vue'
+import BaseModal from '@/components/base/BaseModal.vue'
+import BaseEmpty from '@/components/base/BaseEmpty.vue'
+import BaseSkeleton from '@/components/base/BaseSkeleton.vue'
+import {
+  Plus,
+  Search,
+  Edit,
+  Hash,
+  Globe,
+  Trash2,
+  AlertCircle,
+  type Component,
+} from 'lucide-vue-next'
+
+// Provider 图标映射（简化版，实际项目中可以使用品牌图标）
+const providerIcons: Record<ModelProvider, Component> = {
+  openai: Plus, // 可以替换为 OpenAI 图标
+  anthropic: Plus, // 可以替换为 Anthropic 图标
+  azure: Plus, // 可以替换为 Azure 图标
+  ollama: Plus, // 可以替换为 Ollama 图标
+  qwen: Plus, // 可以替换为 Qwen 图标
+  moonshot: Plus, // 可以替换为 Moonshot 图标
+  zhipu: Plus, // 可以替换为智谱图标
+  baichuan: Plus, // 可以替换为百川图标
+  deepseek: Plus, // 可以替换为 DeepSeek 图标
+  other: Plus,
+}
+
+// Provider 颜色类
+const providerBadgeClasses: Record<ModelProvider, string> = {
+  openai: 'bg-emerald-100 text-emerald-700',
+  anthropic: 'bg-amber-100 text-amber-700',
+  azure: 'bg-sky-100 text-sky-700',
+  ollama: 'bg-violet-100 text-violet-700',
+  qwen: 'bg-orange-100 text-orange-700',
+  moonshot: 'bg-indigo-100 text-indigo-700',
+  zhipu: 'bg-blue-100 text-blue-700',
+  baichuan: 'bg-teal-100 text-teal-700',
+  deepseek: 'bg-rose-100 text-rose-700',
+  other: 'bg-slate-100 text-slate-700',
+}
 
 const modelStore = useModelConfigStore()
+const toast = useToast()
 
 const showForm = ref(false)
 const editingModel = ref<ModelConfig | null>(null)
+const searchQuery = ref('')
+
+// 筛选后的模型列表
+const filteredModels = computed(() => {
+  if (!searchQuery.value) {
+    return modelStore.models
+  }
+
+  const query = searchQuery.value.toLowerCase()
+  return modelStore.models.filter(m =>
+    m.displayName.toLowerCase().includes(query) ||
+    m.modelName.toLowerCase().includes(query) ||
+    m.provider.toLowerCase().includes(query) ||
+    (m.modelId && m.modelId.toLowerCase().includes(query))
+  )
+})
+
+// 获取 Provider 图标
+const getProviderIcon = (provider: ModelProvider) => {
+  return providerIcons[provider] || providerIcons.other
+}
+
+// 获取 Provider 徽章类
+const getProviderBadgeClasses = (provider: ModelProvider) => {
+  return providerBadgeClasses[provider] || providerBadgeClasses.other
+}
 
 onMounted(() => {
   modelStore.fetchModels()
@@ -82,24 +255,25 @@ async function handleSave(data: CreateModelDTO | UpdateModelDTO) {
   try {
     if (editingModel.value) {
       await modelStore.updateModel(editingModel.value.id, data as UpdateModelDTO)
+      toast.success('模型配置更新成功')
     } else {
       await modelStore.createModel(data as CreateModelDTO)
+      toast.success('模型配置添加成功')
     }
     showForm.value = false
   } catch (error) {
     console.error('Failed to save model:', error)
-    alert('保存失败，请重试')
+    toast.error(editingModel.value ? '更新失败，请重试' : '添加失败，请重试')
   }
 }
 
 async function handleDelete(id: number) {
-  if (!confirm('确定删除此模型配置？')) return
-
   try {
     await modelStore.deleteModel(id)
+    toast.success('模型配置已删除')
   } catch (error) {
     console.error('Failed to delete model:', error)
-    alert('删除失败，请重试')
+    toast.error('删除失败，请重试')
   }
 }
 
@@ -113,224 +287,3 @@ function formatBaseUrl(url?: string): string {
   }
 }
 </script>
-
-<style scoped>
-.model-management {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.page-header h1 {
-  font-size: 24px;
-  font-weight: 600;
-  margin: 0;
-}
-
-.btn-primary {
-  padding: 10px 20px;
-  background: #6366f1;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.btn-primary:hover {
-  background: #4f46e5;
-}
-
-.loading, .error {
-  text-align: center;
-  padding: 40px;
-  color: #6b7280;
-}
-
-.error {
-  color: #ef4444;
-}
-
-.model-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.model-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  transition: box-shadow 0.2s;
-}
-
-.model-item:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.model-info {
-  flex: 1;
-}
-
-.model-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-
-.model-header h3 {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0;
-}
-
-.status-badge {
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.status-badge.active {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.status-badge.inactive {
-  background: #f3f4f6;
-  color: #6b7280;
-}
-
-.model-name {
-  font-size: 14px;
-  color: #6b7280;
-  margin: 0 0 12px 0;
-  font-family: monospace;
-}
-
-.model-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.provider-badge {
-  padding: 4px 12px;
-  background: #dbeafe;
-  color: #1d4ed8;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.model-id, .base-url {
-  font-size: 13px;
-  color: #6b7280;
-  padding: 4px 0;
-}
-
-.model-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.btn-secondary, .btn-danger {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: opacity 0.2s;
-}
-
-.btn-secondary {
-  background: #f3f4f6;
-  color: #374151;
-}
-
-.btn-danger {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.btn-secondary:hover,
-.btn-danger:hover {
-  opacity: 0.8;
-}
-
-.empty-state {
-  text-align: center;
-  padding: 60px 20px;
-  color: #9ca3af;
-}
-
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background: white;
-  border-radius: 16px;
-  width: 90%;
-  max-width: 600px;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 24px;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.modal-header h2 {
-  font-size: 20px;
-  font-weight: 600;
-  margin: 0;
-}
-
-.btn-close {
-  background: none;
-  border: none;
-  font-size: 28px;
-  cursor: pointer;
-  color: #6b7280;
-  padding: 0;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.btn-close:hover {
-  color: #374151;
-}
-</style>

@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   db:
-    image: postgres:17
+    image: pgvector/pgvector:pg17
     container_name: agent_postgres
     restart: always
     environment:
@@ -13,8 +13,15 @@ services:
       - "5432:5432"
     volumes:
       - ./postgres_data:/var/lib/postgresql/data # 数据持久化挂载到当前目录
+      # 挂载初始化脚本，自动启用 vector 扩展
+      - ./Agent-Studio/src/main/resources/db/init-vector-extension.sql:/docker-entrypoint-initdb.d/init-vector-extension.sql
     networks:
       - agent-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 networks:
   agent-net:

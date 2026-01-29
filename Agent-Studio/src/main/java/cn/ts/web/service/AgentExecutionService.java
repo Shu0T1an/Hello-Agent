@@ -60,7 +60,7 @@ public class AgentExecutionService {
      * @return SSE 事件流
      */
     public Flux<AgentResponse> executeAgentStream(String agentName, Map<String, Object> initialState) {
-        return executeAgentStreamWithSession(agentName, initialState, "");
+        return executeAgentStreamWithSession(agentName, initialState, "", config.getTimeout());
     }
 
     /**
@@ -69,12 +69,14 @@ public class AgentExecutionService {
      * @param agentName    Agent 名称
      * @param initialState 初始状态
      * @param sessionId    会话ID（用于保持连续对话）
+     * @param timeout      超时时间
      * @return SSE 事件流
      */
     public Flux<AgentResponse> executeAgentStreamWithSession(
             String agentName,
             Map<String, Object> initialState,
-            String sessionId) {
+            String sessionId,
+            Duration timeout) {
 
         CompiledGraph graph = graphRegistry.get(agentName);
         if (graph == null) {
@@ -108,7 +110,7 @@ public class AgentExecutionService {
         // 收集完整的AI回复
         StringBuilder fullResponse = new StringBuilder();
 
-        return graph.stream(initialState, configBuilder.build())
+        return graph.stream(initialState, configBuilder.timeout(timeout).build())
                 .doOnNext(response -> {
                     // 收集流式输出
                     if (response.getData() instanceof StreamingOutput) {
@@ -277,6 +279,7 @@ public class AgentExecutionService {
         // 判断是否为图完成（整个流程结束）
         boolean isGraphComplete = response.isComplete() && response.getNodeId() == null;
         if (isGraphComplete) {
+            System.out.println("检测到 GRAPH_COMPLETED: isComplete=" + response.isComplete() + ", nodeId=" + response.getNodeId());
             return "GRAPH_COMPLETED";
         }
 

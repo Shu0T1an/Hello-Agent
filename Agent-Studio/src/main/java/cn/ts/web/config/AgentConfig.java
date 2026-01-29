@@ -3,11 +3,14 @@ package cn.ts.web.config;
 import cn.ts.agent.core.ReactAgent;
 import cn.ts.agent.mcp.McpManager;
 import cn.ts.agent.mcp.model.McpStatistics;
+import cn.ts.agent.rag.advisor.RagAdvisor;
 import cn.ts.web.service.AgentExecutionService;
 import cn.ts.web.tools.SimpleTools;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.event.EventListener;
@@ -33,19 +36,22 @@ public class AgentConfig {
     private final McpServerConfig mcpServerConfig;
     private final NodeJsConfig nodeJsConfig;
     private final ApiKeyConfig apiKeyConfig;
+    private final VectorStore vectorStore;
 
     public AgentConfig(ChatModel chatModel,
                        AgentExecutionService agentExecutionService,
                        McpManager mcpManager,
                        McpServerConfig mcpServerConfig,
                        NodeJsConfig nodeJsConfig,
-                       ApiKeyConfig apiKeyConfig) {
+                       ApiKeyConfig apiKeyConfig,
+                       @Qualifier("vectorStore") VectorStore vectorStore) {
         this.chatModel = chatModel;
         this.agentExecutionService = agentExecutionService;
         this.mcpManager = mcpManager;
         this.mcpServerConfig = mcpServerConfig;
         this.nodeJsConfig = nodeJsConfig;
         this.apiKeyConfig = apiKeyConfig;
+        this.vectorStore = vectorStore;
     }
 
     /**
@@ -68,13 +74,13 @@ public class AgentConfig {
         logger.info("注册 Agent，工具数量: {}", tools.size());
 
         // 创建一个简单的测试 Agent（非流式，带工具）
-        ReactAgent testAgent = new ReactAgent(
-                "TestAgent",
-                "一个简单的测试助手，可以回答问题和使用工具",
-                chatModel,
-                false,
-                tools.toArray()
-        );
+        ReactAgent testAgent = ReactAgent.builder()
+                .name("TestAgent")
+                .description("一个简单的测试助手，可以回答问题和使用工具")
+                .chatModel(chatModel)
+                .streaming(false)
+                .tools(tools.toArray())
+                .build();
 
         // 注册到 AgentExecutionService，使其可通过 SSE 端点访问
         agentExecutionService.registerGraph(testAgent.getName(), testAgent.getGraph());
@@ -82,13 +88,14 @@ public class AgentConfig {
         logger.info("Agent '{}' 已注册", testAgent.getName());
 
         // 创建流式测试 Agent（带工具）
-        ReactAgent streamingAgent = new ReactAgent(
-                "StreamingTestAgent",
-                "流式测试助手，可以实时输出响应和使用工具",
-                chatModel,
-                true,
-                tools.toArray()
-        );
+        ReactAgent streamingAgent = ReactAgent.builder()
+                .name("StreamingTestAgent")
+                .description("流式测试助手，可以实时输出响应和使用工具")
+                .chatModel(chatModel)
+                .advisors(List.of(new RagAdvisor(vectorStore)))
+                .streaming(true)
+                .tools(tools.toArray())
+                .build();
 
         // 注册流式 Agent
         agentExecutionService.registerGraph(streamingAgent.getName(), streamingAgent.getGraph());

@@ -6,6 +6,8 @@ import cn.ts.graph.edge.Edge;
 import cn.ts.graph.node.Node;
 import cn.ts.graph.state.MapState;
 import cn.ts.graph.state.State;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 
 import java.time.Duration;
@@ -22,6 +24,8 @@ import java.util.function.Supplier;
  * @author tianshuo
  */
 public class GraphRunner {
+
+    private static final Logger logger = LoggerFactory.getLogger(GraphRunner.class);
 
     private final GraphConfig config;
     private final NodeExecutor nodeExecutor;
@@ -259,8 +263,11 @@ public class GraphRunner {
         // 查找下一个节点
         String nextNodeId = findNextNode(currentNodeId, currentState);
 
+        logger.debug("executeNextStream: currentNodeId={}, nextNodeId={}", currentNodeId, nextNodeId);
+
         // 没有下一个节点，结束
         if (nextNodeId == null || GraphConstants.END.equals(nextNodeId)) {
+            logger.info("执行完成: currentNodeId={}, 发送 GRAPH_COMPLETED 事件", currentNodeId);
             // 触发完成回调
             if (context.getConfig().onComplete() != null) {
                 context.getConfig().onComplete().accept(GraphResult.success(currentState,

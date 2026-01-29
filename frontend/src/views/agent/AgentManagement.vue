@@ -1,71 +1,257 @@
 <template>
-  <div class="agent-management">
-    <div class="page-header">
-      <h1>Agent 管理</h1>
-      <button class="btn-primary" @click="handleCreate">
-        <span>+</span> 创建 Agent
-      </button>
+  <div class="p-6 max-w-7xl mx-auto">
+    <!-- 页面头部 -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+      <div>
+        <h1 class="text-2xl font-semibold text-slate-900">Agent 管理</h1>
+        <p class="text-sm text-slate-500 mt-1">创建和管理您的 AI Agent</p>
+      </div>
+      <BaseButton variant="primary" @click="handleCreate" class="btn-hover-lift">
+        <Plus :size="18" />
+        创建 Agent
+      </BaseButton>
     </div>
 
-    <div v-if="agentStore.loading" class="loading">加载中...</div>
-    <div v-else-if="agentStore.error" class="error">{{ agentStore.error }}</div>
-    <div v-else class="agent-list">
-      <div v-for="agent in agentStore.agents" :key="agent.id" class="agent-item">
-        <div class="agent-info">
-          <div class="agent-header">
-            <h3>{{ agent.displayName }}</h3>
-            <span :class="['status-badge', agent.isActive ? 'active' : 'inactive']">
-              {{ agent.isActive ? '激活' : '停用' }}
-            </span>
-          </div>
-          <p class="agent-name">{{ agent.agentName }}</p>
-          <p v-if="agent.description" class="agent-description">{{ agent.description }}</p>
-          <div class="agent-meta">
-            <span v-if="agent.modelConfig">{{ agent.modelConfig.displayName }}</span>
-            <span v-if="agent.toolDefinitions">{{ agent.toolDefinitions.length }} 个工具</span>
-          </div>
-        </div>
-        <div class="agent-actions">
-          <button @click="handleEdit(agent)" class="btn-secondary">编辑</button>
-          <button v-if="!agent.isActive" @click="handleActivate(agent.id)" class="btn-success">激活</button>
-          <button v-else @click="handleDeactivate(agent.id)" class="btn-warning">停用</button>
-          <button @click="handleReload(agent.id)" class="btn-secondary">重载</button>
-          <button @click="handleDelete(agent.id)" class="btn-danger">删除</button>
+    <!-- 加载状态 -->
+    <BaseSkeleton v-if="agentStore.loading" type="card" :rows="3" />
+
+    <!-- 错误状态 -->
+    <BaseCard v-else-if="agentStore.error" class="p-8 text-center">
+      <div class="flex flex-col items-center gap-3">
+        <AlertCircle :size="48" class="text-error-500" />
+        <p class="text-error-600 font-medium">{{ agentStore.error }}</p>
+        <BaseButton variant="secondary" @click="agentStore.fetchAgents()">
+          重试
+        </BaseButton>
+      </div>
+    </BaseCard>
+
+    <!-- Agent 列表 -->
+    <div v-else>
+      <!-- 搜索和筛选 -->
+      <div class="flex flex-col sm:flex-row gap-4 mb-6">
+        <BaseInput
+          v-model="searchQuery"
+          placeholder="搜索 Agent..."
+          class="flex-1"
+        >
+          <template #prefix>
+            <Search :size="18" class="text-slate-400" />
+          </template>
+        </BaseInput>
+        <div class="flex gap-2">
+          <BaseButton
+            :variant="filterStatus === 'all' ? 'primary' : 'ghost'"
+            size="sm"
+            @click="filterStatus = 'all'"
+          >
+            全部
+          </BaseButton>
+          <BaseButton
+            :variant="filterStatus === 'active' ? 'primary' : 'ghost'"
+            size="sm"
+            @click="filterStatus = 'active'"
+          >
+            激活
+          </BaseButton>
+          <BaseButton
+            :variant="filterStatus === 'inactive' ? 'primary' : 'ghost'"
+            size="sm"
+            @click="filterStatus = 'inactive'"
+          >
+            停用
+          </BaseButton>
         </div>
       </div>
 
-      <div v-if="agentStore.agents.length === 0" class="empty-state">
-        <p>暂无 Agent，点击右上角创建</p>
+      <!-- Agent 卡片网格 -->
+      <div v-if="filteredAgents.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <BaseCard
+          v-for="agent in filteredAgents"
+          :key="agent.id"
+          hoverable
+          class="group"
+        >
+          <template #default>
+            <div class="flex items-start justify-between mb-4">
+              <div class="flex-1 min-w-0">
+                <h3 class="text-lg font-semibold text-slate-900 truncate">
+                  {{ agent.displayName }}
+                </h3>
+                <p class="text-sm text-slate-500 font-mono mt-1">
+                  {{ agent.agentName }}
+                </p>
+              </div>
+              <span
+                :class="[
+                  'px-3 py-1 rounded-full text-xs font-medium flex-shrink-0 ml-2',
+                  agent.isActive
+                    ? 'bg-success-100 text-success-700'
+                    : 'bg-slate-100 text-slate-600'
+                ]"
+              >
+                {{ agent.isActive ? '激活' : '停用' }}
+              </span>
+            </div>
+
+            <p v-if="agent.description" class="text-sm text-slate-600 mb-4 line-clamp-2">
+              {{ agent.description }}
+            </p>
+
+            <div class="flex flex-wrap gap-2 mb-4">
+              <span
+                v-if="agent.modelConfig"
+                class="inline-flex items-center gap-1 px-2 py-1 bg-indigo-50 text-indigo-700 rounded-md text-xs font-medium"
+              >
+                <Cpu :size="14" />
+                {{ agent.modelConfig.displayName }}
+              </span>
+              <span
+                v-if="agent.toolDefinitions"
+                class="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 text-slate-600 rounded-md text-xs font-medium"
+              >
+                <Wrench :size="14" />
+                {{ agent.toolDefinitions.length }} 个工具
+              </span>
+            </div>
+
+            <!-- 操作按钮 -->
+            <div class="flex items-center gap-2 pt-4 border-t border-slate-100">
+              <BaseButton
+                variant="ghost"
+                size="sm"
+                class="flex-1"
+                @click="handleEdit(agent)"
+              >
+                <Edit :size="16" />
+                编辑
+              </BaseButton>
+
+              <BaseDropdown :items="getDropdownItems(agent)">
+                <template #trigger>
+                  <BaseButton variant="ghost" size="sm" class="p-2">
+                    <MoreVertical :size="18" />
+                  </BaseButton>
+                </template>
+              </BaseDropdown>
+            </div>
+          </template>
+        </BaseCard>
       </div>
+
+      <!-- 空状态 -->
+      <BaseEmpty
+        v-else-if="agentStore.agents.length === 0"
+        type="inbox"
+        title="暂无 Agent"
+        description="点击右上角创建您的第一个 Agent"
+        action-text="创建 Agent"
+        @action="handleCreate"
+      />
+      <BaseEmpty
+        v-else
+        type="search"
+        title="未找到匹配的 Agent"
+        description="请尝试调整搜索关键词或筛选条件"
+        :show-action="false"
+      />
     </div>
 
-    <!-- Agent 表单对话框 -->
-    <div v-if="showForm" class="modal-overlay" @click.self="showForm = false">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2>{{ editingAgent ? '编辑 Agent' : '创建 Agent' }}</h2>
-          <button @click="showForm = false" class="btn-close">×</button>
-        </div>
-        <AgentForm
-          :agent="editingAgent"
-          @close="showForm = false"
-          @save="handleSave"
-        />
-      </div>
-    </div>
+    <!-- Agent 表单模态框 -->
+    <BaseModal
+      v-model:visible="showForm"
+      :title="editingAgent ? '编辑 Agent' : '创建 Agent'"
+      width="lg"
+    >
+      <AgentForm
+        :agent="editingAgent"
+        @close="showForm = false"
+        @save="handleSave"
+      />
+    </BaseModal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useAgentConfigStore } from '@/stores/agentConfig'
+import { useToast } from '@/composables/useToast'
 import type { AgentConfig, CreateAgentDTO, UpdateAgentDTO } from '@/types/agent'
 import AgentForm from '@/components/agent/AgentForm.vue'
+import BaseButton from '@/components/base/BaseButton.vue'
+import BaseInput from '@/components/base/BaseInput.vue'
+import BaseCard from '@/components/base/BaseCard.vue'
+import BaseModal from '@/components/base/BaseModal.vue'
+import BaseEmpty from '@/components/base/BaseEmpty.vue'
+import BaseSkeleton from '@/components/base/BaseSkeleton.vue'
+import BaseDropdown from '@/components/base/BaseDropdown.vue'
+import {
+  Plus,
+  Search,
+  Edit,
+  Cpu,
+  Wrench,
+  MoreVertical,
+  AlertCircle,
+  Power,
+  RefreshCw,
+  Trash2,
+} from 'lucide-vue-next'
 
 const agentStore = useAgentConfigStore()
+const toast = useToast()
 
 const showForm = ref(false)
 const editingAgent = ref<AgentConfig | null>(null)
+const searchQuery = ref('')
+const filterStatus = ref<'all' | 'active' | 'inactive'>('all')
+
+// 筛选后的 Agent 列表
+const filteredAgents = computed(() => {
+  let result = agentStore.agents
+
+  // 状态筛选
+  if (filterStatus.value === 'active') {
+    result = result.filter(a => a.isActive)
+  } else if (filterStatus.value === 'inactive') {
+    result = result.filter(a => !a.isActive)
+  }
+
+  // 搜索筛选
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    result = result.filter(a =>
+      a.displayName.toLowerCase().includes(query) ||
+      a.agentName.toLowerCase().includes(query) ||
+      (a.description && a.description.toLowerCase().includes(query))
+    )
+  }
+
+  return result
+})
+
+// 获取下拉菜单项
+const getDropdownItems = (agent: AgentConfig) => {
+  return [
+    {
+      label: agent.isActive ? '停用' : '激活',
+      icon: Power,
+      action: () => agent.isActive ? handleDeactivate(agent.id) : handleActivate(agent.id),
+      variant: agent.isActive ? 'warning' : 'success',
+    },
+    {
+      label: '重载',
+      icon: RefreshCw,
+      action: () => handleReload(agent.id),
+    },
+    {
+      label: '删除',
+      icon: Trash2,
+      action: () => handleDelete(agent.id),
+      variant: 'danger',
+    },
+  ]
+}
 
 onMounted(() => {
   agentStore.fetchAgents()
@@ -85,277 +271,64 @@ async function handleSave(data: CreateAgentDTO | UpdateAgentDTO) {
   try {
     if (editingAgent.value) {
       await agentStore.updateAgent(editingAgent.value.id, data as UpdateAgentDTO)
+      toast.success('Agent 更新成功')
     } else {
       await agentStore.createAgent(data as CreateAgentDTO)
+      toast.success('Agent 创建成功')
     }
     showForm.value = false
   } catch (error) {
     console.error('Failed to save agent:', error)
-    alert('保存失败，请重试')
+    toast.error(editingAgent.value ? '更新失败，请重试' : '创建失败，请重试')
   }
 }
 
 async function handleActivate(id: number) {
   try {
     await agentStore.activateAgent(id)
+    toast.success('Agent 已激活')
   } catch (error) {
     console.error('Failed to activate agent:', error)
-    alert('激活失败，请重试')
+    toast.error('激活失败，请重试')
   }
 }
 
 async function handleDeactivate(id: number) {
   try {
     await agentStore.deactivateAgent(id)
+    toast.success('Agent 已停用')
   } catch (error) {
     console.error('Failed to deactivate agent:', error)
-    alert('停用失败，请重试')
+    toast.error('停用失败，请重试')
   }
 }
 
 async function handleReload(id: number) {
   try {
     await agentStore.reloadAgent(id)
-    alert('重载成功')
+    toast.success('Agent 重载成功')
   } catch (error) {
     console.error('Failed to reload agent:', error)
-    alert('重载失败，请重试')
+    toast.error('重载失败，请重试')
   }
 }
 
 async function handleDelete(id: number) {
-  if (!confirm('确定删除此 Agent？')) return
-
   try {
     await agentStore.deleteAgent(id)
+    toast.success('Agent 已删除')
   } catch (error) {
     console.error('Failed to delete agent:', error)
-    alert('删除失败，请重试')
+    toast.error('删除失败，请重试')
   }
 }
 </script>
 
 <style scoped>
-.agent-management {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.page-header h1 {
-  font-size: 24px;
-  font-weight: 600;
-  margin: 0;
-}
-
-.btn-primary {
-  padding: 10px 20px;
-  background: #6366f1;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.btn-primary:hover {
-  background: #4f46e5;
-}
-
-.loading, .error {
-  text-align: center;
-  padding: 40px;
-  color: #6b7280;
-}
-
-.error {
-  color: #ef4444;
-}
-
-.agent-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.agent-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  transition: box-shadow 0.2s;
-}
-
-.agent-item:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.agent-info {
-  flex: 1;
-}
-
-.agent-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-
-.agent-header h3 {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0;
-}
-
-.status-badge {
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.status-badge.active {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.status-badge.inactive {
-  background: #f3f4f6;
-  color: #6b7280;
-}
-
-.agent-name {
-  font-size: 14px;
-  color: #6b7280;
-  margin: 0 0 8px 0;
-  font-family: monospace;
-}
-
-.agent-description {
-  font-size: 14px;
-  color: #374151;
-  margin: 0 0 12px 0;
-}
-
-.agent-meta {
-  display: flex;
-  gap: 16px;
-  font-size: 13px;
-  color: #6b7280;
-}
-
-.agent-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.btn-secondary, .btn-success, .btn-warning, .btn-danger {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: opacity 0.2s;
-}
-
-.btn-secondary {
-  background: #f3f4f6;
-  color: #374151;
-}
-
-.btn-success {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.btn-warning {
-  background: #fef9c3;
-  color: #854d0e;
-}
-
-.btn-danger {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.btn-secondary:hover,
-.btn-success:hover,
-.btn-warning:hover,
-.btn-danger:hover {
-  opacity: 0.8;
-}
-
-.empty-state {
-  text-align: center;
-  padding: 60px 20px;
-  color: #9ca3af;
-}
-
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background: white;
-  border-radius: 16px;
-  width: 90%;
-  max-width: 700px;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 24px;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.modal-header h2 {
-  font-size: 20px;
-  font-weight: 600;
-  margin: 0;
-}
-
-.btn-close {
-  background: none;
-  border: none;
-  font-size: 28px;
-  cursor: pointer;
-  color: #6b7280;
-  padding: 0;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.btn-close:hover {
-  color: #374151;
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 </style>

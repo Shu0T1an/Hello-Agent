@@ -26,6 +26,14 @@ interface AgentEvent {
   nodeErrorMessage?: string      // 节点错误信息
 }
 
+// Agent 执行请求 DTO（与后端 AgentExecuteRequest 一致）
+export interface AgentExecuteRequest {
+  input?: string
+  sessionId?: string
+  timeout?: number
+  initialState?: Record<string, unknown>
+}
+
 // 后端会话数据类型
 interface BackendSession {
   id: string
@@ -88,6 +96,7 @@ export const useChatStore = defineStore('chat', () => {
   const currentStrategy = ref<Strategy>('deep-research')
   const isProcessing = ref<boolean>(false)
   const isLoading = ref<boolean>(false)
+  const currentKnowledgeBaseId = ref<string>('')
 
   // 计算属性
   const currentSession = computed(() => {
@@ -216,7 +225,7 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   // 发送消息
-  function sendMessage(content: string) {
+  async function sendMessage(content: string) {
     if (!content.trim() || isProcessing.value) return
 
     const agentStore = useAgentStore()
@@ -245,82 +254,184 @@ export const useChatStore = defineStore('chat', () => {
       currentSession.value.updatedAt = new Date().toLocaleString('zh-CN')
     }
 
-    // 连接 SSE
+    // 创建 AbortController 用于取消请求
+    const controller = new AbortController()
     isProcessing.value = true
-    const params = new URLSearchParams({
+
+    const request: AgentExecuteRequest = {
       input: content,
-      ...(currentSessionId.value && { sessionId: currentSessionId.value })
-    })
-
-    const url = `${API_BASE}/api/stream/agent/${encodeURIComponent(agentStore.currentAgent)}/execute?${params.toString()}`
-    console.log('SSE URL:', url)
-
-    const eventSource = new EventSource(url)
-    let completed = false
-
-    // SSE 连接打开
-    eventSource.onopen = () => {
-      console.log('SSE 连接已打开')
+      sessionId: currentSessionId.value || undefined,
+      timeout: undefined, // 使用默认超时
+      initialState: currentKnowledgeBaseId.value ? { knowledgeBaseId: currentKnowledgeBaseId.value } : undefined
     }
 
-    // 处理 SSE 消息事件
-    eventSource.onmessage = (event) => {
-      handleSSEMessage(event, aiMessage, agentTimelineStore, eventSource, () => {
-        completed = true
-        isProcessing.value = false
+    const url = `${API_BASE}/api/stream/agent/${encodeURIComponent(agentStore.currentAgent)}/execute`
+    console.log('POST URL:', url)
+
+    try {
+      // 使用 fetch 发送 POST 请求，绑定 AbortSignal
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(request),
+        signal: controller.signal
       })
-    }
 
-    // 处理 SSE 错误
-    eventSource.onerror = () => {
-      handleSSEError(eventSource, aiMessage, completed)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      // 从响应体读取 SSE 流
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      if (!reader) {
+        throw new Error('无法获取响应流')
+      }
+
+      // 读取流
+      while (true) {
+        const { done, value } = await reader.read()
+        console.log('[read] done:', done, 'value length:', value?.length)
+
+        // 解码数据（包括最后一次）
+        if (value) {
+          const decoded = decoder.decode(value, { stream: true })
+          console.log('[read] decoded:', decoded)
+          buffer += decoded
+        }
+
+        console.log('[read] current buffer length:', buffer.length, 'content:', buffer.substring(0, 200))
+
+        if (done) {
+          console.log('=== SSE 流读取完成 ===')
+          console.log('=== 最终 buffer length:', buffer.length, 'content:', buffer)
+          // 流结束时，处理 buffer 中的剩余数据
+          if (buffer.trim()) {
+            console.log('=== 处理 buffer 中的剩余数据 ===')
+            processSSEBuffer(buffer, aiMessage, agentTimelineStore, controller)
+            buffer = ''
+          } else {
+            console.log('=== buffer 为空，没有数据可处理 ===')
+          }
+          break
+        }
+
+        // 使用 \n\n 分隔符（SSE 标准）处理粘包
+        let parts = buffer.split('\n\n')
+        buffer = parts.pop() || ''
+
+        for (const eventBlock of parts) {
+          // SSE 事件块可能包含多行（id: xxx\ndata: {...}）
+          // 逐行查找 data: 开头的行
+          const lines = eventBlock.split('\n')
+          for (const line of lines) {
+            const trimmedLine = line.trim()
+            if (!trimmedLine.startsWith('data:')) continue
+
+            const jsonStr = trimmedLine.replace(/^data:\s*/, '').trim()
+            if (!jsonStr) continue
+
+            try {
+              const data: AgentEvent = JSON.parse(jsonStr)
+              console.log(`[SSE] ${data.eventType} | ${data.nodeId || 'N/A'}`)
+
+              // 直接传入解析好的数据，无需 mock EventSource
+              handleSSEMessage(data, aiMessage, agentTimelineStore, controller, () => {
+                isProcessing.value = false
+              })
+            } catch (error) {
+              console.error('解析 SSE 数据失败:', error, jsonStr)
+            }
+          }
+        }
+      }
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        console.log('Fetch aborted')
+      } else {
+        console.error('SSE 连接错误:', error)
+        handleSSEError(aiMessage)
+      }
+    } finally {
+      isProcessing.value = false
+    }
+  }
+
+  // 处理 buffer 中的剩余数据
+  function processSSEBuffer(
+    buffer: string,
+    aiMessage: Message,
+    agentTimelineStore: ReturnType<typeof useAgentTimelineStore>,
+    controller: AbortController
+  ) {
+    // 使用 \n\n 分隔符处理事件块
+    const eventBlocks = buffer.split('\n\n')
+    for (const eventBlock of eventBlocks) {
+      // 逐行查找 data: 开头的行
+      const lines = eventBlock.split('\n')
+      for (const line of lines) {
+        const trimmedLine = line.trim()
+        if (!trimmedLine.startsWith('data:')) continue
+
+        const jsonStr = trimmedLine.replace(/^data:\s*/, '').trim()
+        if (!jsonStr) continue
+
+        try {
+          const data: AgentEvent = JSON.parse(jsonStr)
+          console.log(`[SSE] 最后处理 ${data.eventType} | ${data.nodeId || 'N/A'}`)
+          handleSSEMessage(data, aiMessage, agentTimelineStore, controller, () => {
+            isProcessing.value = false
+          })
+        } catch (error) {
+          console.error('解析 buffer SSE 数据失败:', error, jsonStr)
+        }
+      }
     }
   }
 
   // 处理 SSE 消息事件
   function handleSSEMessage(
-    event: MessageEvent,
+    data: AgentEvent,
     aiMessage: Message,
     agentTimelineStore: ReturnType<typeof useAgentTimelineStore>,
-    eventSource: EventSource,
+    abortController: AbortController,
     onComplete: () => void
   ) {
-    try {
-      const data: AgentEvent = JSON.parse(event.data)
-      console.log('收到事件:', data.eventType, data)
+    console.log('收到事件:', data.eventType, data)
 
-      // 添加到时间线
-      agentTimelineStore.addEvent({
-        eventType: data.eventType as any,
-        nodeId: data.nodeId || '',
-        nodeType: data.nodeType as any || 'custom',
-        stateData: data.stateData || {},
-        message: data.message,
-        timestamp: data.timestamp || new Date().toISOString(),
-        title: data.title,
-        startTime: data.startTime,
-        endTime: data.endTime,
-        nodeErrorMessage: data.nodeErrorMessage,
-        logs: data.logs
-      })
+    // 添加到时间线
+    agentTimelineStore.addEvent({
+      eventType: data.eventType as any,
+      nodeId: data.nodeId || '',
+      nodeType: data.nodeType as any || 'custom',
+      stateData: data.stateData || {},
+      message: data.message,
+      timestamp: data.timestamp || new Date().toISOString(),
+      title: data.title,
+      startTime: data.startTime,
+      endTime: data.endTime,
+      nodeErrorMessage: data.nodeErrorMessage,
+      logs: data.logs
+    })
 
-      // 处理标题生成事件
-      if (data.eventType === 'TITLE_GENERATED' && data.metadata?.title) {
-        const session = sessions.value.find(s => s.id === currentSessionId.value)
-        if (session) {
-          session.title = data.metadata.title as string
-        }
+    // 处理标题生成事件
+    if (data.eventType === 'TITLE_GENERATED' && data.metadata?.title) {
+      const session = sessions.value.find(s => s.id === currentSessionId.value)
+      if (session) {
+        session.title = data.metadata.title as string
       }
+    }
 
-      // 更新 AI 消息
-      updateAIMessage(aiMessage, data, eventSource, onComplete)
+    // 直接调用 updateAIMessage，无需再次解析
+    updateAIMessage(aiMessage, data, abortController, onComplete)
 
-      // 更新会话时间戳
-      if (currentSession.value) {
-        currentSession.value.updatedAt = new Date().toLocaleString('zh-CN')
-      }
-    } catch (error) {
-      console.error('Failed to parse SSE event:', error)
+    // 更新会话时间戳
+    if (currentSession.value) {
+      currentSession.value.updatedAt = new Date().toLocaleString('zh-CN')
     }
   }
 
@@ -328,65 +439,83 @@ export const useChatStore = defineStore('chat', () => {
   function updateAIMessage(
     aiMessage: Message,
     data: AgentEvent,
-    eventSource: EventSource,
+    abortController: AbortController,
     onComplete: () => void
   ) {
     const msgIndex = currentSession.value?.messages.findIndex(m => m.id === aiMessage.id)
 
     if (msgIndex === undefined || msgIndex < 0 || !currentSession.value) {
+      console.warn('[updateAIMessage] 消息未找到:', aiMessage.id)
       return
     }
 
     const messages = currentSession.value.messages
-    const msg = messages[msgIndex]
 
-    if (!msg) {
+    // 验证消息存在
+    const initialMsg = messages[msgIndex]
+    if (!initialMsg) {
+      console.warn('[updateAIMessage] 消息对象为空')
       return
     }
 
-    msg.status = mapEventTypeToMessageStatus(data.eventType)
+    console.log(`[updateAIMessage] 处理事件: eventType=${data.eventType}`)
 
     switch (data.eventType) {
       case 'running':
-        // 流式输出：追加消息内容
+        // 增量追加：流式输出 - 重新获取最新消息引用
+        const currentMsg = messages[msgIndex]
+        console.log('[updateAIMessage] running - 当前消息:', currentMsg)
+        console.log('[updateAIMessage] running - 收到内容:', data.message)
         if (data.message) {
-          msg.content += data.message
+          messages[msgIndex] = {
+            ...currentMsg,
+            status: 'thinking',
+            content: currentMsg.content + data.message
+          }
+          console.log('[updateAIMessage] running - 更新后:', messages[msgIndex])
+        }
+        break
+
+      case 'completed':
+        // 全量覆盖：仅 _AGENT_MODEL_ 节点 - 重新获取最新消息引用
+        const completedMsg = messages[msgIndex]
+        if (data.nodeId === '_AGENT_MODEL_' && data.message) {
+          console.log('[updateAIMessage] completed - 全量覆盖:', data.message)
+          messages[msgIndex] = {
+            ...completedMsg,
+            status: 'thinking',
+            content: data.message  // 全量覆盖，防止增量丢失
+          }
         }
         break
 
       case 'GRAPH_COMPLETED':
-        // 图完成：标记为已完成，关闭 SSE 连接
-        msg.status = 'completed'
+        // 重新获取最新消息引用
+        const graphCompletedMsg = messages[msgIndex]
+        console.log('[updateAIMessage] GRAPH_COMPLETED - 完成')
+        messages[msgIndex] = { ...graphCompletedMsg, status: 'completed' }
         onComplete()
-        eventSource.close()
-        break
-
-      case 'completed':
-        // 节点完成：不关闭连接，继续等待后续节点
+        abortController.abort()  // 真正停止流
         break
 
       case 'failed':
-        // 失败：显示错误信息，关闭 SSE 连接
-        msg.content = `错误: ${data.nodeErrorMessage || data.error || '执行失败'}`
+        // 重新获取最新消息引用
+        const failedMsg = messages[msgIndex]
+        console.log('[updateAIMessage] failed - 失败:', data.nodeErrorMessage)
+        messages[msgIndex] = {
+          ...failedMsg,
+          status: 'error',
+          content: failedMsg.content + `\n(错误: ${data.nodeErrorMessage || '执行失败'})`
+        }
         onComplete()
-        eventSource.close()
+        abortController.abort()
         break
     }
   }
 
   // 处理 SSE 错误
-  function handleSSEError(eventSource: EventSource, aiMessage: Message, completed: boolean) {
-    console.error('SSE connection error:', {
-      readyState: eventSource.readyState,
-      url: eventSource.url,
-      completed
-    })
-
-    if (completed) {
-      console.log('连接正常完成')
-      isProcessing.value = false
-      return
-    }
+  function handleSSEError(aiMessage: Message) {
+    console.error('SSE connection error')
 
     // 更新消息为错误状态
     const msgIndex = currentSession.value?.messages.findIndex(m => m.id === aiMessage.id)
@@ -399,11 +528,14 @@ export const useChatStore = defineStore('chat', () => {
     }
 
     isProcessing.value = false
-    eventSource.close()
   }
 
   function setStrategy(strategy: Strategy) {
     currentStrategy.value = strategy
+  }
+
+  function setKnowledgeBaseId(knowledgeBaseId: string) {
+    currentKnowledgeBaseId.value = knowledgeBaseId
   }
 
   return {
@@ -413,6 +545,7 @@ export const useChatStore = defineStore('chat', () => {
     currentStrategy,
     isProcessing,
     isLoading,
+    currentKnowledgeBaseId,
     // 计算属性
     currentSession,
     messages,
@@ -423,6 +556,7 @@ export const useChatStore = defineStore('chat', () => {
     switchSession,
     createNewSession,
     deleteSession,
-    setStrategy
+    setStrategy,
+    setKnowledgeBaseId
   }
 })

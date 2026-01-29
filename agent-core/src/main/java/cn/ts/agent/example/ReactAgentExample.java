@@ -28,13 +28,13 @@ public class ReactAgentExample {
         ChatModel chatModel = context.getBean(ChatModel.class);
         ExampleTools tools = context.getBean(ExampleTools.class);
 
-        // 创建 ReactAgent
-        ReactAgent agent = new ReactAgent(
-                "CalculatorAgent",
-                "一个可以进行数学计算的智能助手",
-                chatModel,
-                tools
-        );
+        // 使用 Builder 创建 ReactAgent
+        ReactAgent agent = ReactAgent.builder()
+                .name("CalculatorAgent")
+                .description("一个可以进行数学计算的智能助手")
+                .chatModel(chatModel)
+                .tools(tools)
+                .build();
 
         System.out.println("=== ReAct Agent 示例 ===");
         System.out.println("Agent 名称: " + agent.getName());

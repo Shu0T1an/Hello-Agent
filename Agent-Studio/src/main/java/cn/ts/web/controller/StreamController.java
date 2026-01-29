@@ -12,6 +12,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
+import jakarta.validation.Valid;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -49,27 +50,24 @@ public class StreamController {
      * 流式执行 Agent
      * <p>
      * SSE 端点，实时推送执行事件
+     * 使用 POST + JSON 请求体，统一处理所有参数
      * </p>
      *
-     * @param agentName    Agent 名称
-     * @param input        用户输入
-     * @param sessionId    会话ID（可选，用于保持连续对话）
-     * @param initialState 初始状态（可选）
+     * @param agentName Agent 名称
+     * @param request   执行请求
      * @return SSE 事件流
      */
-    @GetMapping(value = "/agent/{agentName}/execute", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<ServerSentEvent<AgentResponse>> executeAgentStream(
+    @PostMapping(value = "/agent/{agentName}/execute", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<ServerSentEvent<AgentResponse>> executeAgent(
             @PathVariable String agentName,
-            @RequestParam(required = false) String input,
-            @RequestParam(required = false) String sessionId,
-            @RequestParam(required = false) Map<String, Object> initialState) {
+            @Valid @RequestBody cn.ts.web.dto.AgentExecuteRequest request) {
 
         // 构建消息列表（包含历史消息）
         List<Message> messages = new ArrayList<>();
 
         // 如果有 sessionId，从会话服务加载历史消息
-        if (sessionId != null && !sessionId.isEmpty()) {
-            sessionService.getSession(sessionId).ifPresent(sessionDetail -> {
+        if (request.getSessionId() != null && !request.getSessionId().isEmpty()) {
+            sessionService.getSession(request.getSessionId()).ifPresent(sessionDetail -> {
                 if (sessionDetail.getMessages() != null) {
                     for (SessionDetailDTO.SessionMessage msg : sessionDetail.getMessages()) {
                         Message message = convertToSpringAIMessage(msg);
@@ -82,23 +80,29 @@ public class StreamController {
         }
 
         // 添加当前用户输入
-        if (input != null && !input.isEmpty()) {
-            messages.add(new UserMessage(input));
+        if (request.getInput() != null && !request.getInput().isEmpty()) {
+            messages.add(new UserMessage(request.getInput()));
         }
 
-        // 合并参数：支持 input 参数或 initialState
+        // 合并初始状态
         Map<String, Object> mergedState = new HashMap<>();
-        if (initialState != null) {
-            mergedState.putAll(initialState);
+        if (request.getInitialState() != null) {
+            mergedState.putAll(request.getInitialState());
         }
         if (!messages.isEmpty()) {
             mergedState.put("messages", messages);
         }
 
+        // 确定超时时间
+        java.time.Duration actualTimeout = request.getTimeout() != null
+                ? java.time.Duration.ofSeconds(request.getTimeout())
+                : config.getTimeout();
+
         return agentExecutionService.executeAgentStreamWithSession(
                         agentName,
                         mergedState.isEmpty() ? null : mergedState,
-                        sessionId)
+                        request.getSessionId(),
+                        actualTimeout)
                 .map(response -> ServerSentEvent.<AgentResponse>builder()
                         .data(response)
                         .id(response.getExecutionId())
@@ -114,47 +118,6 @@ public class StreamController {
             case "assistant" -> new AssistantMessage(msg.getContent());
             default -> null;
         };
-    }
-
-    /**
-     * 流式执行 Agent（带超时配置）
-     * <p>
-     * 使用配置文件中的默认超时时间，可通过参数覆盖
-     * </p>
-     *
-     * @param agentName    Agent 名称
-     * @param timeout      超时时间（秒），默认使用配置值
-     * @param initialState 初始状态（可选）
-     * @return SSE 事件流
-     */
-    @GetMapping(value = "/agent/{agentName}/execute-with-timeout", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<ServerSentEvent<AgentResponse>> executeAgentStreamWithTimeout(
-            @PathVariable String agentName,
-            @RequestParam(required = false) Integer timeout,
-            @RequestParam(required = false) String input,
-            @RequestParam(required = false) Map<String, Object> initialState) {
-
-        // 使用配置的超时时间，或参数覆盖
-        java.time.Duration actualTimeout = timeout != null
-                ? java.time.Duration.ofSeconds(timeout)
-                : config.getTimeout();
-
-        // 合并参数：支持 input 参数或 initialState
-        Map<String, Object> mergedState = new HashMap<>();
-        if (initialState != null) {
-            mergedState.putAll(initialState);
-        }
-        if (input != null && !input.isEmpty()) {
-            mergedState.put("messages", List.of(new UserMessage(input)));
-        }
-
-        return agentExecutionService.executeAgentStream(
-                agentName,
-                mergedState.isEmpty() ? Map.of() : mergedState,
-                actualTimeout
-        ).map(response -> ServerSentEvent.<AgentResponse>builder()
-                .data(response)
-                .build());
     }
 
     /**

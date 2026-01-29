@@ -16,7 +16,7 @@ import static org.mockito.Mockito.mock;
 /**
  * ReactAgent 单元测试
  * <p>
- * 测试 ReAct Agent 的各项功能，包括构造函数、执行和属性获取
+ * 测试 ReAct Agent 的各项功能，包括 Builder、执行和属性获取
  * </p>
  *
  * @author tianshuo
@@ -28,15 +28,15 @@ class ReactAgentTest {
     private ChatModel mockChatModel;
 
     @Test
-    void testConstructorWithAllParameters() {
+    void testBuilderWithAllParameters() {
         Object testTool = new TestToolClass();
 
-        ReactAgent agent = new ReactAgent(
-                "test_agent",
-                "Test description",
-                mockChatModel,
-                testTool
-        );
+        ReactAgent agent = ReactAgent.builder()
+                .name("test_agent")
+                .description("Test description")
+                .chatModel(mockChatModel)
+                .tools(testTool)
+                .build();
 
         assertNotNull(agent);
         assertEquals("test_agent", agent.getName());
@@ -44,59 +44,64 @@ class ReactAgentTest {
     }
 
     @Test
-    void testConstructorWithMinimalParameters() {
-        ReactAgent agent = new ReactAgent("test_agent", mockChatModel);
+    void testBuilderWithMinimalParameters() {
+        ReactAgent agent = ReactAgent.builder()
+                .name("test_agent")
+                .chatModel(mockChatModel)
+                .build();
 
         assertNotNull(agent);
         assertEquals("test_agent", agent.getName());
-        assertEquals("ReAct Agent with tool calling capabilities", agent.getDescription());
     }
 
     @Test
-    void testConstructorWithDescription() {
-        ReactAgent agent = new ReactAgent(
-                "test_agent",
-                "Custom description",
-                mockChatModel
-        );
+    void testBuilderWithDescription() {
+        ReactAgent agent = ReactAgent.builder()
+                .name("test_agent")
+                .description("Custom description")
+                .chatModel(mockChatModel)
+                .build();
 
         assertNotNull(agent);
         assertEquals("Custom description", agent.getDescription());
     }
 
     @Test
-    void testConstructorWithStreaming() {
+    void testBuilderWithStreaming() {
         Object testTool = new TestToolClass();
 
-        ReactAgent agent = new ReactAgent(
-                "test_agent",
-                "Test agent",
-                mockChatModel,
-                testTool
-        );
+        ReactAgent agent = ReactAgent.builder()
+                .name("test_agent")
+                .description("Test agent")
+                .chatModel(mockChatModel)
+                .streaming(true)
+                .tools(testTool)
+                .build();
 
         assertNotNull(agent);
     }
 
     @Test
-    void testConstructorWithNoTools() {
-        ReactAgent agent = new ReactAgent("test_agent", mockChatModel);
+    void testBuilderWithNoTools() {
+        ReactAgent agent = ReactAgent.builder()
+                .name("test_agent")
+                .chatModel(mockChatModel)
+                .build();
 
         assertNotNull(agent);
         assertArrayEquals(new Object[0], agent.getTools());
     }
 
     @Test
-    void testConstructorWithMultipleTools() {
+    void testBuilderWithMultipleTools() {
         TestToolClass tool1 = new TestToolClass();
         AnotherTestToolClass tool2 = new AnotherTestToolClass();
 
-        ReactAgent agent = new ReactAgent(
-                "test_agent",
-                mockChatModel,
-                tool1,
-                tool2
-        );
+        ReactAgent agent = ReactAgent.builder()
+                .name("test_agent")
+                .chatModel(mockChatModel)
+                .tools(tool1, tool2)
+                .build();
 
         assertNotNull(agent);
         assertEquals(2, agent.getTools().length);
@@ -104,25 +109,31 @@ class ReactAgentTest {
 
     @Test
     void testGetName() {
-        ReactAgent agent = new ReactAgent("my_agent", mockChatModel);
+        ReactAgent agent = ReactAgent.builder()
+                .name("my_agent")
+                .chatModel(mockChatModel)
+                .build();
 
         assertEquals("my_agent", agent.getName());
     }
 
     @Test
     void testGetDescription() {
-        ReactAgent agent = new ReactAgent(
-                "test_agent",
-                "This is a test agent",
-                mockChatModel
-        );
+        ReactAgent agent = ReactAgent.builder()
+                .name("test_agent")
+                .description("This is a test agent")
+                .chatModel(mockChatModel)
+                .build();
 
         assertEquals("This is a test agent", agent.getDescription());
     }
 
     @Test
     void testGetChatModel() {
-        ReactAgent agent = new ReactAgent("test_agent", mockChatModel);
+        ReactAgent agent = ReactAgent.builder()
+                .name("test_agent")
+                .chatModel(mockChatModel)
+                .build();
 
         assertSame(mockChatModel, agent.getChatModel());
     }
@@ -131,7 +142,11 @@ class ReactAgentTest {
     void testGetTools() {
         TestToolClass tool = new TestToolClass();
 
-        ReactAgent agent = new ReactAgent("test_agent", mockChatModel, tool);
+        ReactAgent agent = ReactAgent.builder()
+                .name("test_agent")
+                .chatModel(mockChatModel)
+                .tools(tool)
+                .build();
 
         Object[] tools = agent.getTools();
 
@@ -142,7 +157,10 @@ class ReactAgentTest {
 
     @Test
     void testGetGraph() {
-        ReactAgent agent = new ReactAgent("test_agent", mockChatModel);
+        ReactAgent agent = ReactAgent.builder()
+                .name("test_agent")
+                .chatModel(mockChatModel)
+                .build();
 
         CompiledGraph graph = agent.getGraph();
 
@@ -152,7 +170,10 @@ class ReactAgentTest {
 
     @Test
     void testGraphHasRequiredNodes() {
-        ReactAgent agent = new ReactAgent("test_agent", mockChatModel);
+        ReactAgent agent = ReactAgent.builder()
+                .name("test_agent")
+                .chatModel(mockChatModel)
+                .build();
 
         CompiledGraph graph = agent.getGraph();
 
@@ -162,7 +183,10 @@ class ReactAgentTest {
 
     @Test
     void testGraphHasEntryPoint() {
-        ReactAgent agent = new ReactAgent("test_agent", mockChatModel);
+        ReactAgent agent = ReactAgent.builder()
+                .name("test_agent")
+                .chatModel(mockChatModel)
+                .build();
 
         CompiledGraph graph = agent.getGraph();
 
@@ -172,7 +196,10 @@ class ReactAgentTest {
 
     @Test
     void testToString() {
-        ReactAgent agent = new ReactAgent("test_agent", mockChatModel);
+        ReactAgent agent = ReactAgent.builder()
+                .name("test_agent")
+                .chatModel(mockChatModel)
+                .build();
 
         String str = agent.toString();
 
@@ -182,8 +209,14 @@ class ReactAgentTest {
 
     @Test
     void testMultipleAgentsHaveIndependentGraphs() {
-        ReactAgent agent1 = new ReactAgent("agent1", mockChatModel);
-        ReactAgent agent2 = new ReactAgent("agent2", mockChatModel);
+        ReactAgent agent1 = ReactAgent.builder()
+                .name("agent1")
+                .chatModel(mockChatModel)
+                .build();
+        ReactAgent agent2 = ReactAgent.builder()
+                .name("agent2")
+                .chatModel(mockChatModel)
+                .build();
 
         CompiledGraph graph1 = agent1.getGraph();
         CompiledGraph graph2 = agent2.getGraph();

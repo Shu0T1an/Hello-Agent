@@ -8,6 +8,7 @@ import cn.ts.graph.state.State;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.api.Advisor;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
@@ -71,7 +72,7 @@ public class LLMNode implements NodeAction {
     public Map<String, Object> apply(State state) throws Exception {
         logger.debug("LLMNode processing state: {}, streaming: {}", state, streaming);
 
-        // 1. 构建请求
+        // 构建请求
         ChatModelRequest request = ChatModelRequest.builder(state)
                 .systemPrompt(systemPrompt)
                 .baseOptions(chatOptions)
@@ -80,7 +81,7 @@ public class LLMNode implements NodeAction {
 
         ChatClient.ChatClientRequestSpec requestSpec = request.buildRequest(chatClient);
 
-        // 2. 根据 streaming 配置选择调用方式
+        // 根据 streaming 配置选择调用方式
         if (streaming) {
             return applyStreaming(request, requestSpec);
         } else {
@@ -156,6 +157,12 @@ public class LLMNode implements NodeAction {
      *     .streaming(true)
      *     .tools(tool1, tool2)
      *     .build();
+     *
+     * // 带 Advisors 的示例（如 RAG）
+     * LLMNode node = LLMNode.builder(chatModel)
+     *     .systemPrompt("You are a helpful assistant.")
+     *     .advisors(new RagAdvisor(vectorStore, ragConfig))
+     *     .build();
      * }</pre>
      * </p>
      */
@@ -166,18 +173,48 @@ public class LLMNode implements NodeAction {
         private List<ToolCallback> toolCallbacks;
         private boolean streaming = false;
         private Object[] tools;
+        private List<Advisor> advisors;
 
         private Builder(ChatModel chatModel) {
-            this.chatClient = ChatClient.builder(chatModel)
-                    .defaultOptions(OpenAiChatOptions.builder()
-                            .streamUsage(true)
-                            .internalToolExecutionEnabled(false)
-                            .build())
-                    .build();
+            // ChatClient 会在 build() 时创建，这里只保存 ChatModel
+            buildClientFromModel(chatModel);
         }
 
         private Builder(ChatClient chatClient) {
             this.chatClient = chatClient;
+        }
+
+        /**
+         * 从 ChatModel 构建 ChatClient（支持 Advisors）
+         */
+        private void buildClientFromModel(ChatModel chatModel) {
+
+            ChatClient.Builder builder = ChatClient.builder(chatModel);
+
+
+
+            ChatClient.Builder clientBuilder = builder
+                    .defaultOptions(OpenAiChatOptions.builder()
+                            .streamUsage(true)
+                            .internalToolExecutionEnabled(false)
+                            .build());
+
+            // 添加 Advisors
+            if (advisors != null && !advisors.isEmpty()) {
+                clientBuilder.defaultAdvisors(advisors);
+            }
+
+            this.chatClient = clientBuilder.build();
+        }
+
+        /**
+         * 确保 ChatClient 已创建（延迟初始化）
+         * 如果添加了 Advisors，需要重新构建 ChatClient
+         */
+        private void ensureClientBuilt(ChatModel chatModel) {
+            if (this.chatClient == null || (advisors != null && !advisors.isEmpty())) {
+                buildClientFromModel(chatModel);
+            }
         }
 
         /**
@@ -247,6 +284,46 @@ public class LLMNode implements NodeAction {
         public Builder tools(Object... tools) {
             this.tools = tools;
             this.toolCallbacks = getAllToolCallbacksFromTools(tools);
+            return this;
+        }
+
+        /**
+         * 设置 Advisors 列表（用于 RAG 等场景）
+         * <p>
+         * 使用示例：
+         * <pre>{@code
+         * .advisors(new RagAdvisor(vectorStore, ragConfig))
+         * }</pre>
+         * </p>
+         *
+         * @param advisors Advisors 列表
+         * @return Builder 实例
+         */
+        public final Builder advisors(Advisor... advisors) {
+            this.advisors = List.of(advisors);
+            return this;
+        }
+        public final Builder advisors(List<Advisor> advisors) {
+
+
+            this.advisors = advisors;
+            return this;
+        }
+
+
+
+
+        /**
+         * 添加单个 Advisor
+         *
+         * @param advisor Advisor
+         * @return Builder 实例
+         */
+        public Builder addAdvisor(Advisor advisor) {
+            if (this.advisors == null) {
+                this.advisors = new ArrayList<>();
+            }
+            this.advisors.add(advisor);
             return this;
         }
 

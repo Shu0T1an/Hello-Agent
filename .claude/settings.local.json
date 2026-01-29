@@ -32,7 +32,8 @@
       "Bash(gh api:*)",
       "Bash(gh repo view:*)",
       "Bash(git log:*)",
-      "Bash(git show:*)"
+      "Bash(git show:*)",
+      "Skill(frontend-design:frontend-design)"
     ]
   }
 }

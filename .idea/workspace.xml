@@ -5,74 +5,36 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0e294f23-af53-4e42-af50-c9a578c991d4" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/Component/LocalToolScanner.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/AsyncConfig.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/EncryptionConfig.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/MyBatisConfig.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/controller/AgentManagementController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/controller/ModelManagementController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/controller/ToolManagementController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/controller/response/BusinessException.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/controller/response/GlobalExceptionHandler.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/controller/response/Result.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/controller/response/ResultCode.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/dto/agent/AgentConfigDTO.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/dto/agent/ConnectionType.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/dto/agent/CreateAgentDTO.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/dto/agent/ModelConfigDTO.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/dto/agent/ToolDefinitionDTO.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/dto/agent/ToolType.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/dto/agent/UpdateAgentDTO.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/entity/AgentConfigEntity.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/entity/AgentToolMappingEntity.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/entity/McpConnectionConfigEntity.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/entity/ModelConfigEntity.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/entity/ToolDefinitionEntity.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/factory/AgentFactory.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/mapper/AgentConfigMapper.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/mapper/AgentToolMappingMapper.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/mapper/McpConnectionConfigMapper.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/mapper/ModelConfigMapper.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/mapper/ToolDefinitionMapper.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/AgentConfigService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/ApiKeyEncryptionService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/McpToolSyncService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/ModelConfigService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/ToolDefinitionService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/impl/AgentConfigServiceImpl.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/impl/McpToolSyncServiceImpl.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/impl/ModelConfigServiceImpl.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/impl/ToolDefinitionServiceImpl.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/tools/README.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/tools/WebExampleTools.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/resources/db/data.sql" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/resources/db/schema.sql" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/test/java/cn/ts/web/controller/AgentManagementControllerTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/test/java/cn/ts/web/controller/ModelManagementControllerTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/test/java/cn/ts/web/controller/ToolManagementControllerTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/test/java/cn/ts/web/mapper/MyBatisPostgreSQLIntegrationTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/test/java/cn/ts/web/mapper/SimpleMyBatisTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/test/java/cn/ts/web/service/AgentConfigServiceTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/test/java/cn/ts/web/service/ApiKeyEncryptionServiceTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/test/java/cn/ts/web/service/ModelConfigServiceTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/test/java/cn/ts/web/service/ToolDefinitionServiceTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/test/resources/application-test.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/agent-配置和组装系统实施计划.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/RagConfig.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/rag/advisor/RagAdvisor.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/rag/advisor/RagAdvisorConfig.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.claude/settings.local.json" beforeDir="false" afterPath="$PROJECT_DIR$/.claude/settings.local.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Agent-Studio/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/McpManagerAutoConfiguration.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/McpManagerAutoConfiguration.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/WebConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/WebConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/controller/McpController.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/controller/McpController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/controller/SessionController.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/controller/SessionController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/tools/SimpleTools.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/tools/SimpleTools.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/AgentConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/AgentConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/controller/StreamController.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/controller/StreamController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/factory/AgentFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/factory/AgentFactory.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/AgentExecutionService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/AgentExecutionService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/resources/application-dev.yml" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/resources/application-dev.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/mcp/McpManagerImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/mcp/McpManagerImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/test/java/cn/ts/web/service/SessionManagementTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/test/java/cn/ts/web/service/SessionManagementTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-core/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/core/ReactAgent.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/core/ReactAgent.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/example/ReactAgentExample.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/example/ReactAgentExample.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/node/LLMNode.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/node/LLMNode.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-core/src/test/java/cn/ts/agent/core/ReactAgentTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/test/java/cn/ts/agent/core/ReactAgentTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/api/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/api/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/assets/styles/globals.css" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/assets/styles/globals.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/assets/styles/variables.css" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/assets/styles/variables.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/base/BaseInput.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/base/BaseInput.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/chat/ChatContainer.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/chat/ChatContainer.vue" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/layouts/MainLayout.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/layouts/MainLayout.vue" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/stores/chat.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/stores/chat.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/types/agent.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/types/agent.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/views/agent/AgentManagement.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/views/agent/AgentManagement.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/views/agent/ModelManagement.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/views/agent/ModelManagement.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/tailwind.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/tailwind.config.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/GraphRunner.java" beforeDir="false" afterPath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/GraphRunner.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -124,6 +86,7 @@
   &quot;keyToString&quot;: {
     &quot;Application.EmailProcessingExample.executor&quot;: &quot;Run&quot;,
     &quot;Docker.docker-compose.yml.db: Compose Deployment.executor&quot;: &quot;Run&quot;,
+    &quot;Docker.docker-compose.yml: Compose Deployment.executor&quot;: &quot;Run&quot;,
     &quot;HTTP Request.generated-requests | #8.executor&quot;: &quot;Run&quot;,
     &quot;JUnit.CompiledGraphTest.executor&quot;: &quot;Run&quot;,
     &quot;JUnit.CompiledGraphTest.testInvoke.executor&quot;: &quot;Run&quot;,
@@ -145,7 +108,7 @@
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
     &quot;Spring Boot.Application.executor&quot;: &quot;Run&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;feature/unit-test-enhancement&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;feature/agent-management-system&quot;,
     &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
     &quot;last_opened_file_path&quot;: &quot;D:/JavaProject/Hello-Agent/graph-core/src/main/resources&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
@@ -206,37 +169,6 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="SimpleMyBatisTest" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
-      <module name="Agent-Studio" />
-      <extension name="coverage">
-        <pattern>
-          <option name="PATTERN" value="cn.ts.web.mapper.*" />
-          <option name="ENABLED" value="true" />
-        </pattern>
-      </extension>
-      <option name="PACKAGE_NAME" value="cn.ts.web.mapper" />
-      <option name="MAIN_CLASS_NAME" value="cn.ts.web.mapper.SimpleMyBatisTest" />
-      <option name="TEST_OBJECT" value="class" />
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="SimpleMyBatisTest.testDatabaseConnection" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
-      <module name="Agent-Studio" />
-      <extension name="coverage">
-        <pattern>
-          <option name="PATTERN" value="cn.ts.web.mapper.*" />
-          <option name="ENABLED" value="true" />
-        </pattern>
-      </extension>
-      <option name="PACKAGE_NAME" value="cn.ts.web.mapper" />
-      <option name="MAIN_CLASS_NAME" value="cn.ts.web.mapper.SimpleMyBatisTest" />
-      <option name="METHOD_NAME" value="testDatabaseConnection" />
-      <option name="TEST_OBJECT" value="method" />
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
     <configuration name="Application" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" temporary="true" nameIsGenerated="true">
       <module name="Agent-Studio" />
       <option name="SPRING_BOOT_MAIN_CLASS" value="cn.ts.Application" />
@@ -256,6 +188,27 @@
       </deployment>
       <method v="2" />
     </configuration>
+    <configuration name="docker-compose.yml: Compose Deployment" type="docker-deploy" factoryName="docker-compose.yml" temporary="true" server-name="Docker">
+      <deployment type="docker-compose.yml">
+        <settings>
+          <option name="sourceFilePath" value="docker-compose.yml" />
+        </settings>
+      </deployment>
+      <method v="2" />
+    </configuration>
+    <configuration name="docker-compose.yml.db: Compose Deployment" type="docker-deploy" factoryName="docker-compose.yml" temporary="true" server-name="Docker">
+      <deployment type="docker-compose.yml">
+        <settings>
+          <option name="services">
+            <list>
+              <option value="db" />
+            </list>
+          </option>
+          <option name="sourceFilePath" value="docker-compose.yml" />
+        </settings>
+      </deployment>
+      <method v="2" />
+    </configuration>
     <configuration default="true" type="lua.app" factoryName="Lua Application">
       <option name="program" value="lua.exe" />
       <option name="file" value="" />
@@ -269,10 +222,10 @@
     <recent_temporary>
       <list>
         <item itemvalue="Spring Boot.Application" />
+        <item itemvalue="Docker.docker-compose.yml: Compose Deployment" />
+        <item itemvalue="Docker.docker-compose.yml.db: Compose Deployment" />
         <item itemvalue="JUnit.MyBatisPostgreSQLIntegrationTest" />
         <item itemvalue="JUnit.MyBatisPostgreSQLIntegrationTest.testGetAllModelConfigs" />
-        <item itemvalue="JUnit.SimpleMyBatisTest.testDatabaseConnection" />
-        <item itemvalue="JUnit.SimpleMyBatisTest" />
       </list>
     </recent_temporary>
   </component>
@@ -306,7 +259,11 @@
       <workItem from="1769241288814" duration="8376000" />
       <workItem from="1769303722585" duration="10280000" />
       <workItem from="1769336227224" duration="3598000" />
-      <workItem from="1769424199181" duration="304000" />
+      <workItem from="1769424199181" duration="2006000" />
+      <workItem from="1769436683118" duration="8809000" />
+      <workItem from="1769477423263" duration="8341000" />
+      <workItem from="1769609891735" duration="7089000" />
+      <workItem from="1769699710915" duration="457000" />
     </task>
     <servers />
   </component>
@@ -344,28 +301,18 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/GraphRunner.java</url>
-          <line>259</line>
+          <line>263</line>
           <option name="timeStamp" value="88" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/GraphRunner.java</url>
-          <line>346</line>
+          <line>353</line>
           <option name="timeStamp" value="91" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/GraphRunner.java</url>
-          <line>347</line>
+          <line>354</line>
           <option name="timeStamp" value="92" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/core/ReactAgent.java</url>
-          <line>273</line>
-          <option name="timeStamp" value="100" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/core/ReactAgent.java</url>
-          <line>268</line>
-          <option name="timeStamp" value="102" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java</url>
@@ -383,69 +330,64 @@
           <option name="timeStamp" value="110" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/mcp/McpManagerImpl.java</url>
-          <line>206</line>
-          <option name="timeStamp" value="116" />
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/DocumentLoaderService.java</url>
+          <line>91</line>
+          <option name="timeStamp" value="145" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>jar://$PROJECT_DIR$/../../Java/IDEAReports/org/springframework/ai/spring-ai-model/1.0.0/spring-ai-model-1.0.0-sources.jar!/org/springframework/ai/tool/method/MethodToolCallbackProvider.java</url>
-          <line>139</line>
-          <option name="timeStamp" value="121" />
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/DocumentLoaderService.java</url>
+          <line>104</line>
+          <option name="timeStamp" value="146" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>jar://$PROJECT_DIR$/../../Java/IDEAReports/org/springframework/ai/spring-ai-model/1.0.0/spring-ai-model-1.0.0-sources.jar!/org/springframework/ai/tool/method/MethodToolCallbackProvider.java</url>
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/DocumentLoaderService.java</url>
+          <line>112</line>
+          <option name="timeStamp" value="150" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/DocumentLoaderService.java</url>
+          <line>88</line>
+          <option name="timeStamp" value="151" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/RagQueryService.java</url>
           <line>58</line>
-          <option name="timeStamp" value="122" />
+          <option name="timeStamp" value="154" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>jar://$PROJECT_DIR$/../../Java/IDEAReports/org/springframework/ai/spring-ai-model/1.0.0/spring-ai-model-1.0.0-sources.jar!/org/springframework/ai/tool/method/MethodToolCallbackProvider.java</url>
-          <line>65</line>
-          <option name="timeStamp" value="130" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/AgentConfig.java</url>
+          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/rag/advisor/RagAdvisor.java</url>
           <line>248</line>
-          <option name="timeStamp" value="133" />
+          <option name="timeStamp" value="155" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/AgentConfig.java</url>
-          <line>65</line>
-          <option name="timeStamp" value="135" />
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/RagQueryService.java</url>
+          <line>55</line>
+          <option name="timeStamp" value="157" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/AgentConfig.java</url>
-          <line>56</line>
-          <option name="timeStamp" value="136" />
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/RagQueryService.java</url>
+          <line>52</line>
+          <option name="timeStamp" value="159" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/AgentConfig.java</url>
-          <line>58</line>
-          <option name="timeStamp" value="137" />
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/controller/RagController.java</url>
+          <line>159</line>
+          <option name="timeStamp" value="160" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/AgentConfig.java</url>
-          <line>61</line>
-          <option name="timeStamp" value="138" />
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/controller/RagController.java</url>
+          <line>154</line>
+          <option name="timeStamp" value="161" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/AgentConfig.java</url>
-          <line>62</line>
-          <option name="timeStamp" value="139" />
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/RagQueryService.java</url>
+          <line>84</line>
+          <option name="timeStamp" value="162" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/mcp/McpManagerImpl.java</url>
-          <line>142</line>
-          <option name="timeStamp" value="140" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/mcp/McpManagerImpl.java</url>
-          <line>357</line>
-          <option name="timeStamp" value="142" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/AgentConfig.java</url>
-          <line>114</line>
-          <option name="timeStamp" value="143" />
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/RagQueryService.java</url>
+          <line>89</line>
+          <option name="timeStamp" value="163" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-method">
           <url>file://$PROJECT_DIR$/Agent-Studio/src/test/java/cn/ts/web/mapper/SimpleMyBatisTest.java</url>

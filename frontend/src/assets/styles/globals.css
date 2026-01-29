@@ -11,10 +11,22 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  /* 焦点可见性优化 */
+  *:focus-visible {
+    outline: 2px solid #6366f1;
+    outline-offset: 2px;
+  }
+
+  /* 选择文本样式 */
+  ::selection {
+    background-color: rgba(99, 102, 241, 0.2);
+    color: #0f172a;
+  }
 }
 
 @layer components {
-  /* 滚动条样式 */
+  /* ========== 滚动条样式 ========== */
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -46,10 +58,259 @@
   .dark-scrollbar::-webkit-scrollbar-thumb:hover {
     background: #475569;
   }
+
+  /* ========== 卡片悬停效果 ========== */
+  .card-hover {
+    transition: all 0.2s ease;
+  }
+
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  }
+
+  /* ========== 按钮微交互 ========== */
+  .btn-hover-lift {
+    transition: all 0.15s ease;
+  }
+
+  .btn-hover-lift:hover {
+    transform: translateY(-1px);
+  }
+
+  .btn-hover-lift:active {
+    transform: translateY(0);
+  }
+
+  /* ========== 淡入动画 ========== */
+  .fade-in {
+    animation: fade-in 0.2s ease-out;
+  }
+
+  .fade-out {
+    animation: fade-out 0.2s ease-in;
+  }
+
+  /* ========== 滑动动画 ========== */
+  .slide-in-top {
+    animation: slide-in-top 0.3s ease-out;
+  }
+
+  .slide-in-bottom {
+    animation: slide-in-bottom 0.3s ease-out;
+  }
+
+  .slide-in-left {
+    animation: slide-in-left 0.3s ease-out;
+  }
+
+  .slide-in-right {
+    animation: slide-in-right 0.3s ease-out;
+  }
+
+  /* ========== 缩放动画 ========== */
+  .scale-in {
+    animation: scale-in 0.2s ease-out;
+  }
+
+  .scale-out {
+    animation: scale-out 0.2s ease-in;
+  }
+
+  .bounce-in {
+    animation: bounce-in 0.5s ease-out;
+  }
+
+  /* ========== 骨架屏流光动画 ========== */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      #f1f5f9 0%,
+      #e2e8f0 50%,
+      #f1f5f9 100%
+    );
+    background-size: 1000px 100%;
+    animation: shimmer 2s linear infinite;
+  }
+
+  /* ========== 玻璃态效果 ========== */
+  .glass {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  .glass-dark {
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  /* ========== 渐变背景 ========== */
+  .gradient-primary {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  }
+
+  .gradient-success {
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  }
+
+  .gradient-warning {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  }
+
+  .gradient-error {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  }
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  /* ========== 动画延迟工具类 ========== */
+  .delay-100 {
+    animation-delay: 100ms;
+  }
+
+  .delay-200 {
+    animation-delay: 200ms;
+  }
+
+  .delay-300 {
+    animation-delay: 300ms;
+  }
+
+  .delay-500 {
+    animation-delay: 500ms;
+  }
+
+  /* ========== 过渡工具类 ========== */
+  .transition-all {
+    transition-property: all;
+  }
+
+  .transition-transform {
+    transition-property: transform;
+  }
+
+  .transition-opacity {
+    transition-property: opacity;
+  }
+
+  .transition-colors {
+    transition-property: color, background-color, border-color;
+  }
+}
+
+/* ========== 动画关键帧定义 ========== */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes slide-in-top {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-bottom {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-left {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes scale-in {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes scale-out {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+}
+
+@keyframes bounce-in {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
   }
 }

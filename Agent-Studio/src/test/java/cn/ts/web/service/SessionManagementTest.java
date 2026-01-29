@@ -31,13 +31,14 @@ class SessionManagementTest {
 
     private AgentExecutionService service;
     private CompiledGraph mockGraph;
+    private AgentExecutionConfig mockConfig;
 
     @BeforeEach
     void setUp() {
         // Mock 依赖
         SessionService mockSessionService = mock(SessionService.class);
         TitleGeneratorService mockTitleService = mock(TitleGeneratorService.class);
-        cn.ts.web.config.AgentExecutionConfig mockConfig = mock(cn.ts.web.config.AgentExecutionConfig.class);
+        mockConfig = mock(AgentExecutionConfig.class);
 
         // 设置 mock 配置行为
         when(mockConfig.getTimeout()).thenReturn(java.time.Duration.ofSeconds(300));
@@ -65,7 +66,7 @@ class SessionManagementTest {
                 .thenReturn(Flux.empty());
 
         // 执行测试
-        service.executeAgentStreamWithSession("testAgent", initialState, sessionId)
+        service.executeAgentStreamWithSession("testAgent", initialState, sessionId, mockConfig.getTimeout())
                 .collectList()
                 .block();
 
@@ -89,7 +90,7 @@ class SessionManagementTest {
                 .thenReturn(Flux.empty());
 
         // 执行测试
-        service.executeAgentStreamWithSession("testAgent", initialState, emptySessionId)
+        service.executeAgentStreamWithSession("testAgent", initialState, emptySessionId, mockConfig.getTimeout())
                 .collectList()
                 .block();
 
@@ -114,12 +115,12 @@ class SessionManagementTest {
                 .thenReturn(Flux.empty());
 
         // 执行第一个会话
-        service.executeAgentStreamWithSession("testAgent", initialState, sessionId1)
+        service.executeAgentStreamWithSession("testAgent", initialState, sessionId1, mockConfig.getTimeout())
                 .collectList()
                 .block();
 
         // 执行第二个会话
-        service.executeAgentStreamWithSession("testAgent", initialState, sessionId2)
+        service.executeAgentStreamWithSession("testAgent", initialState, sessionId2, mockConfig.getTimeout())
                 .collectList()
                 .block();
 
@@ -141,7 +142,7 @@ class SessionManagementTest {
 
         // 执行测试 - Agent 不存在，捕获异常
         Throwable thrown = assertThrows(IllegalArgumentException.class, () -> {
-            service.executeAgentStreamWithSession("nonExistentAgent", initialState, sessionId)
+            service.executeAgentStreamWithSession("nonExistentAgent", initialState, sessionId, mockConfig.getTimeout())
                     .blockLast();
         });
 
@@ -160,11 +161,11 @@ class SessionManagementTest {
                 .thenReturn(Flux.empty());
 
         // 执行两次调用
-        service.executeAgentStreamWithSession("testAgent", initialState, sessionId)
+        service.executeAgentStreamWithSession("testAgent", initialState, sessionId, mockConfig.getTimeout())
                 .collectList()
                 .block();
 
-        service.executeAgentStreamWithSession("testAgent", initialState, sessionId)
+        service.executeAgentStreamWithSession("testAgent", initialState, sessionId, mockConfig.getTimeout())
                 .collectList()
                 .block();
 

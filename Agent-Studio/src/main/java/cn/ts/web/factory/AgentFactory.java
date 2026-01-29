@@ -45,14 +45,22 @@ public class AgentFactory {
         // 2. 准备工具列表
         Object[] tools = instantiateTools(config);
 
-        // 3. 创建 ReactAgent
-        ReactAgent agent = new ReactAgent(
-                config.getAgentName(),
-                config.getDescription() != null ? config.getDescription() : config.getDisplayName(),
-                chatModel,
-                config.getEnableStreaming() != null ? config.getEnableStreaming() : true,
-                tools
-        );
+        // 3. 使用 Builder 创建 ReactAgent
+        ReactAgent.Builder builder = ReactAgent.builder()
+                .name(config.getAgentName())
+                .description(config.getDescription() != null ? config.getDescription() : config.getDisplayName())
+                .chatModel(chatModel);
+
+        // 4. 设置流式选项
+        if (config.getEnableStreaming() != null) {
+            builder.streaming(config.getEnableStreaming());
+        }
+
+        // 5. 设置工具
+        builder.tools(tools);
+
+        // 6. 构建 Agent
+        ReactAgent agent = builder.build();
 
         logger.info("Agent created successfully: {}", config.getAgentName());
         return agent;
