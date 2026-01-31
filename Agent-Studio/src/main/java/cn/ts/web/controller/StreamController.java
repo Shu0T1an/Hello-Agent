@@ -62,12 +62,28 @@ public class StreamController {
             @PathVariable String agentName,
             @Valid @RequestBody cn.ts.web.dto.AgentExecuteRequest request) {
 
+        // 如果提供了 sessionId，检查是否需要自动切换 Agent
+        String sessionId = request.getSessionId();
+        if (sessionId != null && !sessionId.isEmpty()) {
+            sessionService.getSession(sessionId).ifPresent(sessionDetail -> {
+                // 如果会话当前 Agent 与请求的 Agent 不同，自动切换
+                if (!sessionDetail.getAgentName().equals(agentName)) {
+                    try {
+                        sessionService.switchAgent(sessionId, agentName);
+                    } catch (Exception e) {
+                        // Agent 切换失败，记录日志但不阻断执行
+                        // 执行时会因为 Agent 不存在而失败
+                    }
+                }
+            });
+        }
+
         // 构建消息列表（包含历史消息）
         List<Message> messages = new ArrayList<>();
 
         // 如果有 sessionId，从会话服务加载历史消息
-        if (request.getSessionId() != null && !request.getSessionId().isEmpty()) {
-            sessionService.getSession(request.getSessionId()).ifPresent(sessionDetail -> {
+        if (sessionId != null && !sessionId.isEmpty()) {
+            sessionService.getSession(sessionId).ifPresent(sessionDetail -> {
                 if (sessionDetail.getMessages() != null) {
                     for (SessionDetailDTO.SessionMessage msg : sessionDetail.getMessages()) {
                         Message message = convertToSpringAIMessage(msg);
@@ -84,13 +100,20 @@ public class StreamController {
             messages.add(new UserMessage(request.getInput()));
         }
 
+        // 创建 messages 副本，避免 Graph 执行修改原始列表
+        List<Message> messagesCopy = new ArrayList<>(messages);
+
         // 合并初始状态
         Map<String, Object> mergedState = new HashMap<>();
         if (request.getInitialState() != null) {
             mergedState.putAll(request.getInitialState());
         }
-        if (!messages.isEmpty()) {
-            mergedState.put("messages", messages);
+        if (!messagesCopy.isEmpty()) {
+            mergedState.put("messages", messagesCopy);
+        }
+        // 保存用户输入，用于 extractUserInput 提取
+        if (request.getInput() != null && !request.getInput().isEmpty()) {
+            mergedState.put("input", request.getInput());
         }
 
         // 确定超时时间
@@ -101,7 +124,7 @@ public class StreamController {
         return agentExecutionService.executeAgentStreamWithSession(
                         agentName,
                         mergedState.isEmpty() ? null : mergedState,
-                        request.getSessionId(),
+                        sessionId,
                         actualTimeout)
                 .map(response -> ServerSentEvent.<AgentResponse>builder()
                         .data(response)

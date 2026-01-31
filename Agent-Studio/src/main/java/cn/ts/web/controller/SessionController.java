@@ -128,4 +128,32 @@ public class SessionController {
         sessionService.addMessage(sessionId, role, content);
         return Result.success();
     }
+
+    /**
+     * 切换会话的 Agent
+     *
+     * @param sessionId 会话ID
+     * @param body      请求体 {"agentName": "xxx"}
+     * @return 切换结果
+     */
+    @PutMapping("/{sessionId}/switch-agent")
+    public Result<String> switchAgent(
+            @PathVariable String sessionId,
+            @RequestBody Map<String, String> body) {
+        if (!sessionService.sessionExists(sessionId)) {
+            return Result.error(ResultCode.NOT_FOUND);
+        }
+
+        String agentName = body.get("agentName");
+        if (agentName == null || agentName.isEmpty()) {
+            return Result.error(ResultCode.BAD_REQUEST, "agentName 不能为空");
+        }
+
+        try {
+            sessionService.switchAgent(sessionId, agentName);
+            return Result.success("Agent 切换成功");
+        } catch (IllegalArgumentException e) {
+            return Result.error(ResultCode.BAD_REQUEST, e.getMessage());
+        }
+    }
 }

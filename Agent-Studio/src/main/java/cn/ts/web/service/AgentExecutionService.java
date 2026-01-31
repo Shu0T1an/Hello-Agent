@@ -116,13 +116,13 @@ public class AgentExecutionService {
                     if (response.getData() instanceof StreamingOutput) {
                         StreamingOutput<?> streamingOutput = (StreamingOutput<?>) response.getData();
                         String chunk = streamingOutput.getChunk();
-                        if (chunk != null) {
+                        if (chunk != null && streamingOutput.getStatus()!=NodeStatus.COMPLETED) {
                             fullResponse.append(chunk);
                         }
                     }
                 })
                 .doOnComplete(() -> {
-                    // 执行完成后保存消息到会话
+                    // 执行完成后保存消息到会话（使用 addMessageIfNotExists 防止重复）
                     saveToSession(sessionId, userInput, fullResponse.toString());
 
                     // 异步生成标题（不阻塞主流程）
@@ -135,17 +135,21 @@ public class AgentExecutionService {
     }
 
     /**
-     * 保存到会话
+     * 保存到会话（使用 addMessageIfNotExists 防止重复）
+     * <p>
+     * 由于 NodeExecutor 已经更新了 context.state["messages"]，
+     * 我们使用 addMessageIfNotExists 来避免重复保存相同的消息。
+     * </p>
      */
     private void saveToSession(String sessionId, String userInput, String fullResponse) {
         if (sessionId != null && !sessionId.isEmpty()) {
-            // 保存用户消息
+            // 保存用户消息（如果还没有保存的话）
             if (userInput != null && !userInput.isEmpty()) {
-                sessionService.addMessage(sessionId, "user", userInput);
+                sessionService.addMessageIfNotExists(sessionId, "user", userInput);
             }
-            // 保存AI回复
+            // 保存AI回复（如果还没有保存的话）
             if (fullResponse.length() > 0) {
-                sessionService.addMessage(sessionId, "assistant", fullResponse);
+                sessionService.addMessageIfNotExists(sessionId, "assistant", fullResponse);
             }
         }
     }

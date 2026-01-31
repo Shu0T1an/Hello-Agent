@@ -1,6 +1,7 @@
 package cn.ts.web.controller;
 
 import cn.ts.web.service.DocumentLoaderService;
+import cn.ts.web.service.KnowledgeBaseService;
 import cn.ts.web.service.RagQueryService;
 import cn.ts.web.service.rag.RagTestDataFactory;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,12 +52,15 @@ class RagControllerTest {
     @Mock
     private RagQueryService mockRagQueryService;
 
+    @Mock
+    private KnowledgeBaseService mockKnowledgeBaseService;
+
     private RagController ragController;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        ragController = new RagController(mockDocumentLoaderService, mockRagQueryService);
+        ragController = new RagController(mockDocumentLoaderService, mockRagQueryService, mockKnowledgeBaseService);
         mockMvc = MockMvcBuilders.standaloneSetup(ragController).build();
     }
 
