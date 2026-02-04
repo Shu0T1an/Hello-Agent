@@ -8,6 +8,7 @@ import cn.ts.web.controller.response.ResultCode;
 import cn.ts.web.dto.CheckpointDTO;
 import cn.ts.web.dto.CheckpointDetailDTO;
 import cn.ts.web.mapper.CheckpointMapper;
+import cn.ts.web.mapper.SessionMapper;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,10 +16,11 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Checkpoint 管理控制器（高级 API）
+ * Checkpoint 管理控制器（重构版）
  * <p>
  * 提供调试和状态管理相关的 API
  * 用于查看和恢复 Checkpoint
+ * 使用 sessionId 替代 threadId
  * </p>
  *
  * @author tianshuo
@@ -30,21 +32,26 @@ public class CheckpointController {
 
     private final CheckpointManager checkpointManager;
     private final CheckpointMapper checkpointMapper;
+    private final SessionMapper sessionMapper;
 
-    public CheckpointController(CheckpointManager checkpointManager, CheckpointMapper checkpointMapper) {
+    public CheckpointController(
+            CheckpointManager checkpointManager,
+            CheckpointMapper checkpointMapper,
+            SessionMapper sessionMapper) {
         this.checkpointManager = checkpointManager;
         this.checkpointMapper = checkpointMapper;
+        this.sessionMapper = sessionMapper;
     }
 
     /**
      * 获取会话的所有 Checkpoint
      *
-     * @param threadId 会话ID（threadId）
+     * @param sessionId 会话ID
      * @return Checkpoint 列表
      */
-    @GetMapping("/threads/{threadId}")
-    public Result<List<CheckpointDTO>> getCheckpoints(@PathVariable String threadId) {
-        List<StateSnapshot> snapshots = checkpointManager.getStateHistory(threadId);
+    @GetMapping("/sessions/{sessionId}")
+    public Result<List<CheckpointDTO>> getCheckpoints(@PathVariable String sessionId) {
+        List<StateSnapshot> snapshots = checkpointManager.getStateHistory(sessionId);
         List<CheckpointDTO> dtoList = snapshots.stream()
                 .map(this::toCheckpointDTO)
                 .collect(Collectors.toList());
@@ -84,10 +91,10 @@ public class CheckpointController {
         }
 
         var entity = entityOpt.get();
-        String threadId = entity.getThreadId();
+        String sessionId = entity.getSessionId();
 
         // 获取恢复上下文
-        GraphRunnerContext context = checkpointManager.restoreContext(threadId, checkpointId);
+        GraphRunnerContext context = checkpointManager.restoreContext(sessionId, checkpointId);
         if (context == null) {
             return Result.error(ResultCode.OPERATION_FAILED, "Failed to restore checkpoint");
         }
@@ -99,7 +106,7 @@ public class CheckpointController {
         }
 
         return Result.success(Map.of(
-                "threadId", threadId,
+                "sessionId", sessionId,
                 "checkpointId", checkpointId,
                 "restoredState", restoredState,
                 "iteration", entity.getIteration()
@@ -119,30 +126,41 @@ public class CheckpointController {
             return Result.error(ResultCode.NOT_FOUND, "Checkpoint not found");
         }
 
-        checkpointManager.deleteCheckpoint(entityOpt.get().getThreadId(), checkpointId);
+        checkpointManager.deleteCheckpoint(entityOpt.get().getSessionId(), checkpointId);
         return Result.success("Checkpoint deleted");
     }
 
     /**
      * 删除会话的所有 Checkpoint
      *
-     * @param threadId 会话ID
+     * @param sessionId 会话ID
      * @return 删除结果
      */
-    @DeleteMapping("/threads/{threadId}")
-    public Result<String> deleteThread(@PathVariable String threadId) {
-        checkpointManager.deleteThread(threadId);
-        return Result.success("All checkpoints deleted for thread: " + threadId);
+    @DeleteMapping("/sessions/{sessionId}")
+    public Result<String> deleteSession(@PathVariable String sessionId) {
+        checkpointManager.deleteThread(sessionId);
+        return Result.success("All checkpoints deleted for session: " + sessionId);
     }
 
     /**
      * 获取所有会话列表
      *
-     * @return 会话 ID 列表
+     * @return 会话列表
      */
-    @GetMapping("/threads")
-    public Result<List<String>> getAllThreads() {
-        return Result.success(checkpointMapper.selectAllThreadIds());
+    @GetMapping("/sessions")
+    public Result<List<Map<String, Object>>> getAllSessions() {
+        List<Map<String, Object>> sessions = sessionMapper.selectActiveSessions().stream()
+                .map(session -> {
+                    Map<String, Object> map = new java.util.HashMap<>();
+                    map.put("sessionId", session.getSessionId());
+                    map.put("title", session.getTitle());
+                    map.put("currentAgent", session.getCurrentAgent());
+                    map.put("createdAt", session.getCreatedAt());
+                    map.put("updatedAt", session.getUpdatedAt());
+                    return map;
+                })
+                .toList();
+        return Result.success(sessions);
     }
 
     /**
@@ -151,7 +169,7 @@ public class CheckpointController {
     private CheckpointDTO toCheckpointDTO(StateSnapshot snapshot) {
         CheckpointDTO dto = new CheckpointDTO();
         dto.setCheckpointId(snapshot.getCheckpointId());
-        dto.setThreadId(snapshot.getThreadId());
+        dto.setThreadId(snapshot.getThreadId());  // 保留 threadId 字段名以保持兼容性
         dto.setNodeId(snapshot.getNodeId());
         dto.setSource(snapshot.getMetadata().getSource());
         dto.setParentId(snapshot.getMetadata().getParentId());
@@ -166,7 +184,7 @@ public class CheckpointController {
     private CheckpointDetailDTO toCheckpointDetailDTO(cn.ts.web.entity.CheckpointEntity entity) {
         CheckpointDetailDTO dto = new CheckpointDetailDTO();
         dto.setCheckpointId(entity.getCheckpointId());
-        dto.setThreadId(entity.getThreadId());
+        dto.setThreadId(entity.getSessionId());  // 使用 sessionId 作为 threadId
         dto.setNodeId(entity.getNodeId());
         dto.setSource(entity.getSource());
         dto.setParentId(entity.getParentId());

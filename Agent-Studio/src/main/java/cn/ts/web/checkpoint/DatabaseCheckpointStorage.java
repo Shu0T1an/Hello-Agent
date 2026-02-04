@@ -3,8 +3,11 @@ package cn.ts.web.checkpoint;
 import cn.ts.graph.checkpoint.CheckpointMetadata;
 import cn.ts.graph.checkpoint.CheckpointStorage;
 import cn.ts.graph.checkpoint.StateSnapshot;
-import cn.ts.web.entity.CheckpointEntity;
+import cn.ts.graph.serialization.TypedStateDeserializer;
+import cn.ts.graph.serialization.TypedStateSerializer;
 import cn.ts.web.mapper.CheckpointMapper;
+import cn.ts.web.entity.CheckpointEntity;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,13 +16,17 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
- * 数据库 Checkpoint 存储实现
+ * 数据库 Checkpoint 存储实现（重构版）
  * <p>
- * 使用 PostgreSQL 数据库持久化 Checkpoint，支持会话状态恢复
+ * 使用 PostgreSQL 数据库持久化 Checkpoint，支持会话状态恢复。
+ * 使用类型化序列化器保持 State 中的泛型类型信息（如 List&lt;Message&gt;）。
+ * API 参数从 threadId 改为 sessionId，与 Session 表关联。
  * </p>
  *
  * @author tianshuo
@@ -36,17 +43,24 @@ public class DatabaseCheckpointStorage implements CheckpointStorage {
 
     private final CheckpointMapper checkpointMapper;
     private final ObjectMapper objectMapper;
+    private final TypedStateSerializer serializer;
+    private final TypedStateDeserializer deserializer;
 
     public DatabaseCheckpointStorage(CheckpointMapper checkpointMapper, ObjectMapper objectMapper) {
         this.checkpointMapper = checkpointMapper;
         this.objectMapper = objectMapper;
+        this.serializer = new TypedStateSerializer(objectMapper);
+        this.deserializer = new TypedStateDeserializer(objectMapper);
     }
 
     @Override
     @Transactional
     public String saveCheckpoint(String threadId, StateSnapshot snapshot) {
+        // threadId 在新设计中即为 sessionId
+        String sessionId = threadId;
+
         CheckpointEntity entity = new CheckpointEntity();
-        entity.setThreadId(threadId);
+        entity.setSessionId(sessionId);
         entity.setCheckpointId(snapshot.getCheckpointId());
         entity.setNodeId(snapshot.getNodeId());
 
@@ -58,23 +72,29 @@ public class DatabaseCheckpointStorage implements CheckpointStorage {
             entity.setMetadataFromMap(metadata.getStepInfo());
         } else {
             entity.setSource("manual");
-            entity.setMetadataFromMap(new java.util.HashMap<>());
+            entity.setMetadataFromMap(new HashMap<>());
         }
 
-        // 将状态 Map 转换为 JSON 字符串
-        entity.setStateFromMap(snapshot.getState());
+        // 使用类型化序列化将 State 转换为 JSON
+        try {
+            String stateJson = serializer.serializeWithTypeMetadata(snapshot.getState());
+            entity.setStateJson(stateJson);
+        } catch (JsonProcessingException e) {
+            log.error("Failed to serialize state for checkpoint {}", snapshot.getCheckpointId(), e);
+            throw new RuntimeException("Failed to serialize state", e);
+        }
+
         entity.setIteration(snapshot.getIteration());
-        entity.setIsLatest(true);
         entity.setCreatedAt(snapshot.getTimestamp());
 
         try {
             int result = checkpointMapper.insert(entity);
             if (result > 0) {
-                log.debug("Saved checkpoint {} for thread {}", snapshot.getCheckpointId(), threadId);
+                log.debug("Saved checkpoint {} for session {}", snapshot.getCheckpointId(), sessionId);
                 return snapshot.getCheckpointId();
             }
         } catch (Exception e) {
-            log.error("Failed to save checkpoint for thread {}", threadId, e);
+            log.error("Failed to save checkpoint for session {}", sessionId, e);
             throw new RuntimeException("Failed to save checkpoint", e);
         }
 
@@ -83,19 +103,25 @@ public class DatabaseCheckpointStorage implements CheckpointStorage {
 
     @Override
     public Optional<StateSnapshot> getCheckpoint(String threadId, String checkpointId) {
-        return checkpointMapper.selectByThreadIdAndCheckpointId(threadId, checkpointId)
+        // threadId 在新设计中即为 sessionId
+        String sessionId = threadId;
+        return checkpointMapper.selectBySessionIdAndCheckpointId(sessionId, checkpointId)
                 .map(this::toSnapshot);
     }
 
     @Override
     public Optional<StateSnapshot> getLatestCheckpoint(String threadId) {
-        return checkpointMapper.selectLatestByThreadId(threadId)
+        // threadId 在新设计中即为 sessionId
+        String sessionId = threadId;
+        return checkpointMapper.selectLatestBySessionId(sessionId)
                 .map(this::toSnapshot);
     }
 
     @Override
     public List<StateSnapshot> getCheckpointHistory(String threadId) {
-        List<CheckpointEntity> entities = checkpointMapper.selectByThreadIdOrderByCreatedAt(threadId);
+        // threadId 在新设计中即为 sessionId
+        String sessionId = threadId;
+        List<CheckpointEntity> entities = checkpointMapper.selectHistoryBySessionId(sessionId);
         List<StateSnapshot> snapshots = new ArrayList<>();
         for (CheckpointEntity entity : entities) {
             snapshots.add(toSnapshot(entity));
@@ -113,12 +139,17 @@ public class DatabaseCheckpointStorage implements CheckpointStorage {
     @Override
     @Transactional
     public void deleteThread(String threadId) {
-        int result = checkpointMapper.deleteByThreadId(threadId);
-        log.debug("Deleted all checkpoints for thread {}, count: {}", threadId, result);
+        // threadId 在新设计中即为 sessionId
+        String sessionId = threadId;
+        int result = checkpointMapper.deleteBySessionId(sessionId);
+        log.debug("Deleted all checkpoints for session {}, count: {}", sessionId, result);
     }
 
     /**
      * 将实体转换为 StateSnapshot
+     * <p>
+     * 使用类型化反序列化器从 JSON 还原 State，确保泛型类型正确。
+     * </p>
      */
     private StateSnapshot toSnapshot(CheckpointEntity entity) {
         CheckpointMetadata metadata = CheckpointMetadata.builder()
@@ -127,11 +158,20 @@ public class DatabaseCheckpointStorage implements CheckpointStorage {
                 .stepInfo(entity.getMetadataMap())
                 .build();
 
+        // 使用类型化反序列化从 JSON 还原 State
+        Map<String, Object> state;
+        try {
+            state = deserializer.deserializeWithTypeMetadata(entity.getStateJson());
+        } catch (JsonProcessingException e) {
+            log.error("Failed to deserialize state for checkpoint {}", entity.getCheckpointId(), e);
+            state = new HashMap<>();
+        }
+
         return StateSnapshot.builder()
                 .checkpointId(entity.getCheckpointId())
-                .threadId(entity.getThreadId())
+                .threadId(entity.getSessionId())  // 使用 sessionId 作为 threadId
                 .nodeId(entity.getNodeId())
-                .state(entity.getStateMap())
+                .state(state)
                 .metadata(metadata)
                 .timestamp(entity.getCreatedAt())
                 .iteration(entity.getIteration())

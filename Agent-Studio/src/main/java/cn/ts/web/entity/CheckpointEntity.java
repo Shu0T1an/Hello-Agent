@@ -23,9 +23,9 @@ public class CheckpointEntity implements Serializable {
     private Long id;
 
     /**
-     * 线程ID（会话ID）
+     * 会话ID（外键关联 sessions 表）
      */
-    private String threadId;
+    private String sessionId;
 
     /**
      * Checkpoint 唯一标识
@@ -63,11 +63,6 @@ public class CheckpointEntity implements Serializable {
     private Integer iteration;
 
     /**
-     * 是否为该 thread 的最新 Checkpoint
-     */
-    private Boolean isLatest;
-
-    /**
      * 创建时间
      */
     private Instant createdAt;
@@ -83,12 +78,12 @@ public class CheckpointEntity implements Serializable {
         return this;
     }
 
-    public String getThreadId() {
-        return threadId;
+    public String getSessionId() {
+        return sessionId;
     }
 
-    public CheckpointEntity setThreadId(String threadId) {
-        this.threadId = threadId;
+    public CheckpointEntity setSessionId(String sessionId) {
+        this.sessionId = sessionId;
         return this;
     }
 
@@ -152,15 +147,6 @@ public class CheckpointEntity implements Serializable {
 
     public CheckpointEntity setIteration(Integer iteration) {
         this.iteration = iteration;
-        return this;
-    }
-
-    public Boolean getIsLatest() {
-        return isLatest;
-    }
-
-    public CheckpointEntity setIsLatest(Boolean isLatest) {
-        this.isLatest = isLatest;
         return this;
     }
 
