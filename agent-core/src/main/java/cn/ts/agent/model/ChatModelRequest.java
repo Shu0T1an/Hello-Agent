@@ -47,17 +47,19 @@ public class ChatModelRequest implements ModelRequest {
     public ChatClient.ChatClientRequestSpec buildRequest(ChatClient chatClient) {
         ChatClient.ChatClientRequestSpec spec = chatClient.prompt();
 
-        // 添加系统消息
-        if (systemPrompt != null && !systemPrompt.isEmpty()) {
-            spec = spec.messages(new SystemMessage(systemPrompt));
-
+        // 添加系统消息（包含工具提示）
+        List<Message> totalMessages = new ArrayList<>();
+        String enhancedSystemPrompt = buildEnhancedSystemPrompt();
+        if (enhancedSystemPrompt != null && !enhancedSystemPrompt.isEmpty()) {
+            totalMessages.add(new SystemMessage(enhancedSystemPrompt));
         }
 
         // 添加对话消息
         if (!messages.isEmpty()) {
-            spec = spec.messages(messages);
+            totalMessages.addAll(messages);
         }
 
+        spec.messages(totalMessages);
         // 配置选项和工具
         ToolCallingChatOptions options = buildOptions();
         if (options != null) {
@@ -75,6 +77,41 @@ public class ChatModelRequest implements ModelRequest {
     @Override
     public List<Message> getMessages() {
         return new ArrayList<>(messages);
+    }
+
+    /**
+     * 构建增强的系统提示词（包含工具使用指南）
+     */
+    private String buildEnhancedSystemPrompt() {
+        if (systemPrompt == null || systemPrompt.isEmpty()) {
+            return null;
+        }
+
+        StringBuilder enhancedPrompt = new StringBuilder(systemPrompt);
+
+        // 检查是否有 todolist 相关工具
+        if (hasTool("update_todos") || hasTool("get_todos")) {
+            enhancedPrompt.append("\n\n## Todo List Management\n");
+            enhancedPrompt.append("You have access to todo list management tools. Use them to track complex multi-step tasks:\n\n");
+            enhancedPrompt.append("- **update_todos**: Create or update the todo list. Use this when:\n");
+            enhancedPrompt.append("  - Working on complex tasks (3+ steps)\n");
+            enhancedPrompt.append("  - User provides multiple tasks\n");
+            enhancedPrompt.append("  - User explicitly requests a todo list\n");
+            enhancedPrompt.append("  - Mark task as in_progress BEFORE starting work\n");
+            enhancedPrompt.append("  - Mark task as completed IMMEDIATELY after finishing\n\n");
+            enhancedPrompt.append("- **get_todos**: Retrieve the current todo list to check progress.\n\n");
+            enhancedPrompt.append("**Important**: Always keep at least one task in_progress until all work is done.");
+        }
+
+        return enhancedPrompt.toString();
+    }
+
+    /**
+     * 检查是否存在指定名称的工具
+     */
+    private boolean hasTool(String toolName) {
+        return toolCallbacks.stream()
+                .anyMatch(tc -> tc.getToolDefinition().name().equals(toolName));
     }
 
     /**

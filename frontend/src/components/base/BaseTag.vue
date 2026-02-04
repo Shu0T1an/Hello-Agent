@@ -25,7 +25,7 @@ const baseClasses = 'inline-flex items-center gap-1.5 font-medium rounded-lg tra
 
 const variantClasses = computed(() => {
   const variants = {
-    default: 'bg-slate-100 text-slate-700',
+    default: 'bg-zinc-100 text-zinc-700',
     success: 'bg-green-100 text-green-700',
     warning: 'bg-yellow-100 text-yellow-700',
     danger: 'bg-red-100 text-red-700',

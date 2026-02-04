@@ -22,6 +22,7 @@ public class AgentExecutionConfig {
     private int maxTitleLength = 15;
     private int defaultMaxIterations = 10;
     private boolean debugMode = false;
+    private RetryConfig retry = new RetryConfig();
 
     public Duration getTimeout() {
         return timeout;
@@ -61,5 +62,64 @@ public class AgentExecutionConfig {
 
     public void setDebugMode(boolean debugMode) {
         this.debugMode = debugMode;
+    }
+
+    public RetryConfig getRetry() {
+        return retry;
+    }
+
+    public void setRetry(RetryConfig retry) {
+        this.retry = retry;
+    }
+
+    /**
+     * 重试配置类
+     */
+    public static class RetryConfig {
+        private boolean enabled = true;
+        private int maxRetries = 3;
+        private Duration initialBackoff = Duration.ofSeconds(1);
+        private double backoffMultiplier = 2.0;
+        private Duration maxBackoff = Duration.ofSeconds(30);
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public int getMaxRetries() {
+            return maxRetries;
+        }
+
+        public void setMaxRetries(int maxRetries) {
+            this.maxRetries = maxRetries;
+        }
+
+        public Duration getInitialBackoff() {
+            return initialBackoff;
+        }
+
+        public void setInitialBackoff(Duration initialBackoff) {
+            this.initialBackoff = initialBackoff;
+        }
+
+        public double getBackoffMultiplier() {
+            return backoffMultiplier;
+        }
+
+        public void setBackoffMultiplier(double backoffMultiplier) {
+            this.backoffMultiplier = backoffMultiplier;
+        }
+
+        public Duration getMaxBackoff() {
+            return maxBackoff;
+        }
+
+        public void setMaxBackoff(Duration maxBackoff) {
+            this.maxBackoff = maxBackoff;
+        }
     }
 }

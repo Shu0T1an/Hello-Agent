@@ -1,6 +1,7 @@
 package cn.ts.web.factory;
 
 import cn.ts.agent.core.ReactAgent;
+import cn.ts.graph.checkpoint.CheckpointManager;
 import cn.ts.web.dto.agent.AgentConfigDTO;
 import cn.ts.web.dto.agent.ToolDefinitionDTO;
 import cn.ts.web.service.ModelConfigService;
@@ -23,11 +24,14 @@ public class AgentFactory {
 
     private final ModelConfigService modelConfigService;
     private final ToolDefinitionService toolDefinitionService;
+    private final CheckpointManager checkpointManager;
 
     public AgentFactory(ModelConfigService modelConfigService,
-                       ToolDefinitionService toolDefinitionService) {
+                       ToolDefinitionService toolDefinitionService,
+                       CheckpointManager checkpointManager) {
         this.modelConfigService = modelConfigService;
         this.toolDefinitionService = toolDefinitionService;
+        this.checkpointManager = checkpointManager;
     }
 
     /**
@@ -49,7 +53,8 @@ public class AgentFactory {
         ReactAgent.Builder builder = ReactAgent.builder()
                 .name(config.getAgentName())
                 .description(config.getDescription() != null ? config.getDescription() : config.getDisplayName())
-                .chatModel(chatModel);
+                .chatModel(chatModel)
+                .checkpointManager(checkpointManager);  // 设置检查点管理器
 
         // 4. 设置流式选项
         if (config.getEnableStreaming() != null) {

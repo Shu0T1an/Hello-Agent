@@ -33,7 +33,15 @@
       "Bash(gh repo view:*)",
       "Bash(git log:*)",
       "Bash(git show:*)",
-      "Skill(frontend-design:frontend-design)"
+      "Skill(frontend-design:frontend-design)",
+      "Skill(frontend-design)",
+      "Bash(git push)",
+      "Bash(tree:*)",
+      "Bash(xargs taskkill:*)",
+      "Bash(xargs:*)",
+      "Bash(curl:*)",
+      "Bash(unzip:*)",
+      "Bash(find:*)"
     ]
   }
 }

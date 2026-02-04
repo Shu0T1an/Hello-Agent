@@ -3,8 +3,8 @@
     <!-- 页面头部 -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
       <div>
-        <h1 class="text-2xl font-semibold text-slate-900">模型配置</h1>
-        <p class="text-sm text-slate-500 mt-1">配置和管理 LLM 模型</p>
+        <h1 class="text-2xl font-semibold text-zinc-900">模型配置</h1>
+        <p class="text-sm text-zinc-500 mt-1">配置和管理 LLM 模型</p>
       </div>
       <BaseButton variant="primary" @click="handleCreate" class="btn-hover-lift">
         <Plus :size="18" />
@@ -36,7 +36,7 @@
           class="max-w-md"
         >
           <template #prefix>
-            <Search :size="18" class="text-slate-400" />
+            <Search :size="18" class="text-zinc-400" />
           </template>
         </BaseInput>
       </div>
@@ -52,10 +52,10 @@
           <template #default>
             <div class="flex items-start justify-between mb-4">
               <div class="flex-1 min-w-0">
-                <h3 class="text-lg font-semibold text-slate-900 truncate">
+                <h3 class="text-lg font-semibold text-zinc-900 truncate">
                   {{ model.displayName }}
                 </h3>
-                <p class="text-sm text-slate-500 font-mono mt-1">
+                <p class="text-sm text-zinc-500 font-mono mt-1">
                   {{ model.modelName }}
                 </p>
               </div>
@@ -64,7 +64,7 @@
                   'px-3 py-1 rounded-full text-xs font-medium flex-shrink-0 ml-2',
                   model.isActive
                     ? 'bg-success-100 text-success-700'
-                    : 'bg-slate-100 text-slate-600'
+                    : 'bg-zinc-100 text-zinc-600'
                 ]"
               >
                 {{ model.isActive ? '激活' : '停用' }}
@@ -86,18 +86,18 @@
 
             <!-- 模型元信息 -->
             <div class="space-y-2 mb-4 text-sm">
-              <div v-if="model.modelId" class="flex items-center gap-2 text-slate-600">
-                <Hash :size="16" class="text-slate-400" />
+              <div v-if="model.modelId" class="flex items-center gap-2 text-zinc-600">
+                <Hash :size="16" class="text-zinc-400" />
                 <span class="truncate">{{ model.modelId }}</span>
               </div>
-              <div v-if="model.baseUrl" class="flex items-center gap-2 text-slate-600">
-                <Globe :size="16" class="text-slate-400" />
+              <div v-if="model.baseUrl" class="flex items-center gap-2 text-zinc-600">
+                <Globe :size="16" class="text-zinc-400" />
                 <span class="truncate">{{ formatBaseUrl(model.baseUrl) }}</span>
               </div>
             </div>
 
             <!-- 操作按钮 -->
-            <div class="flex items-center gap-2 pt-4 border-t border-slate-100">
+            <div class="flex items-center gap-2 pt-4 border-t border-zinc-100">
               <BaseButton
                 variant="ghost"
                 size="sm"
@@ -196,13 +196,13 @@ const providerBadgeClasses: Record<ModelProvider, string> = {
   openai: 'bg-emerald-100 text-emerald-700',
   anthropic: 'bg-amber-100 text-amber-700',
   azure: 'bg-sky-100 text-sky-700',
-  ollama: 'bg-violet-100 text-violet-700',
+  ollama: 'bg-indigo-100 text-indigo-700',
   qwen: 'bg-orange-100 text-orange-700',
   moonshot: 'bg-indigo-100 text-indigo-700',
   zhipu: 'bg-blue-100 text-blue-700',
   baichuan: 'bg-teal-100 text-teal-700',
   deepseek: 'bg-rose-100 text-rose-700',
-  other: 'bg-slate-100 text-slate-700',
+  other: 'bg-zinc-100 text-zinc-700',
 }
 
 const modelStore = useModelConfigStore()

@@ -144,7 +144,7 @@ onBeforeUnmount(() => {
         @keydown.tab="focusTrap"
       >
         <!-- 遮罩 -->
-        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
+        <div class="absolute inset-0 bg-zinc-900/60 backdrop-blur-sm" />
 
         <!-- 模态框内容 -->
         <Transition
@@ -168,14 +168,14 @@ onBeforeUnmount(() => {
             :aria-labelledby="title ? 'modal-title' : undefined"
           >
             <!-- Header -->
-            <div v-if="$slots.header || title || showClose" class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+            <div v-if="$slots.header || title || showClose" class="flex items-center justify-between px-6 py-4 border-b border-zinc-200">
               <div v-if="$slots.header">
                 <slot name="header" />
               </div>
               <h2
                 v-else-if="title"
                 id="modal-title"
-                class="text-lg font-semibold text-slate-900"
+                class="text-lg font-semibold text-zinc-900"
               >
                 {{ title }}
               </h2>
@@ -183,7 +183,7 @@ onBeforeUnmount(() => {
               <button
                 v-if="showClose"
                 type="button"
-                class="ml-4 p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                class="ml-4 p-1 text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 rounded-lg transition-colors"
                 :aria-label="'关闭对话框'"
                 @click="close"
               >
@@ -197,7 +197,7 @@ onBeforeUnmount(() => {
             </div>
 
             <!-- Footer -->
-            <div v-if="$slots.footer" class="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-200">
+            <div v-if="$slots.footer" class="flex items-center justify-end gap-3 px-6 py-4 border-t border-zinc-200">
               <slot name="footer" />
             </div>
           </div>

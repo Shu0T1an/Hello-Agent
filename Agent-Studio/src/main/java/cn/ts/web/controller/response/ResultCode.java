@@ -56,6 +56,11 @@ public enum ResultCode {
     MCP_TOOL_SYNC_FAILED(4007, "MCP 工具同步失败"),
     MCP_TYPE_INVALID(4008, "MCP 类型无效"),
 
+    // ========== API 调用相关 ==========
+    RATE_LIMIT_EXCEEDED(429, "请求过于频繁，请稍后再试"),
+    API_SERVICE_UNAVAILABLE(503, "外部服务暂时不可用"),
+    API_UNAUTHORIZED(401, "API 认证失败"),
+
     // ========== 业务错误 ==========
     OPERATION_FAILED(5001, "操作失败"),
     OPERATION_NOT_SUPPORTED(5002, "不支持的操作"),

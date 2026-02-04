@@ -1,9 +1,14 @@
 package cn.ts.web.config;
 
+import cn.ts.agent.Tool.WriteToDoTool;
 import cn.ts.agent.core.ReactAgent;
+import cn.ts.agent.hook.HumanInTheLoopHook;
+import cn.ts.agent.hook.LoggingHook;
 import cn.ts.agent.mcp.McpManager;
 import cn.ts.agent.mcp.model.McpStatistics;
 import cn.ts.agent.rag.advisor.RagAdvisor;
+import cn.ts.graph.checkpoint.CheckpointManager;
+import cn.ts.graph.hook.Hook;
 import cn.ts.web.service.AgentExecutionService;
 import cn.ts.web.tools.SimpleTools;
 import org.slf4j.Logger;
@@ -37,6 +42,7 @@ public class AgentConfig {
     private final NodeJsConfig nodeJsConfig;
     private final ApiKeyConfig apiKeyConfig;
     private final VectorStore vectorStore;
+    private final CheckpointManager checkpointManager;
 
     public AgentConfig(ChatModel chatModel,
                        AgentExecutionService agentExecutionService,
@@ -44,7 +50,8 @@ public class AgentConfig {
                        McpServerConfig mcpServerConfig,
                        NodeJsConfig nodeJsConfig,
                        ApiKeyConfig apiKeyConfig,
-                       @Qualifier("vectorStore") VectorStore vectorStore) {
+                       @Qualifier("vectorStore") VectorStore vectorStore,
+                       CheckpointManager checkpointManager) {
         this.chatModel = chatModel;
         this.agentExecutionService = agentExecutionService;
         this.mcpManager = mcpManager;
@@ -52,6 +59,7 @@ public class AgentConfig {
         this.nodeJsConfig = nodeJsConfig;
         this.apiKeyConfig = apiKeyConfig;
         this.vectorStore = vectorStore;
+        this.checkpointManager = checkpointManager;
     }
 
     /**
@@ -67,42 +75,80 @@ public class AgentConfig {
         // 准备工具列表（包括普通工具和 MCP 客户端）
         List<Object> tools = new ArrayList<>();
         tools.add(new SimpleTools());
+        tools.add(new WriteToDoTool());
 
         // 添加所有 MCP 客户端作为工具
         tools.addAll(mcpManager.getAllMcpClients());
 
-        logger.info("注册 Agent，工具数量: {}", tools.size());
+        // ========== 创建非流式 TestAgent ==========
+        List<Hook> testAgentHooks = new ArrayList<>();
 
-        // 创建一个简单的测试 Agent（非流式，带工具）
+        // 添加日志 Hook
+        testAgentHooks.add(LoggingHook.builder()
+                .prefix("[TestAgent]")
+                .logMessages(true)
+                .logState(true)
+                .build());
+
+        // 添加人工审批 Hook - 为敏感操作添加审批
+        testAgentHooks.add(HumanInTheLoopHook.builder()
+                .approvalOn("deleteToDo", "删除待办事项，不可逆操作")
+                .approvalOn("clearAllToDos", "清空所有待办事项")
+                .approvalMessage("⚠️ 需要人工审批：以下操作可能影响数据，请确认是否继续")
+                .build());
+
+        // 创建一个简单的测试 Agent（非流式，带工具和 Hook）
         ReactAgent testAgent = ReactAgent.builder()
                 .name("TestAgent")
-                .description("一个简单的测试助手，可以回答问题和使用工具")
+                .description("一个简单的测试助手，可以回答问题和使用工具，支持人工审批")
                 .chatModel(chatModel)
                 .streaming(false)
                 .tools(tools.toArray())
+                .hooks(testAgentHooks)
+                .checkpointManager(checkpointManager)
                 .build();
 
         // 注册到 AgentExecutionService，使其可通过 SSE 端点访问
         agentExecutionService.registerGraph(testAgent.getName(), testAgent.getGraph());
 
-        logger.info("Agent '{}' 已注册", testAgent.getName());
+        logger.info("Agent '{}' 已注册 (包含 {} 个 Hook)", testAgent.getName(), testAgentHooks.size());
 
-        // 创建流式测试 Agent（带工具）
+
+        // ========== 创建流式 StreamingTestAgent ==========
+        List<Hook> streamingAgentHooks = new ArrayList<>();
+
+        // 添加日志 Hook
+//        streamingAgentHooks.add(LoggingHook.builder()
+//                .prefix("[StreamingAgent]")
+//                .logMessages(true)
+//                .logState(false)  // 流式模式下减少状态日志
+//                .build());
+
+        // 添加人工审批 Hook - 流式模式下也支持审批
+        streamingAgentHooks.add(HumanInTheLoopHook.builder()
+                .approvalOn("add", "两数相加")
+                .requireApprovalForAll(false)  // 只对指定工具审批
+                .approvalMessage("🤖 请审批：Agent 请求执行以下工具调用")
+                .build());
+
+        // 创建流式测试 Agent（带工具和 Hook）
         ReactAgent streamingAgent = ReactAgent.builder()
                 .name("StreamingTestAgent")
-                .description("流式测试助手，可以实时输出响应和使用工具")
+                .description("流式测试助手，可以实时输出响应和使用工具，支持人工审批")
                 .chatModel(chatModel)
                 .advisors(List.of(new RagAdvisor(vectorStore)))
                 .streaming(true)
                 .tools(tools.toArray())
+                .hooks(streamingAgentHooks)
+                .checkpointManager(checkpointManager)
                 .build();
 
         // 注册流式 Agent
         agentExecutionService.registerGraph(streamingAgent.getName(), streamingAgent.getGraph());
 
-        logger.info("流式 Agent '{}' 已注册", streamingAgent.getName());
+        logger.info("流式 Agent '{}' 已注册 (包含 {} 个 Hook)", streamingAgent.getName(), streamingAgentHooks.size());
 
-        logger.info("所有 Agent 注册完成");
+        logger.info("所有 Agent 注册完成 (总计 {} 个 Agent)", 2);
     }
 
     /**

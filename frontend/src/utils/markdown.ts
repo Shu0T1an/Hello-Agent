@@ -57,7 +57,8 @@ function clearCacheIfNeeded() {
  * 生成缓存键
  */
 function generateCacheKey(content: string, theme: CodeTheme): string {
-  return `${theme}:${content.length}:${content.slice(0, 100)}`
+  const safeContent = content || ''
+  return `${theme}:${safeContent.length}:${safeContent.slice(0, 100)}`
 }
 
 /**
@@ -74,7 +75,8 @@ async function highlightCodeBlocks(html: string, shikiTheme: string): Promise<st
     const code = codeEl.textContent || ''
 
     // 检查缓存
-    const cacheKey = `${shikiTheme}:${language}:${code.slice(0, 50)}:${code.length}`
+    const safeCode = code || ''
+    const cacheKey = `${shikiTheme}:${language}:${safeCode.slice(0, 50)}:${safeCode.length}`
     const cached = codeHighlightCache.get(cacheKey)
 
     if (cached) {
@@ -89,7 +91,7 @@ async function highlightCodeBlocks(html: string, shikiTheme: string): Promise<st
 
     // 渲染代码高亮
     try {
-      const highlighted = await codeToHtml(code, {
+      const highlighted = await codeToHtml(safeCode, {
         lang: language,
         theme: shikiTheme
       })
@@ -120,8 +122,11 @@ async function highlightCodeBlocks(html: string, shikiTheme: string): Promise<st
 export async function renderMarkdown(content: string, theme: CodeTheme = 'github-dark'): Promise<string> {
   currentTheme = theme
 
+  // 处理空内容
+  const safeContent = content || ''
+
   // 检查缓存
-  const cacheKey = generateCacheKey(content, theme)
+  const cacheKey = generateCacheKey(safeContent, theme)
   const cached = markdownCache.get(cacheKey)
 
   if (cached) {
@@ -131,7 +136,7 @@ export async function renderMarkdown(content: string, theme: CodeTheme = 'github
   const shikiTheme = THEMES[theme].shikiTheme
 
   // 渲染 markdown
-  const rawHtml = md.render(content)
+  const rawHtml = md.render(safeContent)
 
   // 使用 DOMPurify 清理
   const cleanHtml = DOMPurify.sanitize(rawHtml)

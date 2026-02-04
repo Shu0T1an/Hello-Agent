@@ -27,7 +27,7 @@ const emit = defineEmits<{
   keydown: [event: KeyboardEvent]
 }>()
 
-const baseClasses = 'w-full rounded-xl border transition-all duration-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-offset-0 disabled:bg-slate-100 disabled:cursor-not-allowed'
+const baseClasses = 'w-full rounded-xl border transition-all duration-200 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-offset-0 disabled:bg-zinc-100 disabled:cursor-not-allowed'
 
 const sizeClasses = computed(() => {
   const sizes = {
@@ -52,7 +52,7 @@ const stateClasses = computed(() => {
   if (props.error) {
     return 'border-red-300 focus:border-red-500 focus:ring-red-500'
   }
-  return 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-500'
+  return 'border-zinc-200 focus:border-indigo-500 focus:ring-indigo-500'
 })
 
 const handleInput = (e: Event) => {

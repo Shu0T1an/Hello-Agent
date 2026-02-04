@@ -18,6 +18,7 @@ interface Props {
   disabled?: boolean
   size?: 'sm' | 'md' | 'lg'
   align?: 'left' | 'right'
+  direction?: 'up' | 'down'
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -25,6 +26,7 @@ const props = withDefaults(defineProps<Props>(), {
   disabled: false,
   size: 'md',
   align: 'left',
+  direction: 'down',
 })
 
 const emit = defineEmits<{
@@ -54,13 +56,21 @@ const dropdownClasses = computed(() => {
   return cn(
     baseClasses,
     sizeClasses.value,
-    'bg-white border border-slate-200 hover:border-slate-300 focus:border-indigo-500 focus:ring-indigo-500 cursor-pointer min-w-[160px]',
-    props.disabled && 'cursor-not-allowed bg-slate-50'
+    'bg-white border border-zinc-200 hover:border-zinc-300 focus:border-indigo-500 focus:ring-indigo-500 cursor-pointer min-w-[160px]',
+    props.disabled && 'cursor-not-allowed bg-zinc-50'
   )
 })
 
 const dropdownPosition = computed(() => {
   return props.align === 'left' ? 'left-0' : 'right-0'
+})
+
+const dropdownDirection = computed(() => {
+  return props.direction === 'up' ? 'bottom-full mb-1' : 'top-full mt-1'
+})
+
+const chevronDirection = computed(() => {
+  return props.direction === 'up' ? (isOpen.value ? 'rotate-180' : 'rotate-0') : (isOpen.value ? 'rotate-180' : 'rotate-0')
 })
 
 const toggleDropdown = () => {
@@ -108,8 +118,8 @@ onUnmounted(() => {
       </span>
       <ChevronDown
         :class="[
-          'w-4 h-4 text-slate-400 flex-shrink-0 transition-transform duration-200',
-          isOpen && 'rotate-180'
+          'w-4 h-4 text-zinc-400 flex-shrink-0 transition-transform duration-200',
+          chevronDirection
         ]"
       />
     </button>
@@ -117,8 +127,9 @@ onUnmounted(() => {
     <div
       v-if="isOpen"
       :class="[
-        'absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-soft py-1 max-h-60 overflow-auto custom-scrollbar',
-        dropdownPosition
+        'absolute z-50 w-full bg-white border border-zinc-200 rounded-xl shadow-soft py-1 max-h-60 overflow-auto custom-scrollbar',
+        dropdownPosition,
+        dropdownDirection
       ]"
     >
       <div
@@ -127,7 +138,7 @@ onUnmounted(() => {
         :class="[
           'px-4 py-2 cursor-pointer transition-colors flex items-center gap-2',
           item.disabled && 'opacity-50 cursor-not-allowed',
-          item.danger ? 'text-red-600 hover:bg-red-50' : 'hover:bg-slate-50',
+          item.danger ? 'text-red-600 hover:bg-red-50' : 'hover:bg-zinc-50',
           !item.disabled && modelValue === item.value && 'bg-indigo-50 text-indigo-600'
         ]"
         @click="selectItem(item)"

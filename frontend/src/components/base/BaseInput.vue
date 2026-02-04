@@ -9,6 +9,7 @@ interface Props {
   disabled?: boolean
   error?: string
   size?: 'sm' | 'md' | 'lg'
+  variant?: 'default' | 'glass'
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -16,6 +17,7 @@ const props = withDefaults(defineProps<Props>(), {
   disabled: false,
   error: '',
   size: 'md',
+  variant: 'default',
 })
 
 const emit = defineEmits<{
@@ -30,7 +32,7 @@ const slots = useSlots()
 const hasPrefix = computed(() => !!slots.prefix)
 const hasSuffix = computed(() => !!slots.suffix || !!props.error)
 
-const baseClasses = 'w-full rounded-xl border transition-all duration-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-offset-0 disabled:bg-slate-100 disabled:cursor-not-allowed'
+const baseClasses = 'w-full rounded-xl border transition-all duration-200 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-offset-0 disabled:cursor-not-allowed'
 
 const sizeClasses = computed(() => {
   const hasAddon = hasPrefix.value || hasSuffix.value
@@ -42,12 +44,17 @@ const sizeClasses = computed(() => {
   return sizes[props.size]
 })
 
-const stateClasses = computed(() => {
+const variantClasses = computed(() => {
   const errorPadding = props.error ? 'pr-10' : ''
   if (props.error) {
     return `border-error-300 focus:border-error-500 focus:ring-error-500 ${errorPadding}`
   }
-  return 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-500'
+
+  if (props.variant === 'glass') {
+    return 'input-glass border-glass-border'
+  }
+
+  return 'border-zinc-200 bg-white focus:border-indigo-500 focus:ring-indigo-500 disabled:bg-zinc-50'
 })
 
 const handleInput = (e: Event) => {
@@ -60,7 +67,7 @@ const handleInput = (e: Event) => {
     <!-- Prefix Slot -->
     <div
       v-if="slots.prefix"
-      class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400"
+      class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-zinc-400"
     >
       <slot name="prefix" />
     </div>

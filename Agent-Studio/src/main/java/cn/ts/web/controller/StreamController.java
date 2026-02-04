@@ -67,7 +67,9 @@ public class StreamController {
         if (sessionId != null && !sessionId.isEmpty()) {
             sessionService.getSession(sessionId).ifPresent(sessionDetail -> {
                 // 如果会话当前 Agent 与请求的 Agent 不同，自动切换
-                if (!sessionDetail.getAgentName().equals(agentName)) {
+                // 注意：getAgentName() 可能为 null（会话创建时未设置 Agent）
+                String currentAgentName = sessionDetail.getAgentName();
+                if (currentAgentName != null && !currentAgentName.equals(agentName)) {
                     try {
                         sessionService.switchAgent(sessionId, agentName);
                     } catch (Exception e) {
@@ -179,5 +181,37 @@ public class StreamController {
     @GetMapping("/agents")
     public java.util.Set<String> getRegisteredAgents() {
         return agentExecutionService.getRegisteredAgents();
+    }
+
+    /**
+     * 恢复执行（从中断处继续）
+     * <p>
+     * 当用户提交反馈后，从检查点恢复执行
+     * </p>
+     *
+     * @param agentName Agent 名称
+     * @param request   恢复请求
+     * @return SSE 事件流
+     */
+    @PostMapping(value = "/agent/{agentName}/resume", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<ServerSentEvent<AgentResponse>> resumeExecution(
+            @PathVariable String agentName,
+            @Valid @RequestBody cn.ts.web.dto.AgentResumeRequest request) {
+
+        // 确定超时时间
+        java.time.Duration actualTimeout = request.getTimeout() != null
+                ? java.time.Duration.ofSeconds(request.getTimeout())
+                : config.getTimeout();
+
+        return agentExecutionService.resumeAgentStream(
+                        agentName,
+                        request.getCheckpointId(),
+                        request.getFeedbackData(),
+                        request.getSessionId(),
+                        actualTimeout)
+                .map(response -> ServerSentEvent.<AgentResponse>builder()
+                        .data(response)
+                        .id(response.getExecutionId())
+                        .build());
     }
 }

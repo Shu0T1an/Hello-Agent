@@ -1,7 +1,7 @@
 <template>
-  <div class="timeline-test-page min-h-screen bg-slate-100 p-8">
+  <div class="timeline-test-page min-h-screen bg-zinc-100 p-8">
     <div class="max-w-4xl mx-auto">
-      <h1 class="text-2xl font-bold text-slate-900 mb-6">AgentTimeline 组件测试页面</h1>
+      <h1 class="text-2xl font-bold text-zinc-900 mb-6">AgentTimeline 组件测试页面</h1>
 
       <!-- 控制面板 -->
       <div class="bg-white rounded-lg shadow-sm p-4 mb-6 flex flex-wrap items-center gap-4">
@@ -19,18 +19,18 @@
         </button>
         <button
           @click="clearEvents"
-          class="px-4 py-2 bg-slate-500 text-white rounded-lg hover:bg-slate-600 transition-colors text-sm"
+          class="px-4 py-2 bg-zinc-500 text-white rounded-lg hover:bg-zinc-600 transition-colors text-sm"
         >
           清空事件
         </button>
         <button
           @click="toggleLoading"
-          class="px-4 py-2 border rounded-lg hover:bg-slate-50 transition-colors text-sm"
-          :class="loading ? 'border-amber-500 text-amber-500' : 'border-slate-300 text-slate-600'"
+          class="px-4 py-2 border rounded-lg hover:bg-zinc-50 transition-colors text-sm"
+          :class="loading ? 'border-amber-500 text-amber-500' : 'border-zinc-300 text-zinc-600'"
         >
           {{ loading ? '停止加载' : '模拟加载' }}
         </button>
-        <span class="text-sm text-slate-500">事件数量: {{ events.length }}</span>
+        <span class="text-sm text-zinc-500">事件数量: {{ events.length }}</span>
       </div>
 
       <!-- AgentTimeline 组件 -->

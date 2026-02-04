@@ -4,14 +4,33 @@ import type { Message, ChatSession, Strategy } from '@/types/message'
 import { useAgentStore } from './agent'
 import { useAgentTimelineStore } from './agentTimeline'
 import { API_BASE, DEFAULT_SESSION_TITLE } from '@/utils/constants'
-import { formatTimestamp, mapEventTypeToMessageStatus, generateSessionId } from '@/utils/helpers'
+import { formatTimestamp, generateSessionId } from '@/utils/helpers'
 
 // SSE 事件数据类型（与后端 AgentResponse 一致）
 interface AgentEvent {
   eventType: string
   nodeId?: string
   nodeType?: string  // 'llm' | 'tool' | 'custom'
-  stateData?: Record<string, unknown>
+  stateData?: Record<string, unknown> & {
+    interruption?: {
+      metadata: {
+        nodeId: string
+        message: string
+        customData: {
+          tool_feedbacks?: Array<{
+            id: string
+            name: string
+            arguments: Record<string, unknown>
+            description: string
+            result: string
+          }>
+          message?: string
+        }
+        timestamp: string
+      }
+      checkpointId: string
+    }
+  }
   message?: string
   timestamp: string
   executionId?: string
@@ -53,15 +72,23 @@ interface BackendMessage {
   role: string
   content: string
   timestamp: string
+  metadata?: {
+    tool_calls?: Array<{ id: string; name: string; type: string; arguments: string }>
+    tool_responses?: Array<{ id: string; name: string; response: string }>
+  }
 }
 
 // 后端消息转换为前端消息
 function backendMessageToFrontend(msg: BackendMessage): Message {
   return {
     id: msg.id,
-    role: msg.role as 'user' | 'assistant',
+    role: msg.role as MessageRole,
     content: msg.content,
-    timestamp: formatTimestamp(msg.timestamp)
+    timestamp: formatTimestamp(msg.timestamp),
+    metadata: msg.metadata ? {
+      tool_calls: msg.metadata.tool_calls,
+      tool_responses: msg.metadata.tool_responses
+    } : undefined
   }
 }
 
@@ -418,12 +445,49 @@ export const useChatStore = defineStore('chat', () => {
       logs: data.logs
     })
 
+    // 检测并添加工具调用消息到聊天框
+    handleToolCallMessage(data)
+
+    // 检测并添加工具执行消息到聊天框
+    handleToolExecutionMessage(data)
+
     // 处理标题生成事件
     if (data.eventType === 'TITLE_GENERATED' && data.metadata?.title) {
       const session = sessions.value.find(s => s.id === currentSessionId.value)
       if (session) {
         session.title = data.metadata.title as string
       }
+    }
+
+    // 处理中断事件（HILP - 人工在环）
+    if (data.eventType === 'INTERRUPTION') {
+      console.log('[INTERRUPTION] 收到中断事件:', data)
+      // 停止流处理
+      abortController.abort()
+      // 将消息状态设置为等待审批
+      const msgIndex = currentSession.value?.messages.findIndex(m => m.id === aiMessage.id)
+      if (msgIndex !== undefined && msgIndex >= 0 && currentSession.value) {
+        const msg = currentSession.value.messages[msgIndex]
+        if (msg) {
+          msg.status = 'interrupted'
+          // 保存完整的审批数据
+          const toolFeedbacks = data.stateData?.interruption?.metadata?.customData?.tool_feedbacks
+          if (toolFeedbacks && toolFeedbacks.length > 0) {
+            ;(msg as any).interruptionData = {
+              message: data.stateData?.interruption?.metadata?.message || '需要人工审批',
+              tool_feedbacks: toolFeedbacks
+            }
+          }
+          // 保存检查点 ID 和 threadId 以便后续恢复
+          if (data.stateData?.interruption?.checkpointId) {
+            ;(msg as any).checkpointId = data.stateData.interruption.checkpointId
+            // 优先使用 threadId，如果没有则使用当前会话 ID
+            ;(msg as any).threadId = data.stateData.interruption.threadId || currentSessionId.value
+          }
+        }
+      }
+      onComplete()
+      return
     }
 
     // 直接调用 updateAIMessage，无需再次解析
@@ -433,6 +497,86 @@ export const useChatStore = defineStore('chat', () => {
     if (currentSession.value) {
       currentSession.value.updatedAt = new Date().toLocaleString('zh-CN')
     }
+  }
+
+  // 处理工具调用消息（Function Call）
+  function handleToolCallMessage(data: AgentEvent) {
+    // 只在 LLM 节点完成时处理
+    if (data.nodeType !== 'llm' || data.eventType !== 'completed') return
+
+    const toolCalls = data.stateData?.execution_record?.toolCalls
+    if (!toolCalls || toolCalls.length === 0) return
+
+    // 检查是否已经添加过这个工具调用消息
+    const existingMsg = currentSession.value?.messages.find(m =>
+      m.role === 'tool_call' &&
+      m.metadata?.tool_calls?.[0]?.id === toolCalls[0]?.id
+    )
+    if (existingMsg) return
+
+    // 创建 tool_call 消息
+    const toolCallMessage: Message = {
+      id: `tool-call-${Date.now()}-${toolCalls[0]?.id}`,
+      role: 'tool_call',
+      content: '',
+      timestamp: new Date().toLocaleString('zh-CN'),
+      status: 'completed',
+      metadata: {
+        tool_calls: toolCalls.map((tc: any) => ({
+          id: tc.id,
+          name: tc.name,
+          type: tc.type || 'function',
+          arguments: tc.arguments
+        }))
+      }
+    }
+
+    console.log('[handleToolCallMessage] 添加工具调用消息:', toolCallMessage)
+    currentSession.value?.messages.push(toolCallMessage)
+  }
+
+  // 处理工具执行消息（Tool Execution）
+  function handleToolExecutionMessage(data: AgentEvent) {
+    // 检查是否是 tool 节点且已完成
+    if (data.nodeType !== 'tool' || data.eventType !== 'completed') return
+
+    const executions = data.stateData?.execution_record?.executions
+    if (!executions || executions.length === 0) return
+
+    // 检查是否已经添加过这个工具执行消息
+    const existingMsg = currentSession.value?.messages.find(m =>
+      m.role === 'tool_response' &&
+      m.metadata?.tool_responses?.[0]?.id === executions[0]?.id
+    )
+    if (existingMsg) return
+
+    // 创建 tool_response 消息
+    const toolResponseMessage: Message = {
+      id: `tool-response-${Date.now()}-${executions[0]?.id}`,
+      role: 'tool_response',
+      content: '',
+      timestamp: new Date().toLocaleString('zh-CN'),
+      status: 'completed',
+      metadata: {
+        tool_responses: executions.map((exec: any) => {
+          // 处理 result 字段 - 如果是对象则转换为 JSON 字符串
+          let resultStr = exec.result
+          if (typeof exec.result === 'object' && exec.result !== null) {
+            resultStr = JSON.stringify(exec.result, null, 2)
+          } else if (resultStr === undefined || resultStr === null) {
+            resultStr = 'No result'
+          }
+          return {
+            id: exec.id,
+            name: exec.name,
+            response: resultStr
+          }
+        })
+      }
+    }
+
+    console.log('[handleToolExecutionMessage] 添加工具执行消息:', toolResponseMessage)
+    currentSession.value?.messages.push(toolResponseMessage)
   }
 
   // 更新 AI 消息状态
@@ -466,11 +610,14 @@ export const useChatStore = defineStore('chat', () => {
         const currentMsg = messages[msgIndex]
         console.log('[updateAIMessage] running - 当前消息:', currentMsg)
         console.log('[updateAIMessage] running - 收到内容:', data.message)
-        if (data.message) {
+        if (data.message && currentMsg) {
           messages[msgIndex] = {
             ...currentMsg,
-            status: 'thinking',
-            content: currentMsg.content + data.message
+            id: currentMsg.id,
+            role: currentMsg.role,
+            content: currentMsg.content + data.message,
+            timestamp: currentMsg.timestamp,
+            status: 'thinking'
           }
           console.log('[updateAIMessage] running - 更新后:', messages[msgIndex])
         }
@@ -479,12 +626,15 @@ export const useChatStore = defineStore('chat', () => {
       case 'completed':
         // 全量覆盖：仅 _AGENT_MODEL_ 节点 - 重新获取最新消息引用
         const completedMsg = messages[msgIndex]
-        if (data.nodeId === '_AGENT_MODEL_' && data.message) {
+        if (data.nodeId === '_AGENT_MODEL_' && data.message && completedMsg) {
           console.log('[updateAIMessage] completed - 全量覆盖:', data.message)
           messages[msgIndex] = {
             ...completedMsg,
-            status: 'thinking',
-            content: data.message  // 全量覆盖，防止增量丢失
+            id: completedMsg.id,
+            role: completedMsg.role,
+            content: data.message,  // 全量覆盖，防止增量丢失
+            timestamp: completedMsg.timestamp,
+            status: 'thinking'
           }
         }
         break
@@ -492,8 +642,17 @@ export const useChatStore = defineStore('chat', () => {
       case 'GRAPH_COMPLETED':
         // 重新获取最新消息引用
         const graphCompletedMsg = messages[msgIndex]
-        console.log('[updateAIMessage] GRAPH_COMPLETED - 完成')
-        messages[msgIndex] = { ...graphCompletedMsg, status: 'completed' }
+        if (graphCompletedMsg) {
+          console.log('[updateAIMessage] GRAPH_COMPLETED - 完成')
+          messages[msgIndex] = {
+            ...graphCompletedMsg,
+            id: graphCompletedMsg.id,
+            role: graphCompletedMsg.role,
+            content: graphCompletedMsg.content,
+            timestamp: graphCompletedMsg.timestamp,
+            status: 'completed'
+          }
+        }
         onComplete()
         abortController.abort()  // 真正停止流
         break
@@ -501,11 +660,16 @@ export const useChatStore = defineStore('chat', () => {
       case 'failed':
         // 重新获取最新消息引用
         const failedMsg = messages[msgIndex]
-        console.log('[updateAIMessage] failed - 失败:', data.nodeErrorMessage)
-        messages[msgIndex] = {
-          ...failedMsg,
-          status: 'error',
-          content: failedMsg.content + `\n(错误: ${data.nodeErrorMessage || '执行失败'})`
+        if (failedMsg) {
+          console.log('[updateAIMessage] failed - 失败:', data.nodeErrorMessage)
+          messages[msgIndex] = {
+            ...failedMsg,
+            id: failedMsg.id,
+            role: failedMsg.role,
+            content: failedMsg.content + `\n(错误: ${data.nodeErrorMessage || '执行失败'})`,
+            timestamp: failedMsg.timestamp,
+            status: 'error'
+          }
         }
         onComplete()
         abortController.abort()
@@ -538,6 +702,120 @@ export const useChatStore = defineStore('chat', () => {
     currentKnowledgeBaseId.value = knowledgeBaseId
   }
 
+  // Resume agent execution after approval
+  async function resumeAgent(
+    agentName: string,
+    checkpointId: string,
+    sessionId: string,
+    feedbacks: Array<{ id: string; name: string; result: string }>,
+    messageId: string
+  ) {
+    if (isProcessing.value) return
+
+    const agentTimelineStore = useAgentTimelineStore()
+
+    // 找到对应的 AI 消息
+    const msgIndex = currentSession.value?.messages.findIndex(m => m.id === messageId)
+    if (msgIndex === undefined || msgIndex < 0 || !currentSession.value) {
+      console.error('[resumeAgent] 消息未找到:', messageId)
+      return
+    }
+
+    const aiMessage = currentSession.value.messages[msgIndex]
+
+    // 更新消息状态为思考中
+    aiMessage.status = 'thinking'
+    aiMessage.content += '\n\n--- 审批通过，继续执行 ---\n\n'
+
+    // 创建 AbortController
+    const controller = new AbortController()
+    isProcessing.value = true
+
+    const request = {
+      checkpointId,
+      feedbackData: { feedbacks },
+      sessionId
+    }
+
+    const url = `${API_BASE}/api/stream/agent/${encodeURIComponent(agentName)}/resume`
+    console.log('[resumeAgent] POST URL:', url)
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+        signal: controller.signal
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      if (!reader) {
+        throw new Error('无法获取响应流')
+      }
+
+      while (true) {
+        const { done, value } = await reader.read()
+        console.log('[resumeAgent] done:', done, 'value length:', value?.length)
+
+        if (value) {
+          const decoded = decoder.decode(value, { stream: true })
+          buffer += decoded
+        }
+
+        if (done) {
+          console.log('[resumeAgent] SSE 流读取完成')
+          if (buffer.trim()) {
+            processSSEBuffer(buffer, aiMessage, agentTimelineStore, controller)
+            buffer = ''
+          }
+          break
+        }
+
+        // 处理粘包
+        let parts = buffer.split('\n\n')
+        buffer = parts.pop() || ''
+
+        for (const eventBlock of parts) {
+          const lines = eventBlock.split('\n')
+          for (const line of lines) {
+            const trimmedLine = line.trim()
+            if (!trimmedLine.startsWith('data:')) continue
+
+            const jsonStr = trimmedLine.replace(/^data:\s*/, '').trim()
+            if (!jsonStr) continue
+
+            try {
+              const data: AgentEvent = JSON.parse(jsonStr)
+              console.log(`[resumeAgent] SSE ${data.eventType}`)
+
+              handleSSEMessage(data, aiMessage, agentTimelineStore, controller, () => {
+                isProcessing.value = false
+              })
+            } catch (error) {
+              console.error('[resumeAgent] 解析 SSE 数据失败:', error, jsonStr)
+            }
+          }
+        }
+      }
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        console.log('[resumeAgent] Fetch aborted')
+      } else {
+        console.error('[resumeAgent] SSE 连接错误:', error)
+        handleSSEError(aiMessage)
+      }
+    } finally {
+      isProcessing.value = false
+    }
+  }
+
   return {
     // 状态
     sessions,
@@ -553,6 +831,7 @@ export const useChatStore = defineStore('chat', () => {
     loadSessions,
     loadSessionDetail,
     sendMessage,
+    resumeAgent,
     switchSession,
     createNewSession,
     deleteSession,

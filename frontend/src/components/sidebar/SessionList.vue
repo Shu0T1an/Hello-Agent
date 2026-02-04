@@ -7,7 +7,7 @@
       :class="{ active: session.id === chatStore.currentSessionId }"
       @click="handleSessionClick(session.id)"
     >
-      <SessionItem :session="session" />
+      <SessionItem :session="session" :collapsed="collapsed" />
     </div>
   </div>
 </template>
@@ -15,6 +15,12 @@
 <script setup lang="ts">
 import { useChatStore } from '@/stores/chat'
 import SessionItem from './SessionItem.vue'
+
+interface Props {
+  collapsed?: boolean
+}
+
+const props = defineProps<Props>()
 
 const chatStore = useChatStore()
 

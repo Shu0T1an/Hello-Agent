@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { cn } from '@/lib/utils'
 
 interface Props {
-  variant?: 'default' | 'bordered' | 'elevated' | 'flat'
+  variant?: 'default' | 'bordered' | 'elevated' | 'flat' | 'glass'
   hoverable?: boolean
   padding?: 'none' | 'sm' | 'md' | 'lg' | 'xl'
   clickable?: boolean
@@ -21,21 +21,25 @@ const emit = defineEmits<{
   click: [event: MouseEvent]
 }>()
 
-const baseClasses = 'rounded-xl bg-white transition-all duration-200'
+const baseClasses = 'rounded-xl transition-all duration-500'
 
 const variantClasses = computed(() => {
   const variants = {
-    default: 'border border-slate-200 shadow-soft',
-    bordered: 'border-2 border-slate-200',
-    elevated: 'shadow-medium border-0',
-    flat: 'border-0 shadow-none bg-slate-50',
+    default: 'bg-white border border-zinc-200 shadow-soft',
+    bordered: 'bg-white border-2 border-zinc-200',
+    elevated: 'bg-white shadow-medium border-0',
+    flat: 'bg-zinc-50 border-0 shadow-none',
+    glass: 'glass-card',
   }
   return variants[props.variant]
 })
 
 const hoverClasses = computed(() => {
   if (!props.hoverable && !props.clickable) return ''
-  return 'hover:shadow-hover hover:-translate-y-0.5 cursor-pointer'
+  if (props.variant === 'glass') {
+    return 'hover:shadow-glass-deep hover:scale-[1.02] cursor-pointer'
+  }
+  return 'hover:shadow-hover hover:scale-[1.02] cursor-pointer'
 })
 
 const paddingClasses = computed(() => {

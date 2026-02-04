@@ -116,7 +116,7 @@ public class CheckpointAutoConfiguration {
     /**
      * Checkpoint 配置属性
      */
-    @ConfigurationProperties(prefix = "checkpoint.storage")
+    @ConfigurationProperties(prefix = "checkpoint")
     public static class CheckpointProperties {
 
         private Storage storage = new Storage();
@@ -139,7 +139,7 @@ public class CheckpointAutoConfiguration {
              * 检查点策略: ALWAYS | MANUAL | ERROR | ON_SPECIFIC_NODES
              */
             private CheckpointConfig.CheckpointStrategy strategy =
-                    CheckpointConfig.CheckpointStrategy.MANUAL;
+                    CheckpointConfig.CheckpointStrategy.ERROR;
 
             /**
              * 最大历史记录数

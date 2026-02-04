@@ -2,6 +2,8 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import './assets/styles/globals.css'
 import './assets/styles/variables.css'
+import './assets/styles/glassmorphism.css'
+import './assets/styles/animations.css'
 import './assets/styles/markdown.css'
 import App from './App.vue'
 

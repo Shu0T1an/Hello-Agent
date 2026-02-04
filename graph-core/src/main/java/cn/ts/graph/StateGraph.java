@@ -59,6 +59,26 @@ public class StateGraph {
     }
 
     /**
+     * 添加一个完整的节点（支持 InterruptableAction）
+     * <p>
+     * 直接添加 Node 对象，保留 InterruptableAction 信息
+     * </p>
+     *
+     * @param node 完整的节点对象
+     * @return 当前图构建器，支持链式调用
+     */
+    public StateGraph addNode(Node node) {
+        if (node == null) {
+            throw new GraphException.EdgeConfigurationException("Node cannot be null");
+        }
+        if (nodes.containsKey(node.id())) {
+            throw new GraphException.EdgeConfigurationException("Node already exists: " + node.id());
+        }
+        nodes.put(node.id(), node);
+        return this;
+    }
+
+    /**
      * 添加一个带描述的节点
      *
      * @param id          节点标识

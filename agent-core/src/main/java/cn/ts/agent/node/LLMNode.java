@@ -2,6 +2,8 @@ package cn.ts.agent.node;
 
 import cn.ts.agent.Tool.ToolUtils;
 import cn.ts.agent.model.ChatModelRequest;
+import cn.ts.agent.retry.RetryConfig;
+import cn.ts.agent.retry.RetryUtils;
 import cn.ts.graph.flux.GraphFlux;
 import cn.ts.graph.node.NodeAction;
 import cn.ts.graph.state.State;
@@ -16,6 +18,7 @@ import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.tool.ToolCallback;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -54,6 +57,8 @@ public class LLMNode implements NodeAction {
     private final ChatOptions chatOptions;
     private final List<ToolCallback> toolCallbacks;
     private final boolean streaming;
+    private final RetryConfig retryConfig;
+    private final boolean enableRetry;
 
     /**
      * 私有构造函数，仅供 Builder 使用
@@ -66,6 +71,8 @@ public class LLMNode implements NodeAction {
                 ? builder.toolCallbacks
                 : new ArrayList<>();
         this.streaming = builder.streaming;
+        this.retryConfig = builder.retryConfig;
+        this.enableRetry = builder.enableRetry;
     }
 
     @Override
@@ -93,8 +100,16 @@ public class LLMNode implements NodeAction {
      * 非流式调用
      */
     private Map<String, Object> applyNonStreaming(ChatModelRequest request, ChatClient.ChatClientRequestSpec requestSpec) {
-        // 调用 ChatClient
-        ChatResponse response = requestSpec.call().chatResponse();
+        // 创建响应 Mono
+        Mono<ChatResponse> responseMono = Mono.fromCallable(() -> requestSpec.call().chatResponse());
+
+        // 如果启用重试且配置了重试策略，添加重试逻辑
+        if (enableRetry && retryConfig != null) {
+            responseMono = responseMono.retryWhen(RetryUtils.retryFor429(retryConfig));
+        }
+
+        // 阻塞获取响应
+        ChatResponse response = responseMono.block();
 
         // 获取响应中的 AssistantMessage（包含 toolCalls）
         AssistantMessage assistantMessage = response.getResult().getOutput();
@@ -116,6 +131,11 @@ public class LLMNode implements NodeAction {
     private Map<String, Object> applyStreaming(ChatModelRequest request, ChatClient.ChatClientRequestSpec requestSpec) {
         // 调用 stream API
         Flux<ChatResponse> stream = requestSpec.stream().chatResponse();
+
+        // 如果启用重试且配置了重试策略，添加重试逻辑
+        if (enableRetry && retryConfig != null) {
+            stream = stream.retryWhen(RetryUtils.retryFor429(retryConfig));
+        }
 
         // 创建流式输出包装
         GraphFlux<ChatResponse> graphFlux = GraphFlux.of("llm", stream);
@@ -174,6 +194,8 @@ public class LLMNode implements NodeAction {
         private boolean streaming = false;
         private Object[] tools;
         private List<Advisor> advisors;
+        private RetryConfig retryConfig;
+        private boolean enableRetry = true;
 
         private Builder(ChatModel chatModel) {
             // ChatClient 会在 build() 时创建，这里只保存 ChatModel
@@ -324,6 +346,28 @@ public class LLMNode implements NodeAction {
                 this.advisors = new ArrayList<>();
             }
             this.advisors.add(advisor);
+            return this;
+        }
+
+        /**
+         * 设置重试配置
+         *
+         * @param retryConfig 重试配置
+         * @return Builder 实例
+         */
+        public Builder retryConfig(RetryConfig retryConfig) {
+            this.retryConfig = retryConfig;
+            return this;
+        }
+
+        /**
+         * 设置是否启用重试
+         *
+         * @param enableRetry 是否启用重试
+         * @return Builder 实例
+         */
+        public Builder enableRetry(boolean enableRetry) {
+            this.enableRetry = enableRetry;
             return this;
         }
 

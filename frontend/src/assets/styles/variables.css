@@ -1,23 +1,54 @@
 :root {
-  /* ========== 基础颜色变量 - 便于在组件中动态使用 ========== */
+  /* ========== Indigo + Zinc 配色系统 ========== */
 
-  /* 侧边栏颜色 */
-  --color-sidebar-bg: #0f172a;
-  --color-sidebar-hover: #1e293b;
-  --color-sidebar-active: #334155;
-  --color-sidebar-text: #f1f5f9;
-  --color-sidebar-text-muted: #94a3b8;
+  /* ===== 浅色主题（默认） ===== */
 
-  /* 内容区颜色 */
-  --color-content-bg: #f8fafc;
-  --color-content-surface: #ffffff;
-  --color-content-border: #e2e8f0;
+  /* 背景渐变 */
+  --bg-primary: #f5f5f5;
+  --bg-secondary: rgba(255, 255, 255, 0.6);
+  --bg-glass: rgba(255, 255, 255, 0.25);
+  --bg-glass-hover: rgba(255, 255, 255, 0.35);
+
+  /* 消息气泡背景 */
+  --message-user-bg: linear-gradient(135deg, #4f46e5 0%, #3b82f6 50%, #06b6d4 100%);
+  --message-assistant-bg: #ffffff;
+  --message-assistant-text: #09090b;
+
+  /* 玻璃效果 - 浅色 */
+  --glass-bg: rgba(255, 255, 255, 0.25);
+  --glass-bg-hover: rgba(255, 255, 255, 0.35);
+  --glass-border: rgba(24, 24, 27, 0.08);  /* zinc-900/8 */
+  --glass-border-highlight: rgba(24, 24, 27, 0.12);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
 
   /* 主题色 - Indigo */
-  --color-primary: #6366f1;
-  --color-primary-hover: #4f46e5;
-  --color-primary-light: #e0e7ff;
-  --color-primary-dark: #4338ca;
+  --color-primary: #4f46e5;           /* indigo-600 */
+  --color-secondary: #3b82f6;         /* blue-500 */
+  --color-accent: #06b6d4;            /* cyan-500 */
+  --color-primary-hover: #4338ca;     /* indigo-700 */
+  --color-primary-light: #eef2ff;     /* indigo-50 */
+
+  /* 渐变 */
+  --gradient-primary: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+  --gradient-avatar: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);  /* indigo-500 to purple-500 */
+  --gradient-glow: linear-gradient(135deg, #6366f1 0%, #9333ea 100%);     /* indigo-500 to purple-600 */
+
+  /* 侧边栏颜色 */
+  --color-sidebar-bg: #fafafa;        /* zinc-50 */
+  --color-sidebar-hover: #f4f4f5;     /* zinc-100 */
+  --color-sidebar-active: #e4e4e7;    /* zinc-200 */
+  --color-sidebar-text: #18181b;      /* zinc-900 */
+  --color-sidebar-text-muted: #71717a; /* zinc-500 */
+
+  /* 内容区颜色 */
+  --color-content-bg: #f4f4f5;        /* zinc-100 */
+  --color-content-surface: rgba(255, 255, 255, 0.7);
+  --color-content-border: #e4e4e7;    /* zinc-200 */
+
+  /* 文本颜色 - 浅色 */
+  --color-text-primary: #09090b;      /* zinc-950 */
+  --color-text-secondary: #71717a;    /* zinc-500 */
+  --color-text-muted: #a1a1aa;        /* zinc-400 */
 
   /* 语义化颜色 - Success */
   --color-success: #22c55e;
@@ -42,12 +73,6 @@
   --color-info-hover: #2563eb;
   --color-info-light: #dbeafe;
   --color-info-dark: #1d4ed8;
-
-  /* 文本颜色 */
-  --color-text-primary: #0f172a;
-  --color-text-secondary: #475569;
-  --color-text-muted: #94a3b8;
-  --color-text-disabled: #cbd5e1;
 
   /* ========== 间距 ========== */
   --spacing-xs: 4px;
@@ -74,8 +99,8 @@
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
   --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.05);
-  --shadow-focus: 0 0 0 3px rgba(99, 102, 241, 0.3);
-  --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.3);
+  --shadow-focus: 0 0 0 3px rgba(139, 92, 246, 0.3);
+  --shadow-glow: 0 0 20px rgba(139, 92, 246, 0.4);
 
   /* ========== 过渡动画 ========== */
   --transition-instant: 100ms ease;
@@ -94,24 +119,59 @@
   --z-tooltip: 1070;
 }
 
-/* ========== 深色模式支持（可选） ========== */
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* 侧边栏颜色 */
-    --color-sidebar-bg: #0f172a;
-    --color-sidebar-hover: #1e293b;
-    --color-sidebar-active: #334155;
+/* ========== 深色主题 - Indigo + Zinc ========== */
+[data-theme="dark"] {
+  /* 基于 Zinc 的深色背景 */
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #18181b;            /* zinc-900 */
+  --bg-glass: rgba(9, 9, 11, 0.4);    /* zinc-950/40 */
+  --bg-glass-hover: rgba(9, 9, 11, 0.6);
 
-    /* 内容区颜色 */
-    --color-content-bg: #0f172a;
-    --color-content-surface: #1e293b;
-    --color-content-border: #334155;
+  /* 消息气泡背景 */
+  --message-user-bg: linear-gradient(135deg, #4f46e5 0%, #3b82f6 50%, #06b6d4 100%);
+  --message-assistant-bg: #2d2d2d;
+  --message-assistant-text: #f4f4f5;
 
-    /* 文本颜色 */
-    --color-text-primary: #f1f5f9;
-    --color-text-secondary: #cbd5e1;
-    --color-text-muted: #64748b;
-  }
+  /* 高级玻璃态效果 */
+  --glass-bg: rgba(9, 9, 11, 0.4);    /* zinc-950/40 */
+  --glass-bg-hover: rgba(9, 9, 11, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.05);   /* border-white/5 */
+  --glass-border-highlight: rgba(255, 255, 255, 0.08);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --glass-blur: 40px;                              /* backdrop-blur-2xl */
+
+  /* 过渡时间 */
+  --transition-smooth: 500ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* 主题色 - Indigo */
+  --color-primary: #4f46e5;           /* indigo-600 */
+  --color-secondary: #3b82f6;         /* blue-500 */
+  --color-accent: #06b6d4;            /* cyan-500 */
+  --color-primary-hover: #4338ca;     /* indigo-700 */
+  --color-primary-light: rgba(79, 70, 229, 0.15);
+
+  /* 靛蓝渐变 */
+  --gradient-primary: linear-gradient(135deg, #4f46e5 0%, #3b82f6 50%, #06b6d4 100%);
+  --gradient-secondary: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+  --gradient-avatar: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);  /* indigo-500 to purple-500 */
+  --gradient-glow: linear-gradient(135deg, #6366f1 0%, #9333ea 100%);     /* indigo-500 to purple-600 */
+
+  /* 侧边栏 - Zinc 色系 */
+  --color-sidebar-bg: #18181b;            /* zinc-900 */
+  --color-sidebar-hover: #27272a;         /* zinc-800 */
+  --color-sidebar-active: rgba(79, 70, 229, 0.2);  /* indigo-600 半透明 */
+  --color-sidebar-text: #f4f4f5;      /* zinc-100 */
+  --color-sidebar-text-muted: #a1a1aa; /* zinc-400 */
+
+  /* 内容区 - 深色背景 */
+  --color-content-bg: rgba(9, 9, 11, 0.5);    /* zinc-950/50 */
+  --color-content-surface: rgba(255, 255, 255, 0.05);
+  --color-content-border: rgba(255, 255, 255, 0.1);  /* border-white/10 */
+
+  /* 文本颜色 - 深色 */
+  --color-text-primary: #f4f4f5;      /* zinc-100 */
+  --color-text-secondary: #a1a1aa;    /* zinc-400 */
+  --color-text-muted: #71717a;        /* zinc-500 */
 }
 
 /* ========== 语义化颜色类 ========== */

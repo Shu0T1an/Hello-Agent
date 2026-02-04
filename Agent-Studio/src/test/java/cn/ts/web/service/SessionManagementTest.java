@@ -1,6 +1,7 @@
 package cn.ts.web.service;
 
 import cn.ts.graph.CompiledGraph;
+import cn.ts.graph.checkpoint.CheckpointManager;
 import cn.ts.graph.config.RunnableConfig;
 import cn.ts.web.config.AgentExecutionConfig;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,7 +38,7 @@ class SessionManagementTest {
     void setUp() {
         // Mock 依赖
         SessionService mockSessionService = mock(SessionService.class);
-        TitleGeneratorService mockTitleService = mock(TitleGeneratorService.class);
+        CheckpointManager mockCheckpointManager = mock(CheckpointManager.class);
         mockConfig = mock(AgentExecutionConfig.class);
 
         // 设置 mock 配置行为
@@ -47,7 +48,7 @@ class SessionManagementTest {
         when(mockConfig.getDefaultMaxIterations()).thenReturn(10);
         when(mockConfig.isDebugMode()).thenReturn(false);
 
-        service = new AgentExecutionService(mockSessionService, mockTitleService, mockConfig);
+        service = new AgentExecutionService(mockSessionService, mockCheckpointManager, mockConfig);
         mockGraph = mock(CompiledGraph.class);
 
         // 注册测试用的 Agent

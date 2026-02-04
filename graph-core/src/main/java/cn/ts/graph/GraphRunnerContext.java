@@ -1,5 +1,6 @@
 package cn.ts.graph;
 
+import cn.ts.graph.checkpoint.CheckpointManager;
 import cn.ts.graph.config.RunnableConfig;
 import cn.ts.graph.state.MapState;
 import cn.ts.graph.state.State;
@@ -8,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * 图执行上下文
@@ -31,18 +33,21 @@ public class GraphRunnerContext {
     private final RunnableConfig config;
     private final List<GraphResponse<?>> history;
     private final int iteration;
+    private final CheckpointManager checkpointManager;
 
     private GraphRunnerContext(
             String currentNodeId,
             State overallState,
             RunnableConfig config,
             List<GraphResponse<?>> history,
-            int iteration) {
+            int iteration,
+            CheckpointManager checkpointManager) {
         this.currentNodeId = currentNodeId;
         this.overallState = Objects.requireNonNull(overallState, "OverallState cannot be null");
         this.config = Objects.requireNonNull(config, "Config cannot be null");
         this.history = new ArrayList<>(history != null ? history : List.of());
         this.iteration = iteration;
+        this.checkpointManager = checkpointManager; // 可以为 null
     }
 
     /**
@@ -54,11 +59,24 @@ public class GraphRunnerContext {
      * @return GraphRunnerContext 实例
      */
     public static GraphRunnerContext create(Map<String, Object> initialState, RunnableConfig config, java.util.function.Supplier<State> stateInitializer) {
+        return create(initialState, config, stateInitializer, null);
+    }
+
+    /**
+     * 创建一个新的执行上下文（带检查点管理器）
+     *
+     * @param initialState 初始状态
+     * @param config       运行配置
+     * @param stateInitializer 状态初始化器
+     * @param checkpointManager 检查点管理器（可选）
+     * @return GraphRunnerContext 实例
+     */
+    public static GraphRunnerContext create(Map<String, Object> initialState, RunnableConfig config, java.util.function.Supplier<State> stateInitializer, CheckpointManager checkpointManager) {
         State state = stateInitializer != null ? stateInitializer.get() : new MapState();
         if (initialState != null && !initialState.isEmpty()) {
             state.merge(initialState);
         }
-        return new GraphRunnerContext(null, state, config, new ArrayList<>(), 0);
+        return new GraphRunnerContext(null, state, config, new ArrayList<>(), 0, checkpointManager);
     }
 
     /**
@@ -69,7 +87,19 @@ public class GraphRunnerContext {
      * @return GraphRunnerContext 实例
      */
     public static GraphRunnerContext create(State state, RunnableConfig config) {
-        return new GraphRunnerContext(null, state, config, new ArrayList<>(), 0);
+        return create(state, config, null);
+    }
+
+    /**
+     * 创建一个带有状态的执行上下文（带检查点管理器）
+     *
+     * @param state  状态对象
+     * @param config 运行配置
+     * @param checkpointManager 检查点管理器（可选）
+     * @return GraphRunnerContext 实例
+     */
+    public static GraphRunnerContext create(State state, RunnableConfig config, CheckpointManager checkpointManager) {
+        return new GraphRunnerContext(null, state, config, new ArrayList<>(), 0, checkpointManager);
     }
 
     /**
@@ -160,7 +190,7 @@ public class GraphRunnerContext {
      * @return 新的上下文
      */
     public GraphRunnerContext forNextIteration(String nextNodeId) {
-        return new GraphRunnerContext(nextNodeId, overallState, config, history, iteration + 1);
+        return new GraphRunnerContext(nextNodeId, overallState, config, history, iteration + 1, checkpointManager);
     }
 
     /**
@@ -173,7 +203,16 @@ public class GraphRunnerContext {
         State newState = new MapState();
         newState.merge(overallState.data());
         newState.merge(updates);
-        return new GraphRunnerContext(currentNodeId, newState, config, history, iteration);
+        return new GraphRunnerContext(currentNodeId, newState, config, history, iteration, checkpointManager);
+    }
+
+    /**
+     * 获取检查点管理器（可选）
+     *
+     * @return 检查点管理器的 Optional
+     */
+    public Optional<CheckpointManager> getCheckpointManager() {
+        return Optional.ofNullable(checkpointManager);
     }
 
     @Override

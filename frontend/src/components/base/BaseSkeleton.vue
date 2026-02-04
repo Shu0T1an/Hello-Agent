@@ -31,7 +31,7 @@ const containerClasses = computed(() => {
 })
 
 const skeletonClasses = computed(() => {
-  return 'shimmer rounded-lg bg-slate-100'
+  return 'shimmer rounded-lg bg-zinc-100'
 })
 
 const textSkeletonWidths = computed(() => {

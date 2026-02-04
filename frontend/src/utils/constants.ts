@@ -17,7 +17,8 @@ export const MESSAGE_STATUS_CONFIG: Record<string, { label: string; variant: 'de
   'thinking': { label: '思考中...', variant: 'warning' },
   'taking-action': { label: '执行中', variant: 'purple' },
   'completed': { label: '完成', variant: 'success' },
-  'error': { label: '错误', variant: 'danger' }
+  'error': { label: '错误', variant: 'danger' },
+  'interrupted': { label: '等待审批', variant: 'warning' }
 } as const
 
 // 后端事件类型到前端消息状态的映射

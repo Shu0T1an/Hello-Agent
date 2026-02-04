@@ -9,6 +9,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -109,5 +110,38 @@ public class GlobalExceptionHandler {
     public Result<Void> handleException(Exception e) {
         log.error("未知异常", e);
         return Result.error(ResultCode.ERROR.getCode(), "系统错误，请联系管理员");
+    }
+
+    /**
+     * 429 Too Many Requests 错误处理
+     */
+    @ExceptionHandler(WebClientResponseException.TooManyRequests.class)
+    @ResponseStatus(HttpStatus.TOO_MANY_REQUESTS)
+    public Result<Void> handleTooManyRequests(WebClientResponseException.TooManyRequests e) {
+        log.warn("API 速率限制: {}", e.getMessage());
+        String retryAfter = e.getHeaders().getFirst("Retry-After");
+        String message = "请求过于频繁，请稍后再试";
+        if (retryAfter != null) {
+            message += "（建议 " + retryAfter + " 秒后重试）";
+        }
+        return Result.error(ResultCode.RATE_LIMIT_EXCEEDED.getCode(), message);
+    }
+
+    /**
+     * 通用的 WebClientResponseException 处理
+     */
+    @ExceptionHandler(WebClientResponseException.class)
+    @ResponseStatus(HttpStatus.BAD_GATEWAY)
+    public Result<Void> handleWebClientResponseException(WebClientResponseException e) {
+        log.error("外部 API 调用失败: {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
+
+        String message = switch (e.getStatusCode().value()) {
+            case 429 -> "请求过于频繁，请稍后再试";
+            case 500, 502, 503, 504 -> "外部服务暂时不可用，请稍后再试";
+            case 401 -> "API 认证失败，请检查密钥配置";
+            default -> "外部 API 调用失败";
+        };
+
+        return Result.error(ResultCode.API_SERVICE_UNAVAILABLE.getCode(), message);
     }
 }

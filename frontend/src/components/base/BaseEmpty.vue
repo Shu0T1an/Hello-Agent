@@ -88,7 +88,7 @@ const handleAction = () => {
         />
         <slot v-else name="icon">
           <FileQuestion
-            class="text-slate-300"
+            class="text-zinc-300"
             :size="80"
             stroke-width="1.5"
           />
@@ -97,13 +97,13 @@ const handleAction = () => {
     </div>
 
     <!-- 标题 -->
-    <h3 class="text-lg font-semibold text-slate-900 mb-2">
+    <h3 class="text-lg font-semibold text-zinc-900 mb-2">
       <slot v-if="$slots.title" name="title" />
       <template v-else>{{ displayTitle }}</template>
     </h3>
 
     <!-- 描述 -->
-    <p class="text-sm text-slate-500 mb-6 max-w-sm">
+    <p class="text-sm text-zinc-500 mb-6 max-w-sm">
       <slot v-if="$slots.description" name="description" />
       <template v-else>{{ displayDescription }}</template>
     </p>

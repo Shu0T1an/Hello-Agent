@@ -96,4 +96,11 @@ public interface CheckpointManager {
      * @return 检查点配置
      */
     CheckpointConfig getConfig();
+
+    /**
+     * 获取存储实现
+     *
+     * @return 存储实现
+     */
+    CheckpointStorage getStorage();
 }

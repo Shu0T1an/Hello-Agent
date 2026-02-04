@@ -1,5 +1,6 @@
 package cn.ts.graph.node;
 
+import cn.ts.graph.config.RunnableConfig;
 import cn.ts.graph.state.State;
 
 import java.util.Map;
@@ -25,6 +26,9 @@ public interface AsyncNodeAction {
      * @return CompletableFuture 包含状态更新 Map
      */
     CompletableFuture<Map<String, Object>> applyAsync(State state);
+
+
+
 
     /**
      * 将异步节点动作转换为同步动作（阻塞等待）

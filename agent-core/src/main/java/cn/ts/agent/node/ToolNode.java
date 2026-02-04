@@ -17,6 +17,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static cn.ts.agent.Tool.ToolContextConstants.TOOL_EXTRA_STATE_KEY;
+import static cn.ts.agent.Tool.ToolContextConstants.TOOL_STATE_CONTEXT_KEY;
 import static cn.ts.agent.Tool.ToolUtils.getAllToolCallbacksFromTools;
 
 /**
@@ -82,12 +84,15 @@ public class ToolNode implements NodeAction {
         }
         AssistantMessage am = lastMessageOpt.get();
 
+        Map<String, Object> extraStateFromToolCall = new HashMap<>();
+        Map<String, Object> updateState;
+
         // 2. 执行所有工具调用并收集执行记录
         List<ToolResponseMessage.ToolResponse> responses = new ArrayList<>();
         List<Map<String, Object>> executions = new ArrayList<>();
 
         for (AssistantMessage.ToolCall tc : am.getToolCalls()) {
-            ToolExecutionResult result = executeToolCall(tc);
+            ToolExecutionResult result = executeToolCall(tc, state, extraStateFromToolCall);
             responses.add(result.response());
             executions.add(result.executionRecord());
         }
@@ -100,7 +105,11 @@ public class ToolNode implements NodeAction {
         logger.debug("ToolNode completed, iteration: {}", nextIteration);
 
         // 5. 创建执行记录并返回结果
-        return buildResult(toolResponseMessage, nextIteration, startTime, executions);
+        updateState = buildResult(toolResponseMessage, nextIteration, startTime, executions);
+
+        // 合并两个Map updateState 和 extraStateFromToolCall
+        updateState.putAll(extraStateFromToolCall);
+        return updateState;
     }
 
     /**
@@ -148,19 +157,25 @@ public class ToolNode implements NodeAction {
     /**
      * 执行单个工具调用
      *
-     * @param toolCall 工具调用对象
+     * @param toolCall               工具调用对象
+     * @param state
+     * @param extraStateFromToolCall
      * @return 工具执行结果（响应和执行记录）
      */
-    private ToolExecutionResult executeToolCall(AssistantMessage.ToolCall toolCall) {
+    private ToolExecutionResult executeToolCall(AssistantMessage.ToolCall toolCall, State state, Map<String, Object> extraStateFromToolCall) {
         logger.debug("Executing tool call: {}", toolCall.name());
 
         ToolCallback tool = findTool(toolCall.name());
         String result;
         boolean success;
 
+        Map<String, Object> toolContextMap = new HashMap<>();
+
+        toolContextMap.put(TOOL_STATE_CONTEXT_KEY,state);
+        toolContextMap.put(TOOL_EXTRA_STATE_KEY, extraStateFromToolCall);
         if (tool != null) {
             try {
-                result = tool.call(toolCall.arguments(), new ToolContext(Map.of()));
+                result = tool.call(toolCall.arguments(), new ToolContext(toolContextMap));
                 success = true;
                 logger.debug("Tool {} executed successfully", toolCall.name());
             } catch (Exception e) {

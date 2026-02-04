@@ -13,14 +13,11 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.ai.chat.messages.Message;
-import org.springframework.ai.chat.messages.UserMessage;
-import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.messages.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.lang.reflect.Method;
 import java.util.*;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -407,28 +404,11 @@ public class SessionService {
                 sessionMessage.setContent(extractContent(message));
                 sessionMessage.setRole(extractRole(message));
                 sessionMessage.setTimestamp(Instant.now());
+                sessionMessage.setMetadata(extractMetadata(message));
                 result.add(sessionMessage);
                 continue;
-            }
-
-            // 如果是 Map，按原来的方式处理
-            if (item instanceof Map) {
-                Map<String, Object> msg = (Map<String, Object>) item;
-                SessionDetailDTO.SessionMessage sessionMessage = new SessionDetailDTO.SessionMessage();
-                sessionMessage.setId((String) msg.get("id"));
-                sessionMessage.setRole((String) msg.get("role"));
-                sessionMessage.setContent((String) msg.get("content"));
-                String timestampStr = (String) msg.get("timestamp");
-                if (timestampStr != null) {
-                    try {
-                        sessionMessage.setTimestamp(Instant.parse(timestampStr));
-                    } catch (Exception e) {
-                        sessionMessage.setTimestamp(Instant.now());
-                    }
-                } else {
-                    sessionMessage.setTimestamp(Instant.now());
-                }
-                result.add(sessionMessage);
+            }else{
+                throw new IllegalArgumentException("Unknown message type: " + item.getClass());
             }
         }
 
@@ -436,36 +416,109 @@ public class SessionService {
     }
 
     /**
+     * 从 Message 对象提取元数据
+     * <p>
+     * 为前端提供结构化的工具调用和响应数据
+     * </p>
+     */
+    private Map<String, Object> extractMetadata(Message message) {
+        HashMap<String, Object> metadata = new HashMap<>();
+
+        if (message instanceof UserMessage || message instanceof SystemMessage) {
+            return metadata;
+        }
+
+        // AssistantMessage - 提取工具调用信息
+        if (message instanceof AssistantMessage assistantMessage) {
+            if (assistantMessage.hasToolCalls()) {
+                List<Map<String, Object>> toolCallsList = new ArrayList<>();
+                for (AssistantMessage.ToolCall toolCall : assistantMessage.getToolCalls()) {
+                    Map<String, Object> toolCallInfo = new HashMap<>();
+                    toolCallInfo.put("id", toolCall.id());
+                    toolCallInfo.put("name", toolCall.name());
+                    toolCallInfo.put("type", toolCall.type());
+                    toolCallInfo.put("arguments", toolCall.arguments());
+                    toolCallsList.add(toolCallInfo);
+                }
+                metadata.put("tool_calls", toolCallsList);
+            }
+            return metadata;
+        }
+
+        // ToolResponseMessage - 提取工具响应信息
+        if (message instanceof ToolResponseMessage toolResponseMessage) {
+            List<Map<String, Object>> toolResponsesList = new ArrayList<>();
+            for (ToolResponseMessage.ToolResponse response : toolResponseMessage.getResponses()) {
+                Map<String, Object> responseInfo = new HashMap<>();
+                responseInfo.put("id", response.id());
+                responseInfo.put("name", response.name());
+                responseInfo.put("response", response.responseData());
+                toolResponsesList.add(responseInfo);
+            }
+            metadata.put("tool_responses", toolResponsesList);
+            return metadata;
+        }
+
+        throw new RuntimeException("Unknown message type: " + message.getClass());
+    }
+
+    /**
      * 从 Message 对象提取角色
      */
     private String extractRole(Message message) {
         if (message instanceof UserMessage) return "user";
+        if(message instanceof AssistantMessage && ((AssistantMessage) message).hasToolCalls()) return "tool_call";
         if (message instanceof AssistantMessage) return "assistant";
+        if(message instanceof ToolResponseMessage) return "tool_response";
         return "user"; // 默认
     }
 
     /**
      * 从 Message 对象提取内容
+     * <p>
+     * 配合前端设计，格式化工具调用和响应的内容
+     * </p>
      */
     private String extractContent(Message message) {
         if (message instanceof UserMessage userMessage) {
             return userMessage.getText();
         }
-        if (message instanceof AssistantMessage) {
-            // AssistantMessage 可能有多个 content 部分，尝试获取文本内容
-            try {
-                // 尝试反射调用 getText() 方法
-                java.lang.reflect.Method method = message.getClass().getMethod("getText");
-                Object result = method.invoke(message);
-                if (result != null) {
-                    return result.toString();
+
+        // AssistantMessage 处理
+        if (message instanceof AssistantMessage assistantMessage) {
+            // 有工具调用时，格式化显示工具调用信息
+            if (assistantMessage.hasToolCalls()) {
+                List<AssistantMessage.ToolCall> toolCalls = assistantMessage.getToolCalls();
+                StringBuilder sb = new StringBuilder();
+                for (AssistantMessage.ToolCall toolCall : toolCalls) {
+                    String id = toolCall.id();
+                    String name = toolCall.name();
+                    String arguments = toolCall.arguments();
+                    // 格式化：工具调用名称和参数
+                    sb.append("**调用工具**: `").append(name).append("`\n\n");
+                    sb.append("**参数**: ```json\n").append(arguments).append("\n```\n");
                 }
-            } catch (Exception e) {
-                log.debug("Could not extract text from AssistantMessage: {}", e.getMessage());
+                return sb.toString();
             }
-            return "";
+            // 普通的 assistant 消息，直接返回文本
+            return assistantMessage.getText();
         }
-        return "";
+
+        // ToolResponseMessage 处理
+        if (message instanceof ToolResponseMessage toolResponseMessage) {
+            List<ToolResponseMessage.ToolResponse> responses = toolResponseMessage.getResponses();
+            StringBuilder sb = new StringBuilder();
+            for (ToolResponseMessage.ToolResponse response : responses) {
+                String name = response.name();
+                String result = response.responseData();
+                // 格式化：工具响应结果
+                sb.append("**工具结果**: `").append(name).append("` \n\n");
+                sb.append("**返回值**: ```\n").append(result).append("\n```\n");
+            }
+            return sb.toString();
+        }
+
+        return "这是一条空消息";
     }
 
     /**

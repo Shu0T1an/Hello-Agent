@@ -3,8 +3,8 @@
     <!-- 页面头部 -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
       <div>
-        <h1 class="text-2xl font-semibold text-slate-900">Agent 管理</h1>
-        <p class="text-sm text-slate-500 mt-1">创建和管理您的 AI Agent</p>
+        <h1 class="text-2xl font-semibold text-zinc-900">Agent 管理</h1>
+        <p class="text-sm text-zinc-500 mt-1">创建和管理您的 AI Agent</p>
       </div>
       <BaseButton variant="primary" @click="handleCreate" class="btn-hover-lift">
         <Plus :size="18" />
@@ -36,7 +36,7 @@
           class="flex-1"
         >
           <template #prefix>
-            <Search :size="18" class="text-slate-400" />
+            <Search :size="18" class="text-zinc-400" />
           </template>
         </BaseInput>
         <div class="flex gap-2">
@@ -75,10 +75,10 @@
           <template #default>
             <div class="flex items-start justify-between mb-4">
               <div class="flex-1 min-w-0">
-                <h3 class="text-lg font-semibold text-slate-900 truncate">
+                <h3 class="text-lg font-semibold text-zinc-900 truncate">
                   {{ agent.displayName }}
                 </h3>
-                <p class="text-sm text-slate-500 font-mono mt-1">
+                <p class="text-sm text-zinc-500 font-mono mt-1">
                   {{ agent.agentName }}
                 </p>
               </div>
@@ -87,14 +87,14 @@
                   'px-3 py-1 rounded-full text-xs font-medium flex-shrink-0 ml-2',
                   agent.isActive
                     ? 'bg-success-100 text-success-700'
-                    : 'bg-slate-100 text-slate-600'
+                    : 'bg-zinc-100 text-zinc-600'
                 ]"
               >
                 {{ agent.isActive ? '激活' : '停用' }}
               </span>
             </div>
 
-            <p v-if="agent.description" class="text-sm text-slate-600 mb-4 line-clamp-2">
+            <p v-if="agent.description" class="text-sm text-zinc-600 mb-4 line-clamp-2">
               {{ agent.description }}
             </p>
 
@@ -108,7 +108,7 @@
               </span>
               <span
                 v-if="agent.toolDefinitions"
-                class="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 text-slate-600 rounded-md text-xs font-medium"
+                class="inline-flex items-center gap-1 px-2 py-1 bg-zinc-100 text-zinc-600 rounded-md text-xs font-medium"
               >
                 <Wrench :size="14" />
                 {{ agent.toolDefinitions.length }} 个工具
@@ -116,7 +116,7 @@
             </div>
 
             <!-- 操作按钮 -->
-            <div class="flex items-center gap-2 pt-4 border-t border-slate-100">
+            <div class="flex items-center gap-2 pt-4 border-t border-zinc-100">
               <BaseButton
                 variant="ghost"
                 size="sm"

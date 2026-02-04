@@ -3,8 +3,13 @@ package cn.ts.agent.core;
 import cn.ts.agent.api.*;
 import cn.ts.agent.node.*;
 import cn.ts.graph.*;
+import cn.ts.graph.checkpoint.CheckpointManager;
 import cn.ts.graph.config.RunnableConfig;
 import cn.ts.graph.constant.GraphConstants;
+import cn.ts.graph.hook.*;
+import cn.ts.graph.node.AsyncNodeActionWithConfig;
+import cn.ts.graph.node.InterruptableAction;
+import cn.ts.graph.node.Node;
 import cn.ts.graph.node.NodeAction;
 import cn.ts.graph.edge.EdgeAction;
 import cn.ts.graph.state.MapState;
@@ -25,6 +30,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * ReAct Agent：组合 LLMNode 和 ToolNode
@@ -71,6 +77,7 @@ public class ReactAgent implements Agent {
     private final List<Advisor> advisors;
     private final Object[] tools;
     private final boolean streaming;
+    private final List<Hook> hooks;
 
 
     public ReactAgent(Builder builder) {
@@ -81,6 +88,7 @@ public class ReactAgent implements Agent {
         this.advisors = builder.advisors;
         this.tools = builder.tools != null ? builder.tools : new Object[0];
         this.streaming = builder.streaming;
+        this.hooks = builder.hooks != null ? new ArrayList<>(builder.hooks) : new ArrayList<>();
     }
 
 
@@ -94,6 +102,8 @@ public class ReactAgent implements Agent {
         private List<Advisor> advisors;
         private Object[] tools;
         private boolean streaming;
+        private List<Hook> hooks;
+        private CheckpointManager checkpointManager;
 
 
         public Builder name(String name) {
@@ -129,9 +139,34 @@ public class ReactAgent implements Agent {
             return this;
         }
 
+        /**
+         * 设置 Hook 列表
+         *
+         * @param hooks Hook 列表
+         * @return this
+         */
+        public Builder hooks(List<Hook> hooks) {
+            this.hooks = hooks;
+            return this;
+        }
+
+        /**
+         * 设置检查点管理器
+         * <p>
+         * 用于支持状态持久化和中断恢复功能
+         * </p>
+         *
+         * @param checkpointManager 检查点管理器
+         * @return this
+         */
+        public Builder checkpointManager(CheckpointManager checkpointManager) {
+            this.checkpointManager = checkpointManager;
+            return this;
+        }
+
         public ReactAgent build() {
-            // 构建 ReAct 图
-            CompiledGraph compiledGraph = buildReActGraph(chatModel, advisors, streaming, tools);
+            // 构建 ReAct 图，传递 checkpointManager
+            CompiledGraph compiledGraph = buildReActGraph(chatModel, advisors, streaming, tools, hooks, checkpointManager);
             this.graph = compiledGraph;
             return new ReactAgent(this);
         }
@@ -236,24 +271,35 @@ public class ReactAgent implements Agent {
      * 构建 ReAct 循环图
      * <p>
      * 使用内部常量和提取的私有方法，提高代码可读性和可维护性
+     * 支持 Hook 集成和检查点管理
      * </p>
      *
-     * @param chatModel ChatModel 实例
-     * @param advisors Advisor 列表
-     * @param streaming 是否启用流式输出
-     * @param tools     工具对象数组
+     * @param chatModel        ChatModel 实例
+     * @param advisors         Advisor 列表
+     * @param streaming        是否启用流式输出
+     * @param tools            工具对象数组
+     * @param hooks            Hook 列表
+     * @param checkpointManager 检查点管理器（可选）
      * @return 编译后的图
      */
-    private static CompiledGraph buildReActGraph(ChatModel chatModel, List<Advisor> advisors, boolean streaming, Object[] tools) {
+    private static CompiledGraph buildReActGraph(ChatModel chatModel, List<Advisor> advisors, boolean streaming, Object[] tools, List<Hook> hooks, CheckpointManager checkpointManager) {
         StateGraph graph = new StateGraph();
 
         // 配置状态初始化器
         configureStateInitializer(graph);
 
+        // 配置检查点管理器（如果提供）
+        if (checkpointManager != null) {
+            graph.setCheckpointManager(checkpointManager);
+        }
+
         // 处理 null tools，使用空数组
         Object[] safeTools = tools != null ? tools : new Object[0];
 
-        // 创建节点
+        // 处理 null hooks，使用空列表
+        List<Hook> safeHooks = hooks != null ? new ArrayList<>(hooks) : new ArrayList<>();
+
+        // 创建核心节点
         LLMNode llmNode = LLMNode.builder(chatModel)
                 .systemPrompt("You are a helpful assistant.")
                 .streaming(streaming)
@@ -262,23 +308,183 @@ public class ReactAgent implements Agent {
                 .build();
         ToolNode toolNode = new ToolNode(safeTools);
 
-        // 添加节点到图
+        // 添加核心节点到图
         graph.addNode(NodeNames.MODEL, llmNode);
         graph.addNode(NodeNames.TOOL, toolNode);
-        // 添加 AGENT_END 空节点，作为流程的终点中转站
         graph.addNode(NodeNames.END, NodeAction.of(state -> Map.of()));
 
-        // 条件边1：判断最后一条消息是否有 toolCalls
-        graph.addConditionalEdge(NodeNames.MODEL, ReactAgent::routeFromModel, modelRouteMapping());
+        // 集成 Hook（包括条件边设置）
+        String entryPoint = integrateHooks(graph, safeHooks, NodeNames.MODEL, NodeNames.TOOL, NodeNames.END);
 
-        // 条件边2：判断是否继续迭代
+        // 条件边：从 TOOL 节点判断是否继续迭代
         graph.addConditionalEdge(NodeNames.TOOL, ReactAgent::routeFromTool, toolRouteMapping());
 
         // 连接
-        graph.addEdge(GraphConstants.START, NodeNames.MODEL);
+        graph.addEdge(GraphConstants.START, entryPoint);
         graph.addEdge(NodeNames.END, GraphConstants.END);
 
         return graph.compile();
+    }
+
+    /**
+     * 集成 Hook 到图中
+     * <p>
+     * 为每个 Hook 创建对应的图节点，并设置边连接
+     * 正确处理条件边和 Hook 之间的关系
+     * </p>
+     *
+     * @param graph       图
+     * @param hooks       Hook 列表
+     * @param modelNode   MODEL 节点名称
+     * @param toolNode    TOOL 节点名称
+     * @param endNode     END 节点名称
+     * @return 入口点节点名称
+     */
+    private static String integrateHooks(StateGraph graph, List<Hook> hooks, String modelNode, String toolNode, String endNode) {
+        if (hooks.isEmpty()) {
+            // 无 Hook 时，直接从 MODEL 出发条件边
+            graph.addConditionalEdge(modelNode, ReactAgent::routeFromModel, modelRouteMapping());
+            return modelNode;
+        }
+
+        // 分类 Hook
+        List<Hook> beforeModelHooks = new ArrayList<>();
+        List<Hook> afterModelHooks = new ArrayList<>();
+
+        for (Hook hook : hooks) {
+            hook.setAgentName("ReactAgent"); // 设置 Agent 名称
+            if (hook.supportsPosition(HookPosition.BEFORE_MODEL)) {
+                beforeModelHooks.add(hook);
+            }
+            if (hook.supportsPosition(HookPosition.AFTER_MODEL)) {
+                afterModelHooks.add(hook);
+            }
+        }
+
+        // 构建执行链
+        String entryPoint;
+        String chainEnd; // 这是条件边的起点
+
+        // 1. 创建所有 BEFORE_MODEL Hook 节点（顺序）
+        for (Hook hook : beforeModelHooks) {
+            String hookNodeName = Hook.getBeforeHookName(hook);
+            createHookNode(graph, hook, hookNodeName, HookPosition.BEFORE_MODEL);
+        }
+
+        // 2. 创建所有 AFTER_MODEL Hook 节点（顺序）
+        for (Hook hook : afterModelHooks) {
+            String hookNodeName = Hook.getAfterHookName(hook);
+            createHookNode(graph, hook, hookNodeName, HookPosition.AFTER_MODEL);
+        }
+
+        // 3. 构建 BEFORE_MODEL Hook 链的边连接
+        String currentNode = modelNode;
+        if (!beforeModelHooks.isEmpty()) {
+            entryPoint = Hook.getBeforeHookName(beforeModelHooks.get(0));
+            graph.addEdge(GraphConstants.START, entryPoint);
+
+            // 连接 BEFORE_MODEL Hook 链
+            for (int i = 0; i < beforeModelHooks.size(); i++) {
+                String hookNodeName = Hook.getBeforeHookName(beforeModelHooks.get(i));
+                if (i > 0) {
+                    // 前一个 Hook 到当前 Hook
+                    graph.addEdge(Hook.getBeforeHookName(beforeModelHooks.get(i - 1)), hookNodeName);
+                }
+            }
+
+            // 最后一个 BEFORE_MODEL Hook 到 MODEL
+            String lastBeforeHook = Hook.getBeforeHookName(beforeModelHooks.get(beforeModelHooks.size() - 1));
+            graph.addEdge(lastBeforeHook, modelNode);
+            currentNode = modelNode;
+        } else {
+            entryPoint = modelNode;
+        }
+
+        // 4. 构建 AFTER_MODEL Hook 链的边连接（逆序连接，栈行为：先进后出）
+        if (!afterModelHooks.isEmpty()) {
+            // 连接 MODEL 到最后一个 AFTER_MODEL Hook（逆序第一个）
+            String firstAfterHookInReverse = Hook.getAfterHookName(afterModelHooks.get(afterModelHooks.size() - 1));
+            graph.addEdge(currentNode, firstAfterHookInReverse);
+
+            // 逆序连接 AFTER_MODEL Hook 链：hook[n-1] → hook[n-2] → ... → hook[0]
+            for (int i = afterModelHooks.size() - 1; i > 0; i--) {
+                String currentHookName = Hook.getAfterHookName(afterModelHooks.get(i));
+                String nextHookName = Hook.getAfterHookName(afterModelHooks.get(i - 1));
+                graph.addEdge(currentHookName, nextHookName);
+            }
+
+            // 从第一个 AFTER_MODEL Hook（逆序最后一个）发出条件边
+            String lastAfterHookInReverse = Hook.getAfterHookName(afterModelHooks.get(0));
+            graph.addConditionalEdge(lastAfterHookInReverse, ReactAgent::routeFromModel, modelRouteMapping());
+        } else {
+            // 没有 AFTER_MODEL Hook，直接从 MODEL 出发条件边
+            chainEnd = modelNode;
+            graph.addConditionalEdge(modelNode, ReactAgent::routeFromModel, modelRouteMapping());
+        }
+
+        return entryPoint;
+    }
+
+    /**
+     * 创建 Hook 节点
+     * <p>
+     * 支持 InterruptableAction，如果是可中断的 Hook 则使用 Node.ofInterruptable()
+     * 支持 AsyncNodeActionWithConfig，优先使用带 config 的新接口
+     * </p>
+     *
+     * @param graph    图
+     * @param hook     Hook 实例
+     * @param nodeName 节点名称
+     * @param position Hook 位置
+     */
+    private static void createHookNode(StateGraph graph, Hook hook, String nodeName, HookPosition position) {
+        if (hook instanceof InterruptableAction interruptable) {
+            // 可中断 Hook，使用 Node.ofInterruptable() 创建完整节点
+            // 使用 addNode(Node) 方法保留 InterruptableAction 信息
+            graph.addNode(Node.ofInterruptable(nodeName, interruptable));
+        } else if (hook instanceof ModelHook modelHook) {
+            // 普通 ModelHook
+            graph.addNode(nodeName, createModelHookAction(modelHook, position));
+        } else {
+            // 默认空实现
+            graph.addNode(nodeName, NodeAction.of(state -> Map.of()));
+        }
+    }
+
+    /**
+     * 创建 ModelHook 动作
+     *
+     * @param hook    ModelHook 实例
+     * @param position Hook 位置
+     * @return NodeAction
+     */
+    private static NodeAction createModelHookAction(ModelHook hook, HookPosition position) {
+        return state -> {
+            try {
+                RunnableConfig config = RunnableConfig.defaultConfig();
+                CompletableFuture<Map<String, Object>> future;
+
+                if (position == HookPosition.BEFORE_MODEL) {
+                    future = hook.beforeModel(state, config);
+                } else {
+                    future = hook.afterModel(state, config);
+                }
+
+                // 处理 JumpTo
+                Map<String, Object> result = future.get();
+                if (result.containsKey("jump_to")) {
+                    Object jumpToValue = result.get("jump_to");
+                    if (jumpToValue instanceof JumpTo jumpTo) {
+                        // JumpTo 会在 RunnableConfig 中处理
+                        return result;
+                    }
+                }
+
+                return result;
+            } catch (Exception e) {
+                throw new RuntimeException("Hook execution failed: " + hook.getName(), e);
+            }
+        };
     }
 
     /**

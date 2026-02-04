@@ -3,7 +3,11 @@ package cn.ts.graph;
 import cn.ts.graph.config.RunnableConfig;
 import cn.ts.graph.constant.GraphConstants;
 import cn.ts.graph.edge.Edge;
+import cn.ts.graph.hook.JumpTo;
+import cn.ts.graph.node.AsyncNodeActionWithConfig;
+import cn.ts.graph.node.InterruptableAction;
 import cn.ts.graph.node.Node;
+import cn.ts.graph.node.NodeActionWithConfig;
 import cn.ts.graph.state.MapState;
 import cn.ts.graph.state.State;
 import org.slf4j.Logger;
@@ -114,11 +118,14 @@ public class GraphRunner {
                     }
                 }
 
-                // 更新状态
-                state.merge(result.stateUpdates());
+                // 更新状态（移除 jump_to 和 feedbackData 避免污染状态）
+                Map<String, Object> cleanUpdates = new HashMap<>(result.stateUpdates());
+                cleanUpdates.remove("jump_to");
+                cleanUpdates.remove("feedbackData");
+                state.merge(cleanUpdates);
 
                 // 找到下一个节点
-                currentNodeId = findNextNode(currentNodeId, state);
+                currentNodeId = findNextNode(currentNodeId, state, config);
                 iteration++;
             }
 
@@ -171,7 +178,15 @@ public class GraphRunner {
     public Flux<GraphResponse<NodeOutput>> runStream(
             Map<String, Object> initialState, RunnableConfig config) {
 
-        return runStreamInternal(initialState, config, this.config.entryPoint());
+        // 优先使用 config.startNode()，如果没有则使用 entryPoint
+        String startNode = config.startNode() != null
+                ? config.startNode()
+                : this.config.entryPoint();
+
+        logger.debug("runStream: startNode={}, entryPoint={}, config.startNode()={}",
+                startNode, this.config.entryPoint(), config.startNode());
+
+        return runStreamInternal(initialState, config, startNode);
     }
 
     /**
@@ -188,11 +203,16 @@ public class GraphRunner {
     private Flux<GraphResponse<NodeOutput>> runStreamInternal(
             Map<String, Object> initialState, RunnableConfig config, String startNode) {
 
-        // 创建上下文（使用 stateInitializer）
+        // 创建上下文（使用 stateInitializer 和 checkpointManager）
         Supplier<State> stateInitializer = this.config.stateInitializer() != null
                 ? this.config.stateInitializer()
                 : MapState::new;
-        GraphRunnerContext context = GraphRunnerContext.create(initialState, config, stateInitializer);
+        GraphRunnerContext context = GraphRunnerContext.create(
+                initialState,
+                config,
+                stateInitializer,
+                this.config.checkpointManager()
+        );
         context.setCurrentNodeId(startNode);
 
         // 使用 defer() 实现响应式递归
@@ -261,7 +281,7 @@ public class GraphRunner {
         State currentState = context.getOverallState();
 
         // 查找下一个节点
-        String nextNodeId = findNextNode(currentNodeId, currentState);
+        String nextNodeId = findNextNode(currentNodeId, currentState, context.getConfig());
 
         logger.debug("executeNextStream: currentNodeId={}, nextNodeId={}", currentNodeId, nextNodeId);
 
@@ -309,8 +329,16 @@ public class GraphRunner {
                 config.onNodeStart().accept(startExec);
             }
 
-            // 执行节点动作
-            Map<String, Object> updates = node.action().apply(state);
+            // 使用 NodeActionWithConfig 执行节点动作
+            // 优先检查新接口，包装旧接口
+            NodeActionWithConfig actionWithConfig;
+            if (node.action() instanceof NodeActionWithConfig) {
+                actionWithConfig = (NodeActionWithConfig) node.action();
+            } else {
+                actionWithConfig = NodeActionWithConfig.from(node.action());
+            }
+
+            Map<String, Object> updates = actionWithConfig.apply(state, config);
             if (updates != null) {
                 stateUpdates.putAll(updates);
             }
@@ -338,14 +366,29 @@ public class GraphRunner {
      * 查找下一个节点
      * <p>
      * 对于没有出边的节点，返回 {@link GraphConstants#END} 表示正常结束执行
+     * 支持 JumpTo 路由控制
      * </p>
      *
      * @param currentNodeId 当前节点ID
      * @param state         当前状态
+     * @param config        运行配置
      * @return 下一个节点ID，如果没有下一个节点则返回 {@link GraphConstants#END}
      * @throws GraphException.EdgeConfigurationException 如果条件边的路由值没有对应的目标节点
      */
-    private String findNextNode(String currentNodeId, State state) {
+    private String findNextNode(String currentNodeId, State state, RunnableConfig config) {
+        // 优先检查 JumpTo 跳转（来自配置）
+        if (config.jumpTo() != null) {
+            logger.debug("使用 config.jumpTo() 跳转: {}", config.jumpTo());
+            return jumpToToNode(config.jumpTo());
+        }
+
+        // 检查 state 中的 jump_to（来自节点执行结果，如 HumanInTheLoopHook）
+        Optional<JumpTo> stateJumpTo = state.value("jump_to");
+        if (stateJumpTo.isPresent()) {
+            logger.debug("使用 state.jump_to 跳转: {}", stateJumpTo.get());
+            return jumpToToNode(stateJumpTo.get());
+        }
+
         for (Edge edge : this.config.edges()) {
             if (edge.from().equals(currentNodeId)) {
                 if (edge.isNormal()) {
@@ -364,6 +407,20 @@ public class GraphRunner {
         }
         // 没有找到下一个节点，正常结束执行
         return GraphConstants.END;
+    }
+
+    /**
+     * 将 JumpTo 枚举转换为节点ID
+     *
+     * @param jumpTo 跳转目标
+     * @return 节点ID
+     */
+    private String jumpToToNode(JumpTo jumpTo) {
+        return switch (jumpTo) {
+            case END -> GraphConstants.END;
+            case MODEL -> GraphConstants.AGENT_MODEL;
+            case TOOL -> GraphConstants.AGENT_TOOL;
+        };
     }
 
     /**

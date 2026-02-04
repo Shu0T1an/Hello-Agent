@@ -2,8 +2,10 @@ package cn.ts.graph.config;
 
 import cn.ts.graph.GraphResult;
 import cn.ts.graph.event.ExecutionEvent;
+import cn.ts.graph.hook.JumpTo;
 
 import java.time.Duration;
+import java.util.Map;
 import java.util.function.Consumer;
 
 /**
@@ -31,6 +33,9 @@ public class RunnableConfig {
     private final String executionId;
     private final String threadId;
     private final String checkpointId;
+    private final JumpTo jumpTo;
+    private final Map<String, Object> feedbackData;
+    private final String startNode;
 
     private RunnableConfig(Builder builder) {
         this.timeout = builder.timeout;
@@ -47,6 +52,9 @@ public class RunnableConfig {
         this.executionId = builder.executionId;
         this.threadId = builder.threadId;
         this.checkpointId = builder.checkpointId;
+        this.jumpTo = builder.jumpTo;
+        this.feedbackData = builder.feedbackData;
+        this.startNode = builder.startNode;
     }
 
     public Duration timeout() {
@@ -142,12 +150,79 @@ public class RunnableConfig {
         return checkpointId;
     }
 
-    public static Builder builder() {
-        return new Builder();
+    /**
+     * 获取跳转目标
+     * <p>
+     * 用于 Hook 跳转控制，跳转到指定位置
+     * </p>
+     *
+     * @return 跳转目标，可能为 null
+     */
+    public JumpTo jumpTo() {
+        return jumpTo;
     }
 
+    /**
+     * 获取反馈数据
+     * <p>
+     * 用于从中断恢复时传递用户反馈数据
+     * </p>
+     *
+     * @return 反馈数据，可能为 null
+     */
+    public Map<String, Object> feedbackData() {
+        return feedbackData;
+    }
+
+    /**
+     * 获取起始节点
+     * <p>
+     * 用于从指定节点开始执行（常用于从检查点恢复）
+     * 如果为 null，则使用图的默认入口点
+     * </p>
+     *
+     * @return 起始节点ID，可能为 null
+     */
+    public String startNode() {
+        return startNode;
+    }
+
+    /**
+     * 创建带有跳转目标的新配置
+     *
+     * @param jumpTo 跳转目标
+     * @return 新的 RunnableConfig
+     */
+    public RunnableConfig withJumpTo(JumpTo jumpTo) {
+        return new Builder(this).jumpTo(jumpTo).build();
+    }
+
+    /**
+     * 创建带有反馈数据的新配置
+     *
+     * @param feedbackData 反馈数据
+     * @return 新的 RunnableConfig
+     */
+    public RunnableConfig withFeedbackData(Map<String, Object> feedbackData) {
+        return new Builder(this).feedbackData(feedbackData).build();
+    }
+
+    /**
+     * 创建一个新的 Builder
+     *
+     * @return Builder 实例
+     */
+    public static Builder builder() {
+        return new Builder(null);
+    }
+
+    /**
+     * 获取默认配置
+     *
+     * @return 默认的 RunnableConfig
+     */
     public static RunnableConfig defaultConfig() {
-        return new Builder().build();
+        return new Builder(null).build();
     }
 
     public static class Builder {
@@ -165,6 +240,37 @@ public class RunnableConfig {
         private String executionId = null;
         private String threadId = null;
         private String checkpointId = null;
+        private JumpTo jumpTo = null;
+        private Map<String, Object> feedbackData = null;
+        private String startNode = null;
+
+        /**
+         * 从现有配置创建 Builder
+         *
+         * @param config 现有配置（可以为 null）
+         */
+        private Builder(RunnableConfig config) {
+            if (config != null) {
+                this.timeout = config.timeout;
+                this.nodeTimeout = config.nodeTimeout;
+                this.maxIterations = config.maxIterations;
+                this.interruptOnError = config.interruptOnError;
+                this.onNodeStart = config.onNodeStart;
+                this.onNodeComplete = config.onNodeComplete;
+                this.onComplete = config.onComplete;
+                this.onError = config.onError;
+                this.debugMode = config.debugMode;
+                this.eventSink = config.eventSink;
+                this.streamEnabled = config.streamEnabled;
+                this.executionId = config.executionId;
+                this.threadId = config.threadId;
+                this.checkpointId = config.checkpointId;
+                this.jumpTo = config.jumpTo;
+                this.feedbackData = config.feedbackData;
+                this.startNode = config.startNode;
+            }
+            // 如果 config 为 null，使用默认值
+        }
 
         public Builder timeout(Duration timeout) {
             this.timeout = timeout;
@@ -263,6 +369,39 @@ public class RunnableConfig {
          */
         public Builder checkpointId(String checkpointId) {
             this.checkpointId = checkpointId;
+            return this;
+        }
+
+        /**
+         * 设置跳转目标
+         *
+         * @param jumpTo 跳转目标
+         * @return this
+         */
+        public Builder jumpTo(JumpTo jumpTo) {
+            this.jumpTo = jumpTo;
+            return this;
+        }
+
+        /**
+         * 设置反馈数据
+         *
+         * @param feedbackData 反馈数据
+         * @return this
+         */
+        public Builder feedbackData(Map<String, Object> feedbackData) {
+            this.feedbackData = feedbackData;
+            return this;
+        }
+
+        /**
+         * 设置起始节点
+         *
+         * @param startNode 起始节点ID
+         * @return this
+         */
+        public Builder startNode(String startNode) {
+            this.startNode = startNode;
             return this;
         }
 

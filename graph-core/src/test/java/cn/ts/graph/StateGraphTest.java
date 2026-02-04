@@ -2,6 +2,8 @@ package cn.ts.graph;
 
 import cn.ts.graph.checkpoint.CheckpointConfig;
 import cn.ts.graph.checkpoint.CheckpointManager;
+import cn.ts.graph.checkpoint.CheckpointStorage;
+import cn.ts.graph.checkpoint.MemoryCheckpointStorage;
 import cn.ts.graph.checkpoint.StateSnapshot;
 import cn.ts.graph.constant.GraphConstants;
 import cn.ts.graph.edge.Edge;
@@ -388,6 +390,11 @@ class StateGraphTest {
         @Override
         public CheckpointConfig getConfig() {
             return CheckpointConfig.builder().strategy(CheckpointConfig.CheckpointStrategy.MANUAL).build();
+        }
+
+        @Override
+        public CheckpointStorage getStorage() {
+            return new MemoryCheckpointStorage();
         }
     }
 }

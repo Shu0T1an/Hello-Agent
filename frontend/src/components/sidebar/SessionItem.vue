@@ -1,16 +1,23 @@
 <template>
-  <div class="session-item-content">
-    <div class="session-title">{{ session.title }}</div>
-    <div class="session-time">{{ formatTime(session.updatedAt) }}</div>
+  <div class="session-item-content" :class="{ collapsed }">
+    <MessageSquare v-if="collapsed" :size="16" class="session-icon" />
+    <template v-else>
+      <div class="session-title">{{ session.title }}</div>
+      <div class="session-time">{{ formatTime(session.updatedAt) }}</div>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
+import { MessageSquare } from 'lucide-vue-next'
 import type { ChatSession } from '@/types/message'
 
-defineProps<{
+interface Props {
   session: ChatSession
-}>()
+  collapsed?: boolean
+}
+
+defineProps<Props>()
 
 function formatTime(timeStr: string): string {
   const date = new Date(timeStr)
@@ -41,6 +48,16 @@ function formatTime(timeStr: string): string {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.session-item-content.collapsed {
+  padding: 12px;
+  align-items: center;
+}
+
+.session-icon {
+  color: var(--color-sidebar-text-muted);
+  flex-shrink: 0;
 }
 
 .session-title {

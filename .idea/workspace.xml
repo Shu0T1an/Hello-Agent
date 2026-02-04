@@ -5,36 +5,142 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0e294f23-af53-4e42-af50-c9a578c991d4" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/RagConfig.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/rag/advisor/RagAdvisor.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/rag/advisor/RagAdvisorConfig.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.claude/settings.local.json" beforeDir="false" afterPath="$PROJECT_DIR$/.claude/settings.local.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Agent-Studio/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/pom.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/AgentConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/AgentConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/AgentExecutionConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/AgentExecutionConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/CheckpointAutoConfiguration.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/config/CheckpointAutoConfiguration.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/controller/StreamController.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/controller/StreamController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/controller/response/GlobalExceptionHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/controller/response/GlobalExceptionHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/controller/response/ResultCode.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/controller/response/ResultCode.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/dto/SessionDetailDTO.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/dto/SessionDetailDTO.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/factory/AgentFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/factory/AgentFactory.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/AgentExecutionService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/AgentExecutionService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/SessionService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/SessionService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/resources/application-dev.yml" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/resources/application-dev.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/resources/application.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Agent-Studio/src/test/java/cn/ts/web/service/SessionManagementTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/test/java/cn/ts/web/service/SessionManagementTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent-core/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/Prompt/PromptTemplete.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/Prompt/PromptTemplete.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/Tool/ToolContextConstants.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/Tool/ToolContextConstants.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/Tool/WriteToDoTool.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/Tool/WriteToDoTool.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/core/ReactAgent.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/core/ReactAgent.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/example/ReactAgentExample.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/example/ReactAgentExample.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/model/ChatModelRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/model/ChatModelRequest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/node/LLMNode.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/node/LLMNode.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/node/ToolNode.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/node/ToolNode.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/agent-core/src/test/java/cn/ts/agent/core/ReactAgentTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/test/java/cn/ts/agent/core/ReactAgentTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/api/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/api/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/App.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/App.vue" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/assets/styles/globals.css" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/assets/styles/globals.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/assets/styles/variables.css" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/assets/styles/variables.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/agent/AgentTimeline.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/agent/AgentTimeline.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/base/BaseButton.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/base/BaseButton.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/base/BaseCard.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/base/BaseCard.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/base/BaseDropdown.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/base/BaseDropdown.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/base/BaseEmpty.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/base/BaseEmpty.vue" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/components/base/BaseInput.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/base/BaseInput.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/base/BaseModal.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/base/BaseModal.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/base/BaseSkeleton.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/base/BaseSkeleton.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/base/BaseTag.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/base/BaseTag.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/base/BaseTextarea.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/base/BaseTextarea.vue" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/components/chat/ChatContainer.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/chat/ChatContainer.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/chat/ChatMessage.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/chat/ChatMessage.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/chat/MessageInput.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/chat/MessageInput.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/common/TopNav.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/common/TopNav.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/sidebar/SessionItem.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/sidebar/SessionItem.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/sidebar/SessionList.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/sidebar/SessionList.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/sidebar/Sidebar.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/sidebar/Sidebar.vue" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/layouts/MainLayout.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/layouts/MainLayout.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/main.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/main.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/stores/agent.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/stores/agent.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/stores/chat.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/stores/chat.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/types/message.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/types/message.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/utils/agentEvents.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/utils/agentEvents.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/utils/constants.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/utils/constants.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/utils/helpers.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/utils/helpers.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/utils/markdown.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/utils/markdown.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/views/AgentTimelineTest.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/views/AgentTimelineTest.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/views/RagQueryView.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/views/RagQueryView.vue" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/views/agent/AgentManagement.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/views/agent/AgentManagement.vue" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/views/agent/ModelManagement.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/views/agent/ModelManagement.vue" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/tailwind.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/tailwind.config.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/GraphResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/GraphResponse.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/GraphRunner.java" beforeDir="false" afterPath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/GraphRunner.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/GraphRunnerContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/GraphRunnerContext.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java" beforeDir="false" afterPath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/StateGraph.java" beforeDir="false" afterPath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/StateGraph.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/checkpoint/CheckpointManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/checkpoint/CheckpointManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/checkpoint/StateSnapshot.java" beforeDir="false" afterPath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/checkpoint/StateSnapshot.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/config/RunnableConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/config/RunnableConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/node/AsyncNodeAction.java" beforeDir="false" afterPath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/node/AsyncNodeAction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/node/Node.java" beforeDir="false" afterPath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/node/Node.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/graph-core/src/test/java/cn/ts/graph/CompiledGraphTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/graph-core/src/test/java/cn/ts/graph/CompiledGraphTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/graph-core/src/test/java/cn/ts/graph/StateGraphTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/graph-core/src/test/java/cn/ts/graph/StateGraphTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/1247" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/1247" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/1247_fsm" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/1247_fsm" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/1249" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/1249" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/1249_fsm" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/1249_fsm" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/1255" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/1255" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/1259" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/1259" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/1259_fsm" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/1259_fsm" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/16530" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/16530" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/16570" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/16570" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/16595" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/16595" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/16596" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/16596" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/16601" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/16601" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/16603" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/16603" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/16615" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/16615" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/16616" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/16616" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2224" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2224" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2579" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2579" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2604" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2604" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2604_fsm" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2604_fsm" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2606" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2606" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2608" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2608" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2609" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2609" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2610" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2610" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2610_fsm" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2610_fsm" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2618" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2618" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2619" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2619" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2619_fsm" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2619_fsm" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2620" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2620" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2656" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2656" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2657" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2657" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2658" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2658" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2659" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2659" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2662" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2662" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2663" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2663" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2664" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2664" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2665" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2665" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2666" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2666" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2667" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2667" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2673" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2673" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2674" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2674" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2675" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2675" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2678" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2678" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2679" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2679" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2690" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2690" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2691" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2691" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2692" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2692" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2693" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2693" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2696" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2696" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2699" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2699" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2701" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2701" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2702" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2702" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2703" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2703" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2704" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2704" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2840" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2840" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2840_fsm" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2840_fsm" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/2841" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/2841" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/3455" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/3455" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/5002" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/5002" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/base/16384/pg_internal.init" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/base/16384/pg_internal.init" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/global/pg_control" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/global/pg_control" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/global/pg_internal.init" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/global/pg_internal.init" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/pg_subtrans/0000" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/pg_subtrans/0000" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/pg_wal/000000010000000000000001" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/pg_wal/000000010000000000000002" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/pg_wal/000000010000000000000002" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/pg_xact/0000" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/pg_xact/0000" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/postmaster.opts" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/postmaster.opts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgres_data/postmaster.pid" beforeDir="false" afterPath="$PROJECT_DIR$/postgres_data/postmaster.pid" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -51,7 +157,7 @@
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="f96cb11ed52b0bda65b7df9338b0fe4c95ac2e7a" />
+        <entry key="$PROJECT_DIR$" value="feature/agent-management-system" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -82,89 +188,92 @@
     <option name="showMembers" value="true" />
     <option name="showScratchesAndConsoles" value="false" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Application.EmailProcessingExample.executor&quot;: &quot;Run&quot;,
-    &quot;Docker.docker-compose.yml.db: Compose Deployment.executor&quot;: &quot;Run&quot;,
-    &quot;Docker.docker-compose.yml: Compose Deployment.executor&quot;: &quot;Run&quot;,
-    &quot;HTTP Request.generated-requests | #8.executor&quot;: &quot;Run&quot;,
-    &quot;JUnit.CompiledGraphTest.executor&quot;: &quot;Run&quot;,
-    &quot;JUnit.CompiledGraphTest.testInvoke.executor&quot;: &quot;Run&quot;,
-    &quot;JUnit.KeyStrategyTest.executor&quot;: &quot;Run&quot;,
-    &quot;JUnit.KeyStrategyTest.testAppendStrategyWithList.executor&quot;: &quot;Run&quot;,
-    &quot;JUnit.KeyStrategyTest.testReplaceStrategy.executor&quot;: &quot;Run&quot;,
-    &quot;JUnit.MermaidGraphVisualizerTest.executor&quot;: &quot;Run&quot;,
-    &quot;JUnit.MermaidGraphVisualizerTest.testCompiledGraph.executor&quot;: &quot;Run&quot;,
-    &quot;JUnit.MermaidGraphVisualizerTest.testConditionalEdges.executor&quot;: &quot;Run&quot;,
-    &quot;JUnit.MyBatisPostgreSQLIntegrationTest.executor&quot;: &quot;Run&quot;,
-    &quot;JUnit.MyBatisPostgreSQLIntegrationTest.testGetAllModelConfigs.executor&quot;: &quot;Run&quot;,
-    &quot;JUnit.SimpleMyBatisTest.executor&quot;: &quot;Run&quot;,
-    &quot;JUnit.SimpleMyBatisTest.testDatabaseConnection.executor&quot;: &quot;Run&quot;,
-    &quot;Maven. [org.apache.maven.plugins:maven-archetype-plugin:RELEASE:generate].executor&quot;: &quot;Run&quot;,
-    &quot;RequestMappingsPanelOrder0&quot;: &quot;0&quot;,
-    &quot;RequestMappingsPanelOrder1&quot;: &quot;1&quot;,
-    &quot;RequestMappingsPanelWidth0&quot;: &quot;75&quot;,
-    &quot;RequestMappingsPanelWidth1&quot;: &quot;75&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
-    &quot;Spring Boot.Application.executor&quot;: &quot;Run&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;feature/agent-management-system&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;D:/JavaProject/Hello-Agent/graph-core/src/main/resources&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,
-    &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
-    &quot;project.structure.side.proportion&quot;: &quot;0.0&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;reference.projectsettings.compiler.javacompiler&quot;,
-    &quot;ts.external.directory.path&quot;: &quot;D:\\JavaProject\\Hello-Agent\\frontend\\node_modules\\typescript\\lib&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Application.EmailProcessingExample.executor": "Run",
+    "Docker.docker-compose.yml.db: Compose Deployment.executor": "Run",
+    "Docker.docker-compose.yml: Compose Deployment.executor": "Run",
+    "HTTP Request.generated-requests | #8.executor": "Run",
+    "JUnit.CompiledGraphTest.executor": "Run",
+    "JUnit.CompiledGraphTest.testInvoke.executor": "Run",
+    "JUnit.HumanInTheLoopHookTest.testAgentWithHook.executor": "Run",
+    "JUnit.KeyStrategyTest.executor": "Run",
+    "JUnit.KeyStrategyTest.testAppendStrategyWithList.executor": "Run",
+    "JUnit.KeyStrategyTest.testReplaceStrategy.executor": "Run",
+    "JUnit.MermaidGraphVisualizerTest.executor": "Run",
+    "JUnit.MermaidGraphVisualizerTest.testCompiledGraph.executor": "Run",
+    "JUnit.MermaidGraphVisualizerTest.testConditionalEdges.executor": "Run",
+    "JUnit.MyBatisPostgreSQLIntegrationTest.executor": "Run",
+    "JUnit.MyBatisPostgreSQLIntegrationTest.testGetAllModelConfigs.executor": "Run",
+    "JUnit.SimpleMyBatisTest.executor": "Run",
+    "JUnit.SimpleMyBatisTest.testDatabaseConnection.executor": "Run",
+    "JUnit.TypedStateSerializationTest.executor": "Run",
+    "Maven. [org.apache.maven.plugins:maven-archetype-plugin:RELEASE:generate].executor": "Run",
+    "RequestMappingsPanelOrder0": "0",
+    "RequestMappingsPanelOrder1": "1",
+    "RequestMappingsPanelWidth0": "75",
+    "RequestMappingsPanelWidth1": "75",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "Spring Boot.Application.executor": "Debug",
+    "git-widget-placeholder": "master",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "D:/JavaProject/Hello-Agent/docs",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "project.structure.last.edited": "Modules",
+    "project.structure.proportion": "0.0",
+    "project.structure.side.proportion": "0.0",
+    "settings.editor.selected.configurable": "reference.projectsettings.compiler.javacompiler",
+    "ts.external.directory.path": "D:\\JavaProject\\Hello-Agent\\frontend\\node_modules\\typescript\\lib",
+    "vue.rearranger.settings.migration": "true"
   },
-  &quot;keyToStringList&quot;: {
-    &quot;DatabaseDriversLRU&quot;: [
-      &quot;postgresql&quot;
+  "keyToStringList": {
+    "DatabaseDriversLRU": [
+      "postgresql"
     ]
   }
-}</component>
+}]]></component>
   <component name="ReactorSettings">
     <option name="notificationShown" value="true" />
   </component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="D:\JavaProject\Hello-Agent\docs" />
       <recent name="D:\JavaProject\Hello-Agent\graph-core\src\main\resources" />
     </key>
   </component>
   <component name="RunManager" selected="Spring Boot.Application">
-    <configuration name="MyBatisPostgreSQLIntegrationTest" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
-      <module name="Agent-Studio" />
+    <configuration name="HumanInTheLoopHookTest.testAgentWithHook" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="agent-core" />
       <extension name="coverage">
         <pattern>
-          <option name="PATTERN" value="cn.ts.web.mapper.*" />
+          <option name="PATTERN" value="cn.ts.agent.hook.*" />
           <option name="ENABLED" value="true" />
         </pattern>
       </extension>
-      <option name="PACKAGE_NAME" value="cn.ts.web.mapper" />
-      <option name="MAIN_CLASS_NAME" value="cn.ts.web.mapper.MyBatisPostgreSQLIntegrationTest" />
-      <option name="TEST_OBJECT" value="class" />
+      <option name="PACKAGE_NAME" value="cn.ts.agent.hook" />
+      <option name="MAIN_CLASS_NAME" value="cn.ts.agent.hook.HumanInTheLoopHookTest" />
+      <option name="METHOD_NAME" value="testAgentWithHook" />
+      <option name="TEST_OBJECT" value="method" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="MyBatisPostgreSQLIntegrationTest.testGetAllModelConfigs" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
-      <module name="Agent-Studio" />
+    <configuration name="TypedStateSerializationTest" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="graph-core" />
       <extension name="coverage">
         <pattern>
-          <option name="PATTERN" value="cn.ts.web.mapper.*" />
+          <option name="PATTERN" value="cn.ts.graph.serialization.*" />
           <option name="ENABLED" value="true" />
         </pattern>
       </extension>
-      <option name="PACKAGE_NAME" value="cn.ts.web.mapper" />
-      <option name="MAIN_CLASS_NAME" value="cn.ts.web.mapper.MyBatisPostgreSQLIntegrationTest" />
-      <option name="METHOD_NAME" value="testGetAllModelConfigs" />
-      <option name="TEST_OBJECT" value="method" />
+      <option name="PACKAGE_NAME" value="cn.ts.graph.serialization" />
+      <option name="MAIN_CLASS_NAME" value="cn.ts.graph.serialization.TypedStateSerializationTest" />
+      <option name="TEST_OBJECT" value="class" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
@@ -222,10 +331,10 @@
     <recent_temporary>
       <list>
         <item itemvalue="Spring Boot.Application" />
+        <item itemvalue="JUnit.TypedStateSerializationTest" />
+        <item itemvalue="JUnit.HumanInTheLoopHookTest.testAgentWithHook" />
         <item itemvalue="Docker.docker-compose.yml: Compose Deployment" />
         <item itemvalue="Docker.docker-compose.yml.db: Compose Deployment" />
-        <item itemvalue="JUnit.MyBatisPostgreSQLIntegrationTest" />
-        <item itemvalue="JUnit.MyBatisPostgreSQLIntegrationTest.testGetAllModelConfigs" />
       </list>
     </recent_temporary>
   </component>
@@ -264,6 +373,18 @@
       <workItem from="1769477423263" duration="8341000" />
       <workItem from="1769609891735" duration="7089000" />
       <workItem from="1769699710915" duration="457000" />
+      <workItem from="1769736412089" duration="8086000" />
+      <workItem from="1769786746641" duration="6000" />
+      <workItem from="1769788892464" duration="2816000" />
+      <workItem from="1769821817894" duration="11763000" />
+      <workItem from="1769908695582" duration="3879000" />
+      <workItem from="1769919261134" duration="9096000" />
+      <workItem from="1769940068377" duration="5366000" />
+      <workItem from="1769957851361" duration="5468000" />
+      <workItem from="1770000127479" duration="7801000" />
+      <workItem from="1770086301424" duration="6420000" />
+      <workItem from="1770127723820" duration="4995000" />
+      <workItem from="1770165918923" duration="13692000" />
     </task>
     <servers />
   </component>
@@ -286,12 +407,12 @@
       <breakpoints>
         <line-breakpoint enabled="true" type="javascript">
           <url>file://$PROJECT_DIR$/frontend/src/components/chat/MessageInput.vue</url>
-          <line>13</line>
+          <line>4</line>
           <option name="timeStamp" value="3" />
         </line-breakpoint>
         <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/node/ToolNode.java</url>
-          <line>287</line>
+          <line>302</line>
           <option name="timeStamp" value="32" />
         </line-breakpoint>
         <line-breakpoint type="java-line">
@@ -299,95 +420,435 @@
           <line>200</line>
           <option name="timeStamp" value="64" />
         </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
+        <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/GraphRunner.java</url>
-          <line>263</line>
+          <line>283</line>
           <option name="timeStamp" value="88" />
         </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
+        <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/GraphRunner.java</url>
-          <line>353</line>
+          <line>396</line>
           <option name="timeStamp" value="91" />
         </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
+        <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/GraphRunner.java</url>
-          <line>354</line>
+          <line>397</line>
           <option name="timeStamp" value="92" />
         </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
+        <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java</url>
-          <line>218</line>
-          <option name="timeStamp" value="107" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java</url>
-          <line>311</line>
+          <line>380</line>
           <option name="timeStamp" value="109" />
         </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
+        <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java</url>
-          <line>308</line>
+          <line>377</line>
           <option name="timeStamp" value="110" />
         </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
+        <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/DocumentLoaderService.java</url>
           <line>91</line>
           <option name="timeStamp" value="145" />
         </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
+        <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/DocumentLoaderService.java</url>
           <line>104</line>
           <option name="timeStamp" value="146" />
         </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
+        <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/DocumentLoaderService.java</url>
           <line>112</line>
           <option name="timeStamp" value="150" />
         </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
+        <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/DocumentLoaderService.java</url>
           <line>88</line>
           <option name="timeStamp" value="151" />
         </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
+        <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/RagQueryService.java</url>
           <line>58</line>
           <option name="timeStamp" value="154" />
         </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
+        <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/rag/advisor/RagAdvisor.java</url>
           <line>248</line>
           <option name="timeStamp" value="155" />
         </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
+        <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/RagQueryService.java</url>
           <line>55</line>
           <option name="timeStamp" value="157" />
         </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
+        <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/RagQueryService.java</url>
           <line>52</line>
           <option name="timeStamp" value="159" />
         </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
+        <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/controller/RagController.java</url>
           <line>159</line>
           <option name="timeStamp" value="160" />
         </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
+        <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/controller/RagController.java</url>
           <line>154</line>
           <option name="timeStamp" value="161" />
         </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
+        <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/RagQueryService.java</url>
           <line>84</line>
           <option name="timeStamp" value="162" />
         </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
+        <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/RagQueryService.java</url>
           <line>89</line>
           <option name="timeStamp" value="163" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java</url>
+          <line>294</line>
+          <option name="timeStamp" value="164" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java</url>
+          <line>288</line>
+          <option name="timeStamp" value="168" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/Tool/WriteToDoTool.java</url>
+          <line>106</line>
+          <option name="timeStamp" value="169" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/Tool/WriteToDoTool.java</url>
+          <line>73</line>
+          <option name="timeStamp" value="170" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/GraphRunner.java</url>
+          <line>285</line>
+          <option name="timeStamp" value="171" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/GraphRunner.java</url>
+          <line>391</line>
+          <option name="timeStamp" value="173" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/GraphRunner.java</url>
+          <line>303</line>
+          <option name="timeStamp" value="174" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/GraphRunner.java</url>
+          <line>253</line>
+          <option name="timeStamp" value="175" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/GraphRunner.java</url>
+          <line>256</line>
+          <option name="timeStamp" value="177" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java</url>
+          <line>148</line>
+          <option name="timeStamp" value="178" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java</url>
+          <line>154</line>
+          <option name="timeStamp" value="179" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java</url>
+          <line>118</line>
+          <option name="timeStamp" value="181" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/hook/HumanInTheLoopHook.java</url>
+          <line>78</line>
+          <option name="timeStamp" value="183" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java</url>
+          <line>61</line>
+          <option name="timeStamp" value="184" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/hook/HumanInTheLoopHook.java</url>
+          <line>66</line>
+          <option name="timeStamp" value="185" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/hook/HumanInTheLoopHook.java</url>
+          <line>156</line>
+          <option name="timeStamp" value="186" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/hook/HumanInTheLoopHook.java</url>
+          <line>163</line>
+          <option name="timeStamp" value="187" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java</url>
+          <line>613</line>
+          <option name="timeStamp" value="188" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java</url>
+          <line>603</line>
+          <option name="timeStamp" value="189" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/hook/HumanInTheLoopHook.java</url>
+          <line>97</line>
+          <option name="timeStamp" value="190" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/hook/HumanInTheLoopHook.java</url>
+          <line>113</line>
+          <option name="timeStamp" value="191" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/hook/HumanInTheLoopHook.java</url>
+          <line>126</line>
+          <option name="timeStamp" value="192" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/hook/HumanInTheLoopHook.java</url>
+          <line>148</line>
+          <option name="timeStamp" value="193" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java</url>
+          <line>90</line>
+          <option name="timeStamp" value="194" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/AgentExecutionService.java</url>
+          <line>484</line>
+          <option name="timeStamp" value="197" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/AgentExecutionService.java</url>
+          <line>538</line>
+          <option name="timeStamp" value="199" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/AgentExecutionService.java</url>
+          <line>616</line>
+          <option name="timeStamp" value="200" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/AgentExecutionService.java</url>
+          <line>644</line>
+          <option name="timeStamp" value="201" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/AgentExecutionService.java</url>
+          <line>645</line>
+          <option name="timeStamp" value="202" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/AgentExecutionService.java</url>
+          <line>541</line>
+          <option name="timeStamp" value="204" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/AgentExecutionService.java</url>
+          <line>545</line>
+          <option name="timeStamp" value="205" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/AgentExecutionService.java</url>
+          <line>466</line>
+          <option name="timeStamp" value="207" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/AgentExecutionService.java</url>
+          <line>485</line>
+          <option name="timeStamp" value="208" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/AgentExecutionService.java</url>
+          <line>611</line>
+          <option name="timeStamp" value="209" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/AgentExecutionService.java</url>
+          <line>626</line>
+          <option name="timeStamp" value="210" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/AgentExecutionService.java</url>
+          <line>488</line>
+          <option name="timeStamp" value="211" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/controller/StreamController.java</url>
+          <line>71</line>
+          <option name="timeStamp" value="215" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/controller/StreamController.java</url>
+          <line>201</line>
+          <option name="timeStamp" value="219" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/controller/StreamController.java</url>
+          <line>205</line>
+          <option name="timeStamp" value="220" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/AgentExecutionService.java</url>
+          <line>439</line>
+          <option name="timeStamp" value="223" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/AgentExecutionService.java</url>
+          <line>440</line>
+          <option name="timeStamp" value="226" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/AgentExecutionService.java</url>
+          <line>445</line>
+          <option name="timeStamp" value="228" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/SessionService.java</url>
+          <line>528</line>
+          <option name="timeStamp" value="229" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/AgentExecutionService.java</url>
+          <line>409</line>
+          <option name="timeStamp" value="230" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/AgentExecutionService.java</url>
+          <line>425</line>
+          <option name="timeStamp" value="231" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/AgentExecutionService.java</url>
+          <line>443</line>
+          <option name="timeStamp" value="232" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/CompiledGraph.java</url>
+          <line>122</line>
+          <option name="timeStamp" value="233" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/GraphRunner.java</url>
+          <line>180</line>
+          <option name="timeStamp" value="234" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/GraphRunner.java</url>
+          <line>206</line>
+          <option name="timeStamp" value="235" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/GraphRunner.java</url>
+          <line>209</line>
+          <option name="timeStamp" value="236" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/GraphRunner.java</url>
+          <line>215</line>
+          <option name="timeStamp" value="237" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/node/ToolNode.java</url>
+          <line>80</line>
+          <option name="timeStamp" value="238" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/node/ToolNode.java</url>
+          <line>77</line>
+          <option name="timeStamp" value="239" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/GraphRunner.java</url>
+          <line>288</line>
+          <option name="timeStamp" value="240" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/hook/HumanInTheLoopHook.java</url>
+          <line>102</line>
+          <option name="timeStamp" value="241" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/GraphRunner.java</url>
+          <line>379</line>
+          <option name="timeStamp" value="242" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/GraphRunner.java</url>
+          <line>385</line>
+          <option name="timeStamp" value="243" />
+        </line-breakpoint>
+        <line-breakpoint type="java-line">
+          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/node/LLMNode.java</url>
+          <line>79</line>
+          <option name="timeStamp" value="245" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java</url>
+          <line>627</line>
+          <option name="timeStamp" value="247" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java</url>
+          <line>156</line>
+          <option name="timeStamp" value="248" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java</url>
+          <line>629</line>
+          <option name="timeStamp" value="249" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java</url>
+          <line>630</line>
+          <option name="timeStamp" value="250" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/SessionService.java</url>
+          <line>370</line>
+          <option name="timeStamp" value="252" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/SessionService.java</url>
+          <line>371</line>
+          <option name="timeStamp" value="253" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/controller/StreamController.java</url>
+          <line>67</line>
+          <option name="timeStamp" value="254" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/controller/StreamController.java</url>
+          <line>70</line>
+          <option name="timeStamp" value="255" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/SessionService.java</url>
+          <line>367</line>
+          <option name="timeStamp" value="257" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/SessionService.java</url>
+          <line>396</line>
+          <option name="timeStamp" value="258" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/SessionService.java</url>
+          <line>415</line>
+          <option name="timeStamp" value="259" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-method">
           <url>file://$PROJECT_DIR$/Agent-Studio/src/test/java/cn/ts/web/mapper/SimpleMyBatisTest.java</url>
@@ -400,11 +861,6 @@
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
-    <pin-to-top-manager>
-      <pinned-members>
-        <PinnedItemInfo parentTag="org.springframework.ai.chat.messages.AssistantMessage" memberName="toolCalls" />
-      </pinned-members>
-    </pin-to-top-manager>
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

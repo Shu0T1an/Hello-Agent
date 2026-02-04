@@ -2,26 +2,39 @@
 
 @layer base {
   * {
-    border-color: #e2e8f0;
+    border-color: var(--color-content-border);
+  }
+
+  html {
+    /* 默认浅色主题，可以通过 data-theme="dark" 切换 */
+    background: var(--bg-primary);
+    color: var(--color-text-primary);
   }
 
   body {
-    background-color: #f8fafc;
-    color: #0f172a;
+    background: var(--bg-primary);
+    color: var(--color-text-primary);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   /* 焦点可见性优化 */
   *:focus-visible {
-    outline: 2px solid #6366f1;
+    outline: 2px solid #4f46e5;
     outline-offset: 2px;
   }
 
   /* 选择文本样式 */
   ::selection {
-    background-color: rgba(99, 102, 241, 0.2);
-    color: #0f172a;
+    background-color: #eef2ff;
+    color: var(--color-text-primary);
+  }
+
+  [data-theme="dark"] ::selection {
+    background-color: rgba(79, 70, 229, 0.3);
+    color: #ffffff;
   }
 }
 
@@ -57,6 +70,34 @@
 
   .dark-scrollbar::-webkit-scrollbar-thumb:hover {
     background: #475569;
+  }
+
+  /* ========== Canvas 风格精致滚动条 ========== */
+  .custom-scrollbar-premium::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  .custom-scrollbar-premium::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar-premium::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    transition: background 500ms ease;
+  }
+
+  .custom-scrollbar-premium::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  [data-theme="dark"] .custom-scrollbar-premium::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  [data-theme="dark"] .custom-scrollbar-premium::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
   }
 
   /* ========== 卡片悬停效果 ========== */
@@ -148,7 +189,7 @@
 
   /* ========== 渐变背景 ========== */
   .gradient-primary {
-    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
   }
 
   .gradient-success {

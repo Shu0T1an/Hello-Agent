@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { cn } from '@/lib/utils'
 
 interface Props {
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger'
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'gradient' | 'glass'
   size?: 'sm' | 'md' | 'lg'
   disabled?: boolean
   loading?: boolean
@@ -22,14 +22,16 @@ const emit = defineEmits<{
   click: [event: MouseEvent]
 }>()
 
-const baseClasses = 'inline-flex items-center justify-center gap-2 font-medium rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed'
+const baseClasses = 'inline-flex items-center justify-center gap-2 font-medium rounded-xl transition-all duration-500 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100'
 
 const variantClasses = computed(() => {
   const variants = {
-    primary: 'bg-indigo-500 text-white hover:bg-indigo-600 focus:ring-indigo-500 shadow-sm',
-    secondary: 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 focus:ring-slate-200 shadow-sm',
-    ghost: 'bg-transparent text-slate-600 hover:bg-slate-100 focus:ring-slate-200',
+    primary: 'bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500 shadow-sm',
+    secondary: 'bg-white text-zinc-700 border border-zinc-200 hover:bg-zinc-50 focus:ring-zinc-200 shadow-sm',
+    ghost: 'bg-transparent text-zinc-600 hover:bg-zinc-100 focus:ring-zinc-200',
     danger: 'bg-red-500 text-white hover:bg-red-600 focus:ring-red-500 shadow-sm',
+    gradient: 'bg-gradient-neon-primary text-white hover:shadow-glow-neon focus:ring-indigo-500 shadow-sm',
+    glass: 'btn-glass text-zinc-700 hover:text-indigo-700 focus:ring-indigo-400',
   }
   return variants[props.variant]
 })

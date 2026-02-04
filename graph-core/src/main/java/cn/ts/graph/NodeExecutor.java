@@ -1,9 +1,16 @@
 package cn.ts.graph;
 
+import cn.ts.graph.checkpoint.InterruptionMetadata;
+import cn.ts.graph.config.RunnableConfig;
+import cn.ts.graph.flux.GraphFlux;
 import cn.ts.graph.flux.GraphFlux;
 import cn.ts.graph.node.AsyncNodeAction;
+import cn.ts.graph.node.AsyncNodeActionWithConfig;
+import cn.ts.graph.node.InterruptableAction;
 import cn.ts.graph.node.Node;
+import cn.ts.graph.node.NodeAction;
 import cn.ts.graph.node.NodeActionAsyncUtils;
+import cn.ts.graph.node.NodeActionWithConfig;
 import cn.ts.graph.state.State;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +34,7 @@ import java.util.concurrent.ForkJoinPool;
  * <p>
  * 负责执行单个节点并将结果转换为响应式流
  * 支持 CompletableFuture 到 Flux 的转换
+ * 支持中断检测（InterruptableAction）
  * 参考 Spring AI Alibaba 的 NodeExecutor 设计
  * </p>
  *
@@ -44,10 +52,50 @@ public class NodeExecutor {
      * @return 响应式流，发射节点执行结果
      *         - 普通节点：GraphResponse<NodeOutput>（状态更新）
      *         - 流式节点：GraphResponse<NodeOutput>（单个流元素）
+     *         - 中断节点：GraphResponse<NodeOutput>（执行被中断）
      */
     public Flux<GraphResponse<NodeOutput>> execute(Node node, GraphRunnerContext context) {
+        // 1. 检查是否是可中断节点
+        if (node.isInterruptable() && node.interruptableAction() != null) {
+            InterruptableAction interruptable = node.interruptableAction();
+            Optional<InterruptionMetadata> interruption = interruptable.interrupt(
+                    node.id(),
+                    context.getOverallState(),
+                    context.getConfig()
+            );
+
+            if (interruption.isPresent()) {
+                logger.info("节点 {} 执行被中断", node.id());
+
+                // 获取 threadId（用于恢复时查找检查点）
+                String threadId = context.getConfig().threadId();
+
+                // 自动创建检查点（如果配置了 CheckpointManager）
+                String checkpointId = createCheckpointOnInterruption(context, node.id());
+
+                // 构建中断输出
+                InterruptionOutput interruptionOutput = InterruptionOutput.of(
+                        interruption.get(),
+                        checkpointId != null ? checkpointId : "",
+                        threadId
+                );
+                Map<String, Object> interruptData = Map.of(
+                        "interruption", interruptionOutput,
+                        "interrupted", true
+                );
+                NodeOutput interruptOutput = NodeOutput.of(
+                        node.id(),
+                        interruptData,
+                        context.getOverallState()
+                );
+                return Flux.just(GraphResponse.interruption(interruptOutput));
+            }
+        }
+
+        // 2. 异步执行节点动作，返回 CompletableFuture
         CompletableFuture<Map<String, Object>> future = executeNodeAsync(node, context);
 
+        // 3. 将 CompletableFuture 转换为 Mono，然后扁平化为 Flux
         return Mono.fromFuture(future)
                 .flatMapMany(updates -> handleActionResult(node, context, updates))
                 .onErrorResume(error -> Flux.just(GraphResponse.error(error)));
@@ -55,18 +103,35 @@ public class NodeExecutor {
 
     /**
      * 异步执行节点动作
+     * <p>
+     * 支持多种节点动作接口，优先使用带 config 的新接口：
+     * 1. AsyncNodeActionWithConfig（新接口，带 config）
+     * 2. AsyncNodeAction（旧接口，包装）
+     * 3. NodeAction（旧接口，包装）
+     * </p>
      *
      * @param node    节点
      * @param context 上下文
      * @return CompletableFuture 包含状态更新
      */
     private CompletableFuture<Map<String, Object>> executeNodeAsync(Node node, GraphRunnerContext context) {
-        if (node.action() instanceof AsyncNodeAction asyncAction) {
-            return asyncAction.applyAsync(context.getOverallState());
-        } else {
-            return NodeActionAsyncUtils.async(node.action(), ForkJoinPool.commonPool())
-                    .applyAsync(context.getOverallState());
+        NodeAction action = node.action();
+        RunnableConfig config = context.getConfig();
+
+        // 优先检查：是否实现了 AsyncNodeActionWithConfig（新接口，带 config）
+        if (action instanceof AsyncNodeActionWithConfig actionWithConfig) {
+            return actionWithConfig.applyAsync(context.getOverallState(), config);
         }
+
+        // 检查是否是 AsyncNodeAction（旧接口，包装）
+        if (action instanceof AsyncNodeAction asyncAction) {
+            AsyncNodeActionWithConfig wrapped = AsyncNodeActionWithConfig.from(asyncAction);
+            return wrapped.applyAsync(context.getOverallState(), config);
+        }
+
+        // 普通 NodeAction，包装成 NodeActionWithConfig
+        NodeActionWithConfig wrapped = NodeActionWithConfig.from(action);
+        return wrapped.applyAsync(context.getOverallState(), config);
     }
 
     /**
@@ -98,8 +163,10 @@ public class NodeExecutor {
         GraphResponse<NodeOutput> startingResponse = GraphResponse.of(nodeId, NodeOutput.starting(nodeId, node));
         GraphResponse<NodeOutput> completedResponse = GraphResponse.of(nodeId, NodeOutput.completed(nodeId, node, updates, context.getOverallState(), startTime));
 
-        // 返回 STARTING → COMPLETED 流
-        return Flux.just(completedResponse).startWith(startingResponse);
+        // 返回 STARTING → COMPLETED 流，并在完成后创建检查点
+        return Flux.just(completedResponse)
+                .startWith(startingResponse)
+                .doOnComplete(() -> createCheckpointAfterNode(context, nodeId));
     }
 
     /**
@@ -212,7 +279,7 @@ public class NodeExecutor {
                     }
                     return response;
                 })
-                // 流完成时聚合并更新 state
+                // 流完成时聚合并更新 state，然后创建检查点
                 .doOnComplete(() -> {
                     if (!responsesQueue.isEmpty()) {
                         // 1. 聚合 messages
@@ -228,6 +295,8 @@ public class NodeExecutor {
                         context.mergeIntoCurrentState(Map.of("messages", messages));
                         context.mergeIntoCurrentState(Map.of("execution_record", executionRecord));
                     }
+                    // 节点完成后创建检查点
+                    createCheckpointAfterNode(context, nodeName);
                 })
                 // 添加 COMPLETED 响应（包含完整内容）
                 // 使用 defer 确保在所有数据流完成后才评估 fullContentBuilder
@@ -521,6 +590,50 @@ public class NodeExecutor {
                 "completionTokens", completionTokens,
                 "totalTokens", totalTokens
         );
+    }
+
+    /**
+     * 在中断时自动创建检查点
+     *
+     * @param context 执行上下文
+     * @param nodeId  节点ID
+     * @return 检查点ID，如果没有配置 CheckpointManager 则返回 null
+     */
+    private String createCheckpointOnInterruption(GraphRunnerContext context, String nodeId) {
+        return context.getCheckpointManager()
+                .map(manager -> {
+                    try {
+                        String checkpointId = manager.createCheckpoint(context, "interruption");
+                        logger.info("中断时自动创建检查点: nodeId={}, checkpointId={}", nodeId, checkpointId);
+                        return checkpointId;
+                    } catch (Exception e) {
+                        logger.warn("创建中断检查点失败: nodeId={}, error={}", nodeId, e.getMessage());
+                        return null;
+                    }
+                })
+                .orElse(null);
+    }
+
+    /**
+     * 节点完成后自动创建检查点
+     * <p>
+     * 根据 CheckpointConfig 的策略决定是否创建检查点
+     * </p>
+     *
+     * @param context 执行上下文
+     * @param nodeId  节点ID
+     */
+    private void createCheckpointAfterNode(GraphRunnerContext context, String nodeId) {
+        context.getCheckpointManager().ifPresent(manager -> {
+            if (manager.shouldCheckpoint(nodeId)) {
+                try {
+                    String checkpointId = manager.createCheckpoint(context, "auto");
+                    logger.debug("节点 {} 完成后自动创建检查点: {}", nodeId, checkpointId);
+                } catch (Exception e) {
+                    logger.warn("节点完成后创建检查点失败: nodeId={}, error={}", nodeId, e.getMessage());
+                }
+            }
+        });
     }
 
     /**

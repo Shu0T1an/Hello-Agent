@@ -4,7 +4,6 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
-
 /**
  * 状态快照
  * <p>

@@ -1,17 +1,14 @@
 <template>
-  <div class="flex flex-col h-full bg-slate-50">
-    <!-- 顶部导航 -->
-    <TopNav />
-
+  <div class="flex flex-col h-full">
     <!-- 标签和工具栏 -->
-    <div class="flex items-center justify-between px-4 py-3 bg-white border-b border-slate-200 flex-shrink-0">
-      <div class="flex gap-6">
+    <div class="flex items-center justify-between px-4 py-3 glass-panel border-b border-b-glass-border flex-shrink-0">
+      <div class="flex gap-6 items-center">
         <button
           :class="[
             'text-sm font-medium pb-1 border-b-2 transition-all',
             activeTab === 'conversation'
               ? 'text-indigo-600 border-indigo-600'
-              : 'text-slate-500 border-transparent hover:text-slate-700'
+              : 'text-zinc-500 border-transparent hover:text-zinc-700'
           ]"
           @click="activeTab = 'conversation'"
         >
@@ -22,7 +19,7 @@
             'text-sm font-medium pb-1 border-b-2 transition-all',
             activeTab === 'summary'
               ? 'text-indigo-600 border-indigo-600'
-              : 'text-slate-500 border-transparent hover:text-slate-700'
+              : 'text-zinc-500 border-transparent hover:text-zinc-700'
           ]"
           @click="activeTab = 'summary'"
         >
@@ -31,10 +28,10 @@
       </div>
       <div class="flex items-center gap-2">
         <BaseButton
-          variant="ghost"
+          variant="glass"
           size="sm"
           @click="toggleTimeline"
-          :class="{ 'bg-indigo-50 text-indigo-600': timelineVisible }"
+          :class="{ 'bg-indigo-100 text-indigo-700': timelineVisible }"
         >
           <Activity :size="16" />
           <span class="hidden sm:inline ml-1">时间线</span>
@@ -50,26 +47,32 @@
         <div
           ref="messagesRef"
           :class="[
-            'flex-1 overflow-y-auto custom-scrollbar',
+            'flex-1 overflow-y-auto custom-scrollbar-glass',
             'transition-all duration-300',
             timelineVisible ? 'flex-1' : 'w-full'
           ]"
         >
-          <div class="p-4 sm:p-6">
-            <div v-if="chatStore.messages.length === 0" class="flex flex-col items-center justify-center h-full min-h-[300px] text-slate-400">
-              <MessageSquare :size="64" class="opacity-30 mb-4" />
-              <p class="text-lg">开始一个新对话</p>
-            </div>
-            <div class="space-y-6">
-              <ChatMessage
-                v-for="message in chatStore.messages"
-                :key="message.id"
-                :message="message"
+          <!-- 消息列表居中容器 -->
+          <div class="flex justify-center">
+            <div class="w-full max-w-[850px] p-4 sm:p-6">
+              <!-- 欢迎界面 -->
+              <WelcomeScreen
+                v-if="chatStore.messages.length === 0"
+                @select-prompt="handleSelectPrompt"
               />
-              <div v-if="chatStore.isProcessing" class="flex items-center gap-2 p-4 bg-white rounded-xl shadow-sm max-w-md">
-                <span class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0ms" />
-                <span class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 150ms" />
-                <span class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 300ms" />
+              <div class="space-y-4">
+                <ChatMessage
+                  v-for="message in chatStore.messages"
+                  :key="message.id"
+                  :message="message"
+                  :agent-name="agentStore.currentAgent"
+                  :session-id="chatStore.currentSessionId"
+                />
+                <div v-if="chatStore.isProcessing" class="flex items-center gap-2 p-4 glass-card rounded-xl max-w-md">
+                  <span class="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style="animation-delay: 0ms" />
+                  <span class="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style="animation-delay: 150ms" />
+                  <span class="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style="animation-delay: 300ms" />
+                </div>
               </div>
             </div>
           </div>
@@ -78,11 +81,10 @@
         <!-- 拖拽手柄 -->
         <div
           v-if="timelineVisible"
-          ref="resizeHandleRef"
-          class="w-1 bg-slate-200 hover:bg-indigo-400 cursor-col-resize flex-shrink-0 transition-colors relative z-10"
+          class="w-1 bg-glass-200 hover:bg-indigo-400 cursor-col-resize flex-shrink-0 transition-colors relative z-10"
           @mousedown="startResize"
         >
-          <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-8 bg-slate-300 rounded-full" />
+          <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-8 bg-zinc-300 rounded-full" />
         </div>
 
         <!-- 时间线面板 -->
@@ -97,7 +99,7 @@
           <div
             v-if="timelineVisible"
             :class="[
-              'bg-white border-l border-slate-200 overflow-y-auto custom-scrollbar flex-shrink-0',
+              'glass-panel border-l border-l-glass-border overflow-y-auto custom-scrollbar-glass flex-shrink-0',
               'hidden md:block'
             ]"
             :style="{ width: timelineWidth + 'px' }"
@@ -119,15 +121,15 @@
         >
           <div
             v-if="timelineVisible && isMobile"
-            class="fixed inset-x-0 bottom-0 h-[70vh] bg-white border-t border-slate-200 rounded-t-2xl shadow-xl z-50 md:hidden"
+            class="fixed inset-x-0 bottom-0 h-[70vh] glass-panel border-t border-t-glass-border rounded-t-2xl shadow-xl z-50 md:hidden"
           >
-            <div class="flex items-center justify-between p-4 border-b border-slate-200">
+            <div class="flex items-center justify-between p-4 border-b border-b-glass-border">
               <h3 class="text-lg font-semibold">时间线</h3>
-              <BaseButton variant="ghost" size="sm" @click="timelineVisible = false">
+              <BaseButton variant="glass" size="sm" @click="timelineVisible = false">
                 <X :size="20" />
               </BaseButton>
             </div>
-            <div class="overflow-y-auto h-[calc(70vh-60px)] custom-scrollbar">
+            <div class="overflow-y-auto h-[calc(70vh-60px)] custom-scrollbar-glass">
               <AgentTimeline :events="agentTimeline.events" :loading="chatStore.isProcessing" />
             </div>
           </div>
@@ -138,48 +140,69 @@
       <Teleport to="body">
         <div
           v-if="timelineVisible && isMobile"
-          class="fixed inset-0 bg-black/50 z-40 md:hidden"
+          class="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 md:hidden"
           @click="timelineVisible = false"
         />
       </Teleport>
+    </div>
 
-      <!-- 输入框 -->
-      <MessageInput />
+    <!-- 输入框 - 移到 overflow-hidden 外面 -->
+    <div class="flex justify-center relative z-20">
+      <div class="w-full max-w-[850px]">
+        <MessageInput
+          ref="messageInputRef"
+          :knowledge-base-id="knowledgeBaseId"
+          :knowledge-bases="knowledgeBases"
+          @knowledge-base-change="handleKnowledgeBaseChange"
+        />
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, watch, onMounted, onUnmounted } from 'vue'
-import { MessageSquare, Activity, X } from 'lucide-vue-next'
+import { ref, nextTick, watch, onUnmounted } from 'vue'
+import { Activity, X } from 'lucide-vue-next'
 import { useChatStore } from '@/stores/chat'
+import { useAgentStore } from '@/stores/agent'
 import { useAgentTimelineStore } from '@/stores/agentTimeline'
 import { useBreakpoints } from '@/composables/useBreakpoints'
 import BaseButton from '@/components/base/BaseButton.vue'
-import TopNav from '@/components/common/TopNav.vue'
 import ChatMessage from './ChatMessage.vue'
 import MessageInput from './MessageInput.vue'
+import WelcomeScreen from './WelcomeScreen.vue'
 import AgentTimeline from '@/components/agent/AgentTimeline.vue'
 
-// 接收知识库ID
+// 接收知识库ID和列表
 const props = defineProps<{
   knowledgeBaseId?: string
+  knowledgeBases?: Array<{ kbId: string; kbName: string }>
 }>()
 
 const chatStore = useChatStore()
+const agentStore = useAgentStore()
 const agentTimeline = useAgentTimelineStore()
 const { isMobile } = useBreakpoints()
-
-// 监听knowledgeBaseId变化，更新chatStore
-watch(() => props.knowledgeBaseId, (newId) => {
-  chatStore.setKnowledgeBaseId(newId || '')
-}, { immediate: true })
 
 // 当前激活的标签页
 const activeTab = ref<'conversation' | 'summary'>('conversation')
 
+// 处理知识库切换
+function handleKnowledgeBaseChange(kbId: string) {
+  chatStore.setKnowledgeBaseId(kbId)
+}
+
+// 处理快捷提示词选择
+function handleSelectPrompt(prompt: string) {
+  // 设置输入框内容并聚焦
+  messageInputRef.value?.setContent(prompt)
+}
+
 // 消息容器引用
 const messagesRef = ref<HTMLElement>()
+
+// MessageInput 组件引用
+const messageInputRef = ref<InstanceType<typeof MessageInput>>()
 
 // 时间线显示状态
 const timelineVisible = ref(false)
@@ -187,12 +210,11 @@ const timelineWidth = ref(400)
 const minWidth = 300
 const maxWidth = 600
 const isResizing = ref(false)
-const resizeHandleRef = ref<HTMLElement>()
 
 // 自动滚动到底部
 watch(() => chatStore.messages.length, async () => {
   await nextTick()
-  scrollToBottom()
+  smoothScrollToBottom()
 })
 
 // 监听会话变化，自动开始收集事件
@@ -202,10 +224,13 @@ watch(() => chatStore.currentSessionId, (newSessionId) => {
   }
 }, { immediate: true })
 
-// 滚动到底部
-function scrollToBottom() {
+// 平滑滚动到底部
+function smoothScrollToBottom() {
   if (messagesRef.value) {
-    messagesRef.value.scrollTop = messagesRef.value.scrollHeight
+    messagesRef.value.scrollTo({
+      top: messagesRef.value.scrollHeight,
+      behavior: 'smooth'
+    })
   }
 }
 

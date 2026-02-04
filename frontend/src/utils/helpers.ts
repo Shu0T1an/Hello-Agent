@@ -2,6 +2,8 @@
  * 通用辅助函数
  */
 
+import { MESSAGE_STATUS_CONFIG } from './constants'
+
 /**
  * 格式化时间戳为本地化字符串
  */
@@ -71,26 +73,14 @@ export function formatJSON(jsonStr: string): string {
  * 获取消息状态的标签
  */
 export function getMessageStatusLabel(status: string): string {
-  const statusMap: Record<string, string> = {
-    'thinking': '思考中...',
-    'taking-action': '执行中',
-    'completed': '完成',
-    'error': '错误'
-  }
-  return statusMap[status] || status
+  return MESSAGE_STATUS_CONFIG[status]?.label || status
 }
 
 /**
  * 获取消息状态的变体
  */
 export function getMessageStatusVariant(status: string): 'default' | 'warning' | 'danger' | 'success' | 'info' | 'purple' {
-  const variantMap: Record<string, 'default' | 'warning' | 'danger' | 'success' | 'info' | 'purple'> = {
-    'thinking': 'warning',
-    'taking-action': 'purple',
-    'completed': 'success',
-    'error': 'danger'
-  }
-  return variantMap[status] || 'info'
+  return MESSAGE_STATUS_CONFIG[status]?.variant || 'info'
 }
 
 /**

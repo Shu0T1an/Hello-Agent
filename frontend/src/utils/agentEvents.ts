@@ -49,9 +49,9 @@ export function getNodeConfig(event: AgentEvent): NodeThemeConfig {
     return {
       icon: Play,
       label: '已启动',
-      dotBg: 'bg-slate-400',
-      borderClass: 'border-slate-200',
-      labelClass: 'text-slate-600'
+      dotBg: 'bg-zinc-400',
+      borderClass: 'border-zinc-200',
+      labelClass: 'text-zinc-600'
     }
   }
 
@@ -88,9 +88,9 @@ export function getNodeConfig(event: AgentEvent): NodeThemeConfig {
   return {
     icon: Cog,
     label: 'System Node',
-    dotBg: 'bg-slate-500',
-    borderClass: 'border-slate-200',
-    labelClass: 'text-slate-700'
+    dotBg: 'bg-zinc-500',
+    borderClass: 'border-zinc-200',
+    labelClass: 'text-zinc-700'
   }
 }
 

@@ -1,21 +1,22 @@
 <template>
-  <div class="flex h-screen w-full overflow-hidden">
+  <div class="flex h-screen w-full overflow-hidden" style="background-color: #f5f5f5;" data-theme-container>
     <!-- 侧边栏 -->
     <aside
       v-if="currentView === 'chat'"
       :class="[
-        'h-full bg-slate-900 border-r border-slate-800 transition-all duration-300 relative z-50 flex-shrink-0',
+        'h-full transition-all duration-300 relative z-50 flex-shrink-0',
+        'glass-panel border-r border-r-glass-border',
         sidebarClasses
       ]"
     >
-      <Sidebar :collapsed="isCollapsed" />
+      <Sidebar :collapsed="isCollapsed" @toggle="isCollapsed = !isCollapsed" />
     </aside>
 
     <!-- 移动端遮罩 -->
     <Transition name="fade">
       <div
         v-if="isMobileMenuOpen"
-        class="fixed inset-0 bg-black/50 z-40 lg:hidden"
+        class="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 lg:hidden"
         @click="closeMobileMenu"
       />
     </Transition>
@@ -23,54 +24,48 @@
     <!-- 主内容区 -->
     <main class="flex-1 flex flex-col h-full overflow-hidden min-w-0">
       <!-- 移动端顶部导航 -->
-      <div class="lg:hidden flex items-center justify-between p-4 bg-white border-b border-slate-200 flex-shrink-0">
+      <div class="lg:hidden flex items-center justify-between p-4 glass-panel border-b border-b-glass-border flex-shrink-0 relative z-[60]">
         <button
           @click="toggleMobileMenu"
-          class="p-2 text-slate-600 hover:bg-slate-100 rounded-lg"
+          class="p-2 hover:bg-glass-200 rounded-lg transition-colors"
         >
           <Menu :size="24" />
         </button>
-        <h1 class="text-lg font-semibold text-slate-900">{{ getCurrentViewLabel() }}</h1>
-        <div class="w-10" />
+        <h1 class="text-lg font-semibold">{{ getCurrentViewLabel() }}</h1>
+        <!-- 主题切换按钮 -->
+        <ThemeToggle />
       </div>
 
       <!-- 导航标签 -->
-      <nav class="flex gap-1 sm:gap-2 p-3 sm:p-4 bg-slate-50 border-b border-slate-200 flex-shrink-0 overflow-x-auto">
+      <nav class="flex items-center gap-1 sm:gap-2 p-3 sm:p-4 glass-panel border-b border-b-glass-border flex-shrink-0 overflow-x-auto relative z-[60]">
         <button
           v-for="tab in tabs"
           :key="tab.id"
           :class="[
-            'flex items-center gap-2 px-3 py-2 sm:px-4 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap',
+            'flex items-center gap-2 px-3 py-2 sm:px-4 rounded-xl text-sm font-medium transition-all duration-200 whitespace-nowrap',
             currentView === tab.id
-              ? 'bg-indigo-500 text-white shadow-sm'
-              : 'text-slate-600 hover:bg-white hover:shadow-sm'
+              ? 'nav-tab-glass active'
+              : 'nav-tab-glass'
           ]"
           @click="switchView(tab.id)"
         >
           <component :is="tab.icon" :size="18" />
           <span class="hidden sm:inline">{{ tab.label }}</span>
         </button>
+        <div class="ml-auto flex items-center gap-2">
+          <!-- 桌面端主题切换按钮 -->
+          <ThemeToggle class="hidden lg:block" />
+        </div>
       </nav>
 
       <!-- 视图内容 -->
-      <div class="flex-1 overflow-y-auto min-h-0">
-        <!-- 知识库选择器（仅聊天视图显示） -->
-        <div v-if="currentView === 'chat'" class="flex items-center gap-3 p-4 bg-white border-b border-slate-200 flex-shrink-0">
-          <label class="text-sm font-medium text-slate-700">知识库：</label>
-          <select
-            v-model="selectedKnowledgeBase"
-            class="flex-1 max-w-xs px-3 py-2 border border-slate-200 rounded-lg bg-white text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-          >
-            <option value="">不使用知识库</option>
-            <option v-for="kb in knowledgeBases" :key="kb.kbId" :value="kb.kbId">
-              {{ kb.kbName }}
-            </option>
-          </select>
-        </div>
-
+      <div class="flex-1 overflow-y-auto min-h-0 custom-scrollbar-glass">
         <!-- 聊天视图需要全高度 -->
         <div v-if="currentView === 'chat'" class="h-full min-h-0">
-          <ChatContainer :knowledge-base-id="selectedKnowledgeBase" />
+          <ChatContainer
+            :knowledge-base-id="selectedKnowledgeBase"
+            :knowledge-bases="knowledgeBases"
+          />
         </div>
 
         <!-- 其他视图使用内边距 -->
@@ -87,7 +82,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useChatStore } from '@/stores/chat'
 import { useAgentStore } from '@/stores/agent'
 import { useBreakpoints } from '@/composables/useBreakpoints'
@@ -98,6 +93,7 @@ import ToolMarket from '@/views/agent/ToolMarket.vue'
 import ModelManagement from '@/views/agent/ModelManagement.vue'
 import McpManagement from '@/views/agent/McpManagement.vue'
 import RagQueryView from '@/views/RagQueryView.vue'
+import ThemeToggle from '@/components/common/ThemeToggle.vue'
 import {
   MessageSquare,
   Bot,
@@ -210,6 +206,33 @@ onMounted(async () => {
   await loadKnowledgeBases()
   // 初始处理侧边栏状态
   handleResize()
+  // 设置深色模式背景
+  updateThemeBackground()
+})
+
+// 更新主题背景
+const updateThemeBackground = () => {
+  const container = document.querySelector('[data-theme-container]') as HTMLElement
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
+  if (container) {
+    container.style.backgroundColor = isDark ? '#1a1a1a' : '#f5f5f5'
+  }
+}
+
+// 监听主题变化
+const observer = new MutationObserver(() => {
+  updateThemeBackground()
+})
+
+onMounted(() => {
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme']
+  })
+})
+
+onUnmounted(() => {
+  observer.disconnect()
 })
 </script>
 

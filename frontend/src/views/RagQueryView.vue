@@ -1,8 +1,8 @@
 <template>
-  <div class="flex h-screen bg-slate-50">
+  <div class="flex h-screen bg-zinc-50">
     <!-- 侧边栏：知识库选择 -->
-    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col p-4">
-      <h2 class="text-lg font-semibold text-slate-900 mb-4">知识库</h2>
+    <aside class="w-64 bg-white border-r border-zinc-200 flex flex-col p-4">
+      <h2 class="text-lg font-semibold text-zinc-900 mb-4">知识库</h2>
 
       <!-- 知识库列表 -->
       <div class="flex-1 space-y-2 overflow-y-auto custom-scrollbar">
@@ -13,7 +13,7 @@
             'px-4 py-3 rounded-xl cursor-pointer transition-all duration-200',
             selectedKbId === kb.kbId
               ? 'bg-indigo-500 text-white shadow-medium'
-              : 'hover:bg-slate-100 text-slate-700'
+              : 'hover:bg-zinc-100 text-zinc-700'
           ]"
           @click="selectedKbId = kb.kbId"
         >
@@ -49,7 +49,7 @@
                   'px-5 py-3 rounded-2xl',
                   msg.role === 'user'
                     ? 'bg-indigo-500 text-white rounded-br-md'
-                    : 'bg-slate-100 text-slate-900 rounded-bl-md'
+                    : 'bg-zinc-100 text-zinc-900 rounded-bl-md'
                 ]"
               >
                 <div
@@ -63,17 +63,17 @@
               <!-- 来源文档信息 -->
               <div
                 v-if="msg.sources && msg.sources.length > 0"
-                class="mt-3 p-4 bg-slate-50 rounded-xl border border-slate-200"
+                class="mt-3 p-4 bg-zinc-50 rounded-xl border border-zinc-200"
               >
                 <div class="flex items-center gap-2 mb-2">
-                  <FileText :size="16" class="text-slate-400" />
-                  <span class="text-sm font-medium text-slate-700">参考来源</span>
+                  <FileText :size="16" class="text-zinc-400" />
+                  <span class="text-sm font-medium text-zinc-700">参考来源</span>
                 </div>
                 <ul class="space-y-1">
                   <li
                     v-for="(source, idx) in msg.sources"
                     :key="idx"
-                    class="text-sm text-slate-600 flex items-center justify-between gap-4"
+                    class="text-sm text-zinc-600 flex items-center justify-between gap-4"
                   >
                     <span class="truncate">{{ source.fileName }}</span>
                     <span
@@ -84,7 +84,7 @@
                           ? 'bg-success-100 text-success-700'
                           : source.score >= 0.6
                           ? 'bg-warning-100 text-warning-700'
-                          : 'bg-slate-100 text-slate-600'
+                          : 'bg-zinc-100 text-zinc-600'
                       ]"
                     >
                       {{ (source.score * 100).toFixed(0) }}%
@@ -97,11 +97,11 @@
 
           <!-- 加载指示器 -->
           <div v-if="isLoading" class="flex justify-start">
-            <div class="bg-slate-100 px-5 py-3 rounded-2xl rounded-bl-md">
+            <div class="bg-zinc-100 px-5 py-3 rounded-2xl rounded-bl-md">
               <div class="flex gap-1">
-                <span class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0ms" />
-                <span class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 150ms" />
-                <span class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 300ms" />
+                <span class="w-2 h-2 bg-zinc-400 rounded-full animate-bounce" style="animation-delay: 0ms" />
+                <span class="w-2 h-2 bg-zinc-400 rounded-full animate-bounce" style="animation-delay: 150ms" />
+                <span class="w-2 h-2 bg-zinc-400 rounded-full animate-bounce" style="animation-delay: 300ms" />
               </div>
             </div>
           </div>
@@ -117,7 +117,7 @@
         </div>
 
         <!-- 输入区 -->
-        <div class="p-4 border-t border-slate-200">
+        <div class="p-4 border-t border-zinc-200">
           <div class="flex gap-3">
             <BaseTextarea
               v-model="query"
@@ -147,18 +147,18 @@
       width="md"
     >
       <div class="space-y-4">
-        <p class="text-sm text-slate-600">
+        <p class="text-sm text-zinc-600">
           支持上传 PDF、TXT、Markdown 格式的文档，AI 将自动处理并建立索引。
         </p>
 
         <!-- 上传区域 -->
         <div
-          class="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-indigo-400 transition-colors cursor-pointer"
+          class="border-2 border-dashed border-zinc-300 rounded-xl p-8 text-center hover:border-indigo-400 transition-colors cursor-pointer"
           @click="$refs.fileInput?.click()"
         >
-          <UploadCloud :size="48" class="mx-auto text-slate-400 mb-3" />
-          <p class="text-sm text-slate-600 mb-1">点击选择文件或拖拽文件到此处</p>
-          <p class="text-xs text-slate-400">支持 .pdf、.txt、.md、.markdown 格式</p>
+          <UploadCloud :size="48" class="mx-auto text-zinc-400 mb-3" />
+          <p class="text-sm text-zinc-600 mb-1">点击选择文件或拖拽文件到此处</p>
+          <p class="text-xs text-zinc-400">支持 .pdf、.txt、.md、.markdown 格式</p>
           <input
             ref="fileInput"
             type="file"
@@ -174,18 +174,18 @@
           <div
             v-for="(file, idx) in selectedFiles"
             :key="idx"
-            class="flex items-center justify-between p-3 bg-slate-50 rounded-lg group"
+            class="flex items-center justify-between p-3 bg-zinc-50 rounded-lg group"
           >
             <div class="flex items-center gap-3 min-w-0">
-              <File :size="20" class="text-slate-400 flex-shrink-0" />
+              <File :size="20" class="text-zinc-400 flex-shrink-0" />
               <div class="min-w-0 flex-1">
-                <p class="text-sm font-medium text-slate-700 truncate">{{ file.name }}</p>
-                <p class="text-xs text-slate-500">{{ formatFileSize(file.size) }}</p>
+                <p class="text-sm font-medium text-zinc-700 truncate">{{ file.name }}</p>
+                <p class="text-xs text-zinc-500">{{ formatFileSize(file.size) }}</p>
               </div>
             </div>
             <button
               @click="selectedFiles.splice(idx, 1)"
-              class="p-1 text-slate-400 hover:text-error-500 transition-colors opacity-0 group-hover:opacity-100"
+              class="p-1 text-zinc-400 hover:text-error-500 transition-colors opacity-0 group-hover:opacity-100"
             >
               <X :size="18" />
             </button>

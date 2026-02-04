@@ -10,6 +10,9 @@ import org.springframework.ai.tool.annotation.ToolParam;
 import java.util.List;
 import java.util.Map;
 
+import static cn.ts.agent.Tool.ToolContextConstants.TOOL_EXTRA_STATE_KEY;
+import static cn.ts.agent.Tool.ToolContextConstants.TOOL_STATE_CONTEXT_KEY;
+
 /**
  * @author: ts
  * @description
@@ -57,8 +60,8 @@ public class WriteToDoTool {
                 return "Error: Tool context is not available";
             }
 
-            // 2. 获取可更新状态（Spring AI Alibaba 约定的键）
-            Object extraStateObj = contextData.get("extraState");
+            // 2. 获取可更新状态（使用 ToolContextConstants 中定义的键）
+            Object extraStateObj = contextData.get(TOOL_EXTRA_STATE_KEY);
             if (extraStateObj == null) {
                 return "Error: Extra state is not initialized";
             }
@@ -99,16 +102,16 @@ public class WriteToDoTool {
                 return "No context available";
             }
 
-            // 从可更新状态中读取 todos
+            // 从可更新状态中读取 todos（使用 ToolContextConstants 中定义的键）
             @SuppressWarnings("unchecked")
-            Map<String, Object> extraState = (Map<String, Object>) contextData.get("_AGENT_STATE_FOR_UPDATE_");
+            Map<String, Object> state = (Map<String, Object>) contextData.get(TOOL_STATE_CONTEXT_KEY);
 
-            if (extraState == null || !extraState.containsKey("todos")) {
+            if (state == null || !state.containsKey("todos")) {
                 return "No todos found in state";
             }
 
             @SuppressWarnings("unchecked")
-            List<TodoItem> todos = (List<TodoItem>) extraState.get("todos");
+            List<TodoItem> todos = (List<TodoItem>) state.get("todos");
 
             if (todos == null || todos.isEmpty()) {
                 return "Todo list is empty";

@@ -2,6 +2,7 @@ package cn.ts.web.dto;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 会话详情（包含消息历史）
@@ -31,15 +32,18 @@ public class SessionDetailDTO extends SessionDTO {
         private String role;      // "user" | "assistant"
         private String content;
         private Instant timestamp;
+        private Map<String,Object> metadata;
 
         public SessionMessage() {
         }
 
-        public SessionMessage(String id, String role, String content, Instant timestamp) {
+        public SessionMessage(String id, String role, String content, Instant timestamp, Map<String,Object> metadata) {
             this.id = id;
             this.role = role;
             this.content = content;
             this.timestamp = timestamp;
+            this.metadata = metadata;
+
         }
 
         public String getId() {
@@ -72,6 +76,13 @@ public class SessionDetailDTO extends SessionDTO {
 
         public void setTimestamp(Instant timestamp) {
             this.timestamp = timestamp;
+        }
+
+        public Map<String,Object> getMetadata() {
+            return metadata;
+        }
+        public void setMetadata(Map<String,Object> metadata) {
+            this.metadata = metadata;
         }
     }
 }
