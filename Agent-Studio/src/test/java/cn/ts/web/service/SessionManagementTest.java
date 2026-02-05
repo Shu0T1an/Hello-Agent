@@ -40,6 +40,9 @@ class SessionManagementTest {
         SessionService mockSessionService = mock(SessionService.class);
         CheckpointManager mockCheckpointManager = mock(CheckpointManager.class);
         mockConfig = mock(AgentExecutionConfig.class);
+        MessageConversionService mockMessageConversionService = mock(MessageConversionService.class);
+        AgentRegistry mockAgentRegistry = mock(AgentRegistry.class);
+        AgentResponseBuilder mockResponseBuilder = mock(AgentResponseBuilder.class);
 
         // 设置 mock 配置行为
         when(mockConfig.getTimeout()).thenReturn(java.time.Duration.ofSeconds(300));
@@ -48,11 +51,13 @@ class SessionManagementTest {
         when(mockConfig.getDefaultMaxIterations()).thenReturn(10);
         when(mockConfig.isDebugMode()).thenReturn(false);
 
-        service = new AgentExecutionService(mockSessionService, mockCheckpointManager, mockConfig);
+        service = new AgentExecutionService(mockAgentRegistry, mockSessionService, mockCheckpointManager,
+                mockConfig, mockMessageConversionService, mockResponseBuilder);
         mockGraph = mock(CompiledGraph.class);
 
-        // 注册测试用的 Agent
-        service.registerGraph("testAgent", mockGraph);
+        // 设置 AgentRegistry mock 行为
+        when(mockAgentRegistry.get("testAgent")).thenReturn(mockGraph);
+        when(mockAgentRegistry.isRegistered("testAgent")).thenReturn(true);
     }
 
     @Test

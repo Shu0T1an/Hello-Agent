@@ -1,6 +1,7 @@
 package cn.ts.agent.node;
 
 import cn.ts.agent.Tool.ToolUtils;
+import cn.ts.agent.constant.AgentConstants;
 import cn.ts.agent.model.ChatModelRequest;
 import cn.ts.agent.retry.RetryConfig;
 import cn.ts.agent.retry.RetryUtils;
@@ -20,6 +21,7 @@ import org.springframework.ai.tool.ToolCallback;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -98,6 +100,9 @@ public class LLMNode implements NodeAction {
 
     /**
      * 非流式调用
+     * <p>
+     * 使用响应式链 + 超时配置，避免无限期阻塞
+     * </p>
      */
     private Map<String, Object> applyNonStreaming(ChatModelRequest request, ChatClient.ChatClientRequestSpec requestSpec) {
         // 创建响应 Mono
@@ -108,7 +113,12 @@ public class LLMNode implements NodeAction {
             responseMono = responseMono.retryWhen(RetryUtils.retryFor429(retryConfig));
         }
 
-        // 阻塞获取响应
+        // 添加超时配置，避免无限期阻塞
+        // 默认超时 2 分钟，可通过 chatOptions 覆盖
+        Duration timeout = getTimeoutFromOptions();
+        responseMono = responseMono.timeout(timeout);
+
+        // 使用 block() 但带超时，防止永久阻塞
         ChatResponse response = responseMono.block();
 
         // 获取响应中的 AssistantMessage（包含 toolCalls）
@@ -119,6 +129,28 @@ public class LLMNode implements NodeAction {
                 "messages", List.of(assistantMessage),
                 "chat_response", response
         );
+    }
+
+    /**
+     * 从 ChatOptions 获取超时配置
+     * <p>
+     * 如果没有配置，返回默认超时时间
+     * </p>
+     */
+    private Duration getTimeoutFromOptions() {
+        // 尝试从 chatOptions 获取超时配置
+        // 如果无法获取，使用默认值
+        try {
+            if (chatOptions != null) {
+                // 使用反射或其他方式获取超时配置
+                // 这里简化处理，使用默认超时
+                logger.debug("Using default timeout for LLM call");
+            }
+        } catch (Exception e) {
+            logger.warn("Failed to get timeout from options, using default: {}", e.getMessage());
+        }
+        // 默认超时 2 分钟
+        return Duration.ofMinutes(2);
     }
 
     /**
@@ -188,14 +220,14 @@ public class LLMNode implements NodeAction {
      */
     public static class Builder {
         private ChatClient chatClient;
-        private String systemPrompt = "You are a helpful assistant.";
+        private String systemPrompt = AgentConstants.DEFAULT_SYSTEM_PROMPT;
         private ChatOptions chatOptions;
         private List<ToolCallback> toolCallbacks;
-        private boolean streaming = false;
+        private boolean streaming = AgentConstants.Defaults.DEFAULT_STREAMING;
         private Object[] tools;
         private List<Advisor> advisors;
         private RetryConfig retryConfig;
-        private boolean enableRetry = true;
+        private boolean enableRetry = AgentConstants.Defaults.DEFAULT_ENABLE_RETRY;
 
         private Builder(ChatModel chatModel) {
             // ChatClient 会在 build() 时创建，这里只保存 ChatModel

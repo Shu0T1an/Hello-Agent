@@ -1,5 +1,6 @@
 package cn.ts.web.service;
 
+import cn.ts.web.constant.SessionConstants;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.stereotype.Service;
 
@@ -28,7 +29,7 @@ public class TitleGeneratorService {
      */
     public String generateTitle(String userMessage) {
         if (userMessage == null || userMessage.isEmpty()) {
-            return "新对话";
+            return SessionConstants.DEFAULT_SESSION_TITLE;
         }
 
         // 截取前100个字符作为上下文

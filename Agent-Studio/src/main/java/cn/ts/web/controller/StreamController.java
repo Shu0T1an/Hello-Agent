@@ -1,9 +1,12 @@
 package cn.ts.web.controller;
 
+import cn.ts.graph.state.State;
 import cn.ts.web.config.AgentExecutionConfig;
 import cn.ts.web.dto.AgentResponse;
+import cn.ts.web.dto.GraphStateVO;
 import cn.ts.web.dto.SessionDetailDTO;
 import cn.ts.web.service.AgentExecutionService;
+import cn.ts.web.service.GraphStateService;
 import cn.ts.web.service.SessionService;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
@@ -36,14 +39,15 @@ public class StreamController {
     private final AgentExecutionService agentExecutionService;
     private final SessionService sessionService;
     private final AgentExecutionConfig config;
-
+    private final GraphStateService graphStateService;
     public StreamController(
             AgentExecutionService agentExecutionService,
             SessionService sessionService,
-            AgentExecutionConfig config) {
+            AgentExecutionConfig config, GraphStateService graphStateService) {
         this.agentExecutionService = agentExecutionService;
         this.sessionService = sessionService;
         this.config = config;
+        this.graphStateService = graphStateService;
     }
 
     /**
@@ -81,41 +85,36 @@ public class StreamController {
         }
 
         // 构建消息列表（包含历史消息）
-        List<Message> messages = new ArrayList<>();
+//        List<Message> messages = new ArrayList<>();
 
         // 如果有 sessionId，从会话服务加载历史消息
-        if (sessionId != null && !sessionId.isEmpty()) {
-            sessionService.getSession(sessionId).ifPresent(sessionDetail -> {
-                if (sessionDetail.getMessages() != null) {
-                    for (SessionDetailDTO.SessionMessage msg : sessionDetail.getMessages()) {
-                        Message message = convertToSpringAIMessage(msg);
-                        if (message != null) {
-                            messages.add(message);
-                        }
-                    }
-                }
-            });
-        }
+//        if (sessionId != null && !sessionId.isEmpty()) {
+//            sessionService.getSession(sessionId).ifPresent(sessionDetail -> {
+//                if (sessionDetail.getMessages() != null) {
+//                    for (SessionDetailDTO.SessionMessage msg : sessionDetail.getMessages()) {
+//                        Message message = convertToSpringAIMessage(msg);
+//                        if (message != null) {
+//                            messages.add(message);
+//                        }
+//                    }
+//                }
+//            });
+//        }
 
         // 添加当前用户输入
-        if (request.getInput() != null && !request.getInput().isEmpty()) {
-            messages.add(new UserMessage(request.getInput()));
-        }
 
         // 创建 messages 副本，避免 Graph 执行修改原始列表
-        List<Message> messagesCopy = new ArrayList<>(messages);
 
-        // 合并初始状态
-        Map<String, Object> mergedState = new HashMap<>();
-        if (request.getInitialState() != null) {
-            mergedState.putAll(request.getInitialState());
-        }
-        if (!messagesCopy.isEmpty()) {
-            mergedState.put("messages", messagesCopy);
-        }
+
+        // 合并初始状态 - 创建可变副本避免修改不可变集合
+        GraphStateVO initialState = graphStateService.getGraphState(sessionId);
+        Map<String, Object> stateData = initialState.getStateData();
+        Map<String, Object> mergedState = new HashMap<>(stateData);
+        List<Message> messages = (List<Message>)mergedState.get("messages");
         // 保存用户输入，用于 extractUserInput 提取
         if (request.getInput() != null && !request.getInput().isEmpty()) {
             mergedState.put("input", request.getInput());
+            messages.add(new UserMessage(request.getInput()));
         }
 
         // 确定超时时间

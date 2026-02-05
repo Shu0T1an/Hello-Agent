@@ -3,11 +3,14 @@ package cn.ts.web.service;
 import cn.ts.graph.checkpoint.CheckpointManager;
 import cn.ts.graph.checkpoint.CheckpointMetadata;
 import cn.ts.graph.checkpoint.StateSnapshot;
+import cn.ts.graph.util.TypeSafeStateUtils;
+import cn.ts.web.constant.SessionConstants;
 import cn.ts.web.dto.SessionDetailDTO;
 import cn.ts.web.dto.SessionDTO;
 import cn.ts.web.entity.SessionEntity;
 import cn.ts.web.mapper.CheckpointMapper;
 import cn.ts.web.mapper.SessionMapper;
+import cn.ts.agent.util.MessageUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -98,9 +101,9 @@ public class SessionService {
         // 1. 创建 Session 记录
         SessionEntity session = new SessionEntity()
                 .setSessionId(sessionId)
-                .setTitle(title != null && !title.isEmpty() ? title : "新对话")
+                .setTitle(title != null && !title.isEmpty() ? title : SessionConstants.DEFAULT_SESSION_TITLE)
                 .setCurrentAgent(agentName)
-                .setStatus("active")
+                .setStatus(SessionConstants.STATUS_ACTIVE)
                 .setAgentSwitchHistory("[]")
                 .setCreatedAt(Instant.now())
                 .setUpdatedAt(Instant.now());
@@ -108,23 +111,23 @@ public class SessionService {
 
         // 2. 创建初始 Checkpoint
         Map<String, Object> state = new HashMap<>();
-        state.put("messages", new ArrayList<>());
-        state.put("current_agent", agentName);
-        state.put("agent_history", new ArrayList<>());
-        state.put("iteration", 0);
+        state.put(SessionConstants.StateKeys.MESSAGES, new ArrayList<>());
+        state.put(SessionConstants.StateKeys.CURRENT_AGENT, agentName);
+        state.put(SessionConstants.StateKeys.AGENT_HISTORY, new ArrayList<>());
+        state.put(SessionConstants.StateKeys.ITERATION, SessionConstants.Defaults.DEFAULT_ITERATION);
 
         CheckpointMetadata metadata = CheckpointMetadata.builder()
-                .source("manual")
-                .stepInfo(Map.of("title", title != null && !title.isEmpty() ? title : "新对话"))
+                .source(SessionConstants.Checkpoint.SOURCE_MANUAL)
+                .stepInfo(Map.of("title", title != null && !title.isEmpty() ? title : SessionConstants.DEFAULT_SESSION_TITLE))
                 .build();
 
         StateSnapshot snapshot = StateSnapshot.builder()
                 .checkpointId(UUID.randomUUID().toString())
                 .threadId(sessionId)
-                .nodeId("INIT")
+                .nodeId(SessionConstants.Checkpoint.INIT_NODE)
                 .state(state)
                 .metadata(metadata)
-                .iteration(0)
+                .iteration(SessionConstants.Defaults.DEFAULT_ITERATION)
                 .build();
 
         checkpointManager.getStorage().saveCheckpoint(sessionId, snapshot);
@@ -212,19 +215,18 @@ public class SessionService {
         Map<String, Object> state = new HashMap<>(latest.getState());
 
         // 添加消息
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> messages = (List<Map<String, Object>>) state.getOrDefault("messages", new ArrayList<>());
+        List<Map<String, Object>> messages = TypeSafeStateUtils.getListFromMapOrEmpty(state, SessionConstants.StateKeys.MESSAGES);
         Map<String, Object> message = new HashMap<>();
         message.put("id", UUID.randomUUID().toString());
         message.put("role", role);
         message.put("content", content);
         message.put("timestamp", Instant.now().toString());
         messages.add(message);
-        state.put("messages", messages);
+        state.put(SessionConstants.StateKeys.MESSAGES, messages);
 
         // 创建新 Checkpoint
         CheckpointMetadata metadata = CheckpointMetadata.builder()
-                .source("manual")
+                .source(SessionConstants.Checkpoint.SOURCE_MANUAL)
                 .parentId(latest.getCheckpointId())
                 .build();
 
@@ -341,8 +343,7 @@ public class SessionService {
         Optional<StateSnapshot> latestOpt = checkpointManager.getState(entity.getSessionId());
         if (latestOpt.isPresent()) {
             Map<String, Object> state = latestOpt.get().getState();
-            @SuppressWarnings("unchecked")
-            List<?> messages = (List<?>) state.getOrDefault("messages", new ArrayList<>());
+            List<?> messages = TypeSafeStateUtils.getListFromMapOrEmpty(state, SessionConstants.StateKeys.MESSAGES);
             messageCount = messages.size();
         }
 
@@ -422,55 +423,14 @@ public class SessionService {
      * </p>
      */
     private Map<String, Object> extractMetadata(Message message) {
-        HashMap<String, Object> metadata = new HashMap<>();
-
-        if (message instanceof UserMessage || message instanceof SystemMessage) {
-            return metadata;
-        }
-
-        // AssistantMessage - 提取工具调用信息
-        if (message instanceof AssistantMessage assistantMessage) {
-            if (assistantMessage.hasToolCalls()) {
-                List<Map<String, Object>> toolCallsList = new ArrayList<>();
-                for (AssistantMessage.ToolCall toolCall : assistantMessage.getToolCalls()) {
-                    Map<String, Object> toolCallInfo = new HashMap<>();
-                    toolCallInfo.put("id", toolCall.id());
-                    toolCallInfo.put("name", toolCall.name());
-                    toolCallInfo.put("type", toolCall.type());
-                    toolCallInfo.put("arguments", toolCall.arguments());
-                    toolCallsList.add(toolCallInfo);
-                }
-                metadata.put("tool_calls", toolCallsList);
-            }
-            return metadata;
-        }
-
-        // ToolResponseMessage - 提取工具响应信息
-        if (message instanceof ToolResponseMessage toolResponseMessage) {
-            List<Map<String, Object>> toolResponsesList = new ArrayList<>();
-            for (ToolResponseMessage.ToolResponse response : toolResponseMessage.getResponses()) {
-                Map<String, Object> responseInfo = new HashMap<>();
-                responseInfo.put("id", response.id());
-                responseInfo.put("name", response.name());
-                responseInfo.put("response", response.responseData());
-                toolResponsesList.add(responseInfo);
-            }
-            metadata.put("tool_responses", toolResponsesList);
-            return metadata;
-        }
-
-        throw new RuntimeException("Unknown message type: " + message.getClass());
+        return MessageUtils.MessageExtractor.extractMetadata(message);
     }
 
     /**
      * 从 Message 对象提取角色
      */
     private String extractRole(Message message) {
-        if (message instanceof UserMessage) return "user";
-        if(message instanceof AssistantMessage && ((AssistantMessage) message).hasToolCalls()) return "tool_call";
-        if (message instanceof AssistantMessage) return "assistant";
-        if(message instanceof ToolResponseMessage) return "tool_response";
-        return "user"; // 默认
+        return MessageUtils.MessageExtractor.extractRole(message);
     }
 
     /**
@@ -480,45 +440,7 @@ public class SessionService {
      * </p>
      */
     private String extractContent(Message message) {
-        if (message instanceof UserMessage userMessage) {
-            return userMessage.getText();
-        }
-
-        // AssistantMessage 处理
-        if (message instanceof AssistantMessage assistantMessage) {
-            // 有工具调用时，格式化显示工具调用信息
-            if (assistantMessage.hasToolCalls()) {
-                List<AssistantMessage.ToolCall> toolCalls = assistantMessage.getToolCalls();
-                StringBuilder sb = new StringBuilder();
-                for (AssistantMessage.ToolCall toolCall : toolCalls) {
-                    String id = toolCall.id();
-                    String name = toolCall.name();
-                    String arguments = toolCall.arguments();
-                    // 格式化：工具调用名称和参数
-                    sb.append("**调用工具**: `").append(name).append("`\n\n");
-                    sb.append("**参数**: ```json\n").append(arguments).append("\n```\n");
-                }
-                return sb.toString();
-            }
-            // 普通的 assistant 消息，直接返回文本
-            return assistantMessage.getText();
-        }
-
-        // ToolResponseMessage 处理
-        if (message instanceof ToolResponseMessage toolResponseMessage) {
-            List<ToolResponseMessage.ToolResponse> responses = toolResponseMessage.getResponses();
-            StringBuilder sb = new StringBuilder();
-            for (ToolResponseMessage.ToolResponse response : responses) {
-                String name = response.name();
-                String result = response.responseData();
-                // 格式化：工具响应结果
-                sb.append("**工具结果**: `").append(name).append("` \n\n");
-                sb.append("**返回值**: ```\n").append(result).append("\n```\n");
-            }
-            return sb.toString();
-        }
-
-        return "这是一条空消息";
+        return MessageUtils.MessageExtractor.extractContent(message);
     }
 
     /**

@@ -1,7 +1,9 @@
 package cn.ts.agent.core;
 
 import cn.ts.agent.api.*;
+import cn.ts.agent.constant.StateKeys;
 import cn.ts.agent.node.*;
+import cn.ts.agent.util.MessageUtils;
 import cn.ts.graph.*;
 import cn.ts.graph.checkpoint.CheckpointManager;
 import cn.ts.graph.config.RunnableConfig;
@@ -16,6 +18,8 @@ import cn.ts.graph.state.MapState;
 import cn.ts.graph.state.State;
 import cn.ts.graph.state.strategy.AppendStrategy;
 import cn.ts.graph.state.strategy.ReplaceStrategy;
+import cn.ts.graph.util.StateFactory;
+import cn.ts.graph.util.StateTemplates;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
@@ -181,17 +185,11 @@ public class ReactAgent implements Agent {
     @Override
     public AgentResult invoke(String input, AgentConfig config) {
         try {
-            // 准备初始状态
-            Map<String, Object> initialState = Map.of(
-                    "input", input,
-                    "max_iterations", config.getMaxIterations(),
-                    "iteration", 0,
-                    "messages", new ArrayList<Message>(),
-                    "execute_record", new ArrayList<Map<String, Object>>()
-            );
+            // 使用 StateTemplates 创建初始状态
+            State initialState = StateTemplates.createAgentInitialState(input, config.getMaxIterations());
 
             // 执行图
-            GraphResult graphResult = graph.invoke(initialState);
+            GraphResult graphResult = graph.invoke(initialState.data());
 
             // 转换结果
             if (graphResult.isFailure()) {
@@ -200,7 +198,7 @@ public class ReactAgent implements Agent {
 
             // 从 messages 中获取最后的 assistant 消息作为输出
             List<Message> messages = graphResult.finalState()
-                    .<List<Message>>value("messages")
+                    .<List<Message>>value(StateKeys.MESSAGES)
                     .orElse(new ArrayList<>());
 
             // 获取最后一个 assistant 消息
@@ -217,7 +215,7 @@ public class ReactAgent implements Agent {
             // 如果没有找到 assistant 消息，尝试从 chat_response 获取
             if (output.isEmpty()) {
                 ChatResponse response = graphResult.finalState()
-                        .<ChatResponse>value("chat_response")
+                        .<ChatResponse>value(StateKeys.CHAT_RESPONSE)
                         .orElse(null);
                 if (response != null && !response.getResults().isEmpty()) {
                     output = response.getResults().get(0).getOutput().getText();
@@ -301,7 +299,7 @@ public class ReactAgent implements Agent {
 
         // 创建核心节点
         LLMNode llmNode = LLMNode.builder(chatModel)
-                .systemPrompt("You are a helpful assistant.")
+                .systemPrompt(cn.ts.agent.constant.AgentConstants.DEFAULT_SYSTEM_PROMPT)
                 .streaming(streaming)
                 .tools(safeTools)
                 .advisors(advisors != null ? advisors : new ArrayList<>())
@@ -490,19 +488,12 @@ public class ReactAgent implements Agent {
     /**
      * 配置状态初始化器
      * <p>
-     * 提取为私有方法，提高代码可读性
+     * 使用 StateFactory 统一状态创建逻辑
      * </p>
      */
     private static void configureStateInitializer(StateGraph graph) {
-        graph.setStateInitializer(() -> {
-            MapState state = new MapState();
-            state.registerKeyStrategy("messages", AppendStrategy.getInstance());
-            state.registerKeyStrategy("iteration", ReplaceStrategy.getInstance());
-            state.registerKeyStrategy("max_iterations", ReplaceStrategy.getInstance());
-            state.registerKeyStrategy("execute_record", AppendStrategy.getInstance());
-            logger.debug("State initialized with keys: {}", state.keys());
-            return state;
-        });
+        StateFactory factory = StateTemplates.defaultFactory();
+        graph.setStateInitializer(factory::createStateWithDefaultStrategies);
     }
 
     /**
@@ -515,18 +506,8 @@ public class ReactAgent implements Agent {
      * </p>
      */
     private static String routeFromModel(State state) {
-        List<Message> messages = state.value("messages", new ArrayList<Message>());
-        if (messages.isEmpty()) {
-            return NodeNames.END;
-        }
-
-        Message last = messages.get(messages.size() - 1);
-        if (last instanceof AssistantMessage am && am.hasToolCalls()) {
-            return NodeNames.TOOL;
-        } else if (last instanceof ToolResponseMessage) {
-            return NodeNames.MODEL;
-        }
-        return NodeNames.END;
+        List<Message> messages = state.value(StateKeys.MESSAGES, new ArrayList<Message>());
+        return MessageUtils.MessageRouter.routeFromModel(messages, NodeNames.TOOL, NodeNames.MODEL, NodeNames.END);
     }
 
     /**
@@ -536,8 +517,8 @@ public class ReactAgent implements Agent {
      * </p>
      */
     private static String routeFromTool(State state) {
-        int iteration = state.<Integer>value("iteration").orElse(0);
-        int maxIterations = state.<Integer>value("max_iterations").orElse(10);
+        int iteration = state.<Integer>value(StateKeys.ITERATION).orElse(0);
+        int maxIterations = state.<Integer>value(StateKeys.MAX_ITERATIONS).orElse(10);
         // iteration 已在 ToolNode 中递增
         return (iteration < maxIterations) ? NodeNames.MODEL : NodeNames.END;
     }
