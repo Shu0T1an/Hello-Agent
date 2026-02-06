@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS checkpoint_snapshots (
     session_id VARCHAR(100) NOT NULL,
     checkpoint_id VARCHAR(100) NOT NULL,
     node_id VARCHAR(100),
+    last_node_id VARCHAR(100),
     parent_id VARCHAR(100),
     state_json JSONB NOT NULL,
     metadata_json JSONB NOT NULL,
@@ -55,6 +56,7 @@ COMMENT ON TABLE checkpoint_snapshots IS 'Checkpoint 快照表，存储执行状
 COMMENT ON COLUMN checkpoint_snapshots.session_id IS '关联的会话ID（外键）';
 COMMENT ON COLUMN checkpoint_snapshots.checkpoint_id IS 'Checkpoint 唯一标识';
 COMMENT ON COLUMN checkpoint_snapshots.node_id IS '当前执行的节点ID';
+COMMENT ON COLUMN checkpoint_snapshots.last_node_id IS '上一个执行的节点ID，用于追踪执行流程';
 COMMENT ON COLUMN checkpoint_snapshots.parent_id IS '父 Checkpoint ID，支持检查点链';
 COMMENT ON COLUMN checkpoint_snapshots.state_json IS '完整状态（JSON 格式）';
 COMMENT ON COLUMN checkpoint_snapshots.metadata_json IS '元数据（JSON 格式）';

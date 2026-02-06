@@ -20,7 +20,7 @@ public class AgentExecutionConfig {
     private Duration timeout = Duration.ofSeconds(300);
     private Duration heartbeatInterval = Duration.ofSeconds(30);
     private int maxTitleLength = 15;
-    private int defaultMaxIterations = 10;
+    private int defaultMaxIterations = 100;
     private boolean debugMode = false;
     private RetryConfig retry = new RetryConfig();
 

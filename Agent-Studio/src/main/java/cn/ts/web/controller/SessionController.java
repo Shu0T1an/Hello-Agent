@@ -156,4 +156,15 @@ public class SessionController {
             return Result.error(ResultCode.BAD_REQUEST, e.getMessage());
         }
     }
+
+    /**
+     * 删除所有会话
+     *
+     * @return 删除结果（包含删除数量）
+     */
+    @DeleteMapping("/delete-all")
+    public Result<Map<String, Integer>> deleteAllSessions() {
+        int count = sessionService.deleteAllSessions();
+        return Result.success(Map.of("count", count));
+    }
 }

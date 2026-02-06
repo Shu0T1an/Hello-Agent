@@ -75,7 +75,7 @@ public class ToolNode implements NodeAction {
     @Override
     public Map<String, Object> apply(State state) throws Exception {
         Instant startTime = Instant.now();
-        logger.debug("ToolNode processing state: {}", state);
+        logger.debug("ToolNode processing");
 
         // 1. 验证消息并获取最后一条 AssistantMessage
         Optional<AssistantMessage> lastMessageOpt = validateAndGetLastMessage(state);

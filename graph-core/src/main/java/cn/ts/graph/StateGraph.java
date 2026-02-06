@@ -6,6 +6,7 @@ import cn.ts.graph.edge.Edge;
 import cn.ts.graph.edge.EdgeAction;
 import cn.ts.graph.node.Node;
 import cn.ts.graph.node.NodeAction;
+import cn.ts.graph.observation.GraphLifecycleListener;
 import cn.ts.graph.state.MapState;
 import cn.ts.graph.state.State;
 import cn.ts.graph.visualization.MermaidGraphVisualizer;
@@ -30,6 +31,7 @@ public class StateGraph {
     private String entryPoint;
     private Supplier<State> stateInitializer = MapState::new;
     private CheckpointManager checkpointManager;
+    private final List<GraphLifecycleListener> lifecycleListeners = new ArrayList<>();
 
     /**
      * 创建一个空的图构建器
@@ -169,6 +171,20 @@ public class StateGraph {
     }
 
     /**
+     * 添加生命周期监听器
+     * <p>
+     * 用于监听图执行的各个阶段，实现可观测性、日志记录、性能监控等功能
+     * </p>
+     *
+     * @param listener 生命周期监听器
+     * @return 当前图构建器，支持链式调用
+     */
+    public StateGraph withLifecycleListener(GraphLifecycleListener listener) {
+        this.lifecycleListeners.add(listener);
+        return this;
+    }
+
+    /**
      * 编译图为可执行的结构
      * <p>
      * 使用 GraphConfig 封装图数据，然后创建 CompiledGraph
@@ -183,7 +199,8 @@ public class StateGraph {
                 new ArrayList<>(edges),
                 entryPoint,
                 stateInitializer,
-                checkpointManager
+                checkpointManager,
+                new ArrayList<>(lifecycleListeners)
         );
         return new CompiledGraph(graphConfig);
     }

@@ -18,6 +18,7 @@ public class StateSnapshot {
     private final String checkpointId;
     private final String threadId;
     private final String nodeId;
+    private final String lastNodeId;
     private final Map<String, Object> state;
     private final CheckpointMetadata metadata;
     private final Instant timestamp;
@@ -27,6 +28,7 @@ public class StateSnapshot {
         this.checkpointId = builder.checkpointId;
         this.threadId = builder.threadId;
         this.nodeId = builder.nodeId;
+        this.lastNodeId = builder.lastNodeId;
         this.state = builder.state != null ? Map.copyOf(builder.state) : Map.of();
         this.metadata = builder.metadata;
         this.timestamp = builder.timestamp != null ? builder.timestamp : Instant.now();
@@ -67,6 +69,15 @@ public class StateSnapshot {
      */
     public String getNodeId() {
         return nodeId;
+    }
+
+    /**
+     * 获取上一个节点ID
+     *
+     * @return 上一个节点ID，如果不存在则返回 null
+     */
+    public String getLastNodeId() {
+        return lastNodeId;
     }
 
     /**
@@ -130,6 +141,7 @@ public class StateSnapshot {
                 "checkpointId='" + checkpointId + '\'' +
                 ", threadId='" + threadId + '\'' +
                 ", nodeId='" + nodeId + '\'' +
+                ", lastNodeId='" + lastNodeId + '\'' +
                 ", state=" + state +
                 ", metadata=" + metadata +
                 ", timestamp=" + timestamp +
@@ -144,6 +156,7 @@ public class StateSnapshot {
         private String checkpointId = UUID.randomUUID().toString();
         private String threadId;
         private String nodeId;
+        private String lastNodeId;
         private Map<String, Object> state;
         private CheckpointMetadata metadata;
         private Instant timestamp;
@@ -179,6 +192,17 @@ public class StateSnapshot {
          */
         public Builder nodeId(String nodeId) {
             this.nodeId = nodeId;
+            return this;
+        }
+
+        /**
+         * 设置上一个节点ID
+         *
+         * @param lastNodeId 上一个节点ID
+         * @return this
+         */
+        public Builder lastNodeId(String lastNodeId) {
+            this.lastNodeId = lastNodeId;
             return this;
         }
 

@@ -245,6 +245,35 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
+  async function deleteAllSessions() {
+    try {
+      const response = await fetch(`${API_BASE}/api/sessions/delete-all`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+
+      const result: { code: number; message: string; data?: { count: number } } = await response.json()
+
+      // 清空会话列表
+      sessions.value = []
+      currentSessionId.value = ''
+      // 创建默认会话
+      await createNewSession()
+
+      return result.data?.count ?? 0
+    } catch (error) {
+      console.error('删除所有会话失败:', error)
+      // 即使 API 调用失败，也清空本地会话列表并创建默认会话
+      sessions.value = []
+      currentSessionId.value = ''
+      await createNewSession()
+      throw error
+    }
+  }
+
   function switchSession(sessionId: string) {
     currentSessionId.value = sessionId
     // 从后端加载会话详情
@@ -835,6 +864,7 @@ export const useChatStore = defineStore('chat', () => {
     switchSession,
     createNewSession,
     deleteSession,
+    deleteAllSessions,
     setStrategy,
     setKnowledgeBaseId
   }

@@ -77,6 +77,15 @@ public class GraphRunner {
         Instant startTime = Instant.now();
         List<GraphResult.NodeExecution> executionHistory = new ArrayList<>();
 
+        // 调用 onStart 监听器
+        this.config.lifecycleListeners().forEach(listener -> {
+            try {
+                listener.onStart(this.config.entryPoint(), initialState, config);
+            } catch (Exception e) {
+                logger.warn("Error in start listener", e);
+            }
+        });
+
         try {
             // 使用状态初始化器创建状态
             Supplier<State> stateInitializer = this.config.stateInitializer() != null
@@ -134,6 +143,16 @@ public class GraphRunner {
             if (config.onComplete() != null) {
                 config.onComplete().accept(result);
             }
+
+            // 调用 onComplete 监听器
+            this.config.lifecycleListeners().forEach(listener -> {
+                try {
+                    listener.onComplete(GraphConstants.END, state.data(), config);
+                } catch (Exception e) {
+                    logger.warn("Error in complete listener", e);
+                }
+            });
+
             return result;
 
         } catch (Exception e) {
@@ -142,6 +161,16 @@ public class GraphRunner {
             if (config.onError() != null) {
                 config.onError().accept(result);
             }
+
+            // 调用 onError 监听器
+            this.config.lifecycleListeners().forEach(listener -> {
+                try {
+                    listener.onError(null, initialState, e, config);
+                } catch (Exception ex) {
+                    logger.warn("Error in error listener", ex);
+                }
+            });
+
             return result;
         }
     }
@@ -203,6 +232,17 @@ public class GraphRunner {
     private Flux<GraphResponse<NodeOutput>> runStreamInternal(
             Map<String, Object> initialState, RunnableConfig config, String startNode) {
 
+        // 调用 onStart 监听器
+        logger.info("Calling lifecycle listeners for stream start, listeners count: {}", this.config.lifecycleListeners().size());
+        this.config.lifecycleListeners().forEach(listener -> {
+            try {
+                logger.info("Calling onStart listener: {}", listener.getClass().getSimpleName());
+                listener.onStart(startNode, initialState, config);
+            } catch (Exception e) {
+                logger.warn("Error in start listener (stream)", e);
+            }
+        });
+
         // 创建上下文（使用 stateInitializer 和 checkpointManager）
         Supplier<State> stateInitializer = this.config.stateInitializer() != null
                 ? this.config.stateInitializer()
@@ -217,7 +257,27 @@ public class GraphRunner {
 
         // 使用 defer() 实现响应式递归
         return executeNodeStream(context)
-                .concatWith(Flux.defer(() -> executeNextStream(context)));
+                .concatWith(Flux.defer(() -> executeNextStream(context)))
+                .doOnComplete(() -> {
+                    // 调用 onComplete 监听器
+                    this.config.lifecycleListeners().forEach(listener -> {
+                        try {
+                            listener.onComplete(GraphConstants.END, context.getOverallState().data(), config);
+                        } catch (Exception e) {
+                            logger.warn("Error in complete listener (stream)", e);
+                        }
+                    });
+                })
+                .doOnError(error -> {
+                    // 调用 onError 监听器
+                    this.config.lifecycleListeners().forEach(listener -> {
+                        try {
+                            listener.onError(null, initialState, error, config);
+                        } catch (Exception e) {
+                            logger.warn("Error in error listener (stream)", e);
+                        }
+                    });
+                });
     }
 
     /**
@@ -250,6 +310,16 @@ public class GraphRunner {
                     new GraphResult.NodeExecution(nodeId, java.time.Instant.now(), java.time.Instant.now()));
         }
 
+        // 节点执行前调用监听器
+        long startTime = System.currentTimeMillis();
+        this.config.lifecycleListeners().forEach(listener -> {
+            try {
+                listener.before(nodeId, context.getOverallState().data(), context.getConfig(), startTime);
+            } catch (Exception e) {
+                logger.warn("Error in before listener for node: {} (stream)", nodeId, e);
+            }
+        });
+
         // 执行节点
         return nodeExecutor.execute(node, context)
                 .doOnNext(response -> {
@@ -262,11 +332,31 @@ public class GraphRunner {
                                 new GraphResult.NodeExecution(nodeId, java.time.Instant.now(), java.time.Instant.now()));
                     }
                 })
+                .doOnComplete(() -> {
+                    // 节点流式执行完成后调用监听器（记录整个流式持续时间）
+                    long endTime = System.currentTimeMillis();
+                    this.config.lifecycleListeners().forEach(listener -> {
+                        try {
+                            listener.after(nodeId, context.getOverallState().data(), context.getConfig(), endTime);
+                        } catch (Exception e) {
+                            logger.warn("Error in after listener for node: {} (stream)", nodeId, e);
+                        }
+                    });
+                })
                 .doOnError(error -> {
                     if (context.getConfig().onError() != null) {
                         context.getConfig().onError().accept(GraphResult.failure(error, List.of(),
                                 java.time.Instant.now(), java.time.Instant.now()));
                     }
+
+                    // 节点错误时调用监听器
+                    this.config.lifecycleListeners().forEach(listener -> {
+                        try {
+                            listener.onError(nodeId, context.getOverallState().data(), error, context.getConfig());
+                        } catch (Exception e) {
+                            logger.warn("Error in error listener for node: {} (stream)", nodeId, e);
+                        }
+                    });
                 });
     }
 
@@ -297,6 +387,7 @@ public class GraphRunner {
             return Flux.just(GraphResponse.complete());
         }
 
+        logger.info("Executing next node: currentNodeId={}, nextNodeId={} iteration={}", currentNodeId, nextNodeId, context.getIteration());
         // 创建下一个迭代的上下文
         GraphRunnerContext nextContext = context.forNextIteration(nextNodeId);
 
@@ -316,6 +407,15 @@ public class GraphRunner {
     private NodeExecutionResult executeNode(String nodeId, State state, RunnableConfig config) {
         Instant nodeStartTime = Instant.now();
         Map<String, Object> stateUpdates = new HashMap<>();
+
+        // 节点执行前调用监听器
+        this.config.lifecycleListeners().forEach(listener -> {
+            try {
+                listener.before(nodeId, state.data(), config, nodeStartTime.toEpochMilli());
+            } catch (Exception e) {
+                logger.warn("Error in before listener for node: {}", nodeId, e);
+            }
+        });
 
         try {
             Node node = this.config.nodes().get(nodeId);
@@ -352,12 +452,33 @@ public class GraphRunner {
                 config.onNodeComplete().accept(execution);
             }
 
+            // 节点执行后调用监听器
+            Instant finalNodeEndTime = nodeEndTime;
+            this.config.lifecycleListeners().forEach(listener -> {
+                try {
+                    listener.after(nodeId, state.data(), config, finalNodeEndTime.toEpochMilli());
+                } catch (Exception e) {
+                    logger.warn("Error in after listener for node: {}", nodeId, e);
+                }
+            });
+
             return new NodeExecutionResult(stateUpdates, execution, null);
 
         } catch (Exception e) {
             Instant nodeEndTime = Instant.now();
             GraphResult.NodeExecution execution = new GraphResult.NodeExecution(
                     nodeId, nodeStartTime, nodeEndTime, e);
+
+            // 节点错误时调用监听器
+            Instant finalNodeEndTime = nodeEndTime;
+            this.config.lifecycleListeners().forEach(listener -> {
+                try {
+                    listener.onError(nodeId, state.data(), e, config);
+                } catch (Exception ex) {
+                    logger.warn("Error in error listener for node: {}", nodeId, ex);
+                }
+            });
+
             return new NodeExecutionResult(stateUpdates, execution, e);
         }
     }

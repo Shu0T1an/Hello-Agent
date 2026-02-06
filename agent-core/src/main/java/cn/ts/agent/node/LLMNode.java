@@ -18,6 +18,7 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.tool.ToolCallback;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -79,7 +80,7 @@ public class LLMNode implements NodeAction {
 
     @Override
     public Map<String, Object> apply(State state) throws Exception {
-        logger.debug("LLMNode processing state: {}, streaming: {}", state, streaming);
+        logger.debug("LLMNode processing state");
 
         // 构建请求
         ChatModelRequest request = ChatModelRequest.builder(state)
@@ -110,7 +111,10 @@ public class LLMNode implements NodeAction {
 
         // 如果启用重试且配置了重试策略，添加重试逻辑
         if (enableRetry && retryConfig != null) {
-            responseMono = responseMono.retryWhen(RetryUtils.retryFor429(retryConfig));
+            // 使用 defer 确保重试时重新创建请求
+            responseMono = Mono.defer(() -> Mono.fromCallable(() -> requestSpec.call().chatResponse()));
+            // 使用带日志的重试策略
+            responseMono = responseMono.retryWhen(RetryUtils.retryFor429(retryConfig, "LLM"));
         }
 
         // 添加超时配置，避免无限期阻塞
@@ -159,14 +163,29 @@ public class LLMNode implements NodeAction {
      * 返回 GraphFlux 用于实时输出
      * NodeExecutor 会自动在流结束时聚合并更新 state
      * </p>
+     * <p>
+     * 使用 Flux.defer() 确保重试时会重新创建整个流，而不是重试已失败的流。
+     * 这样可以保证：
+     * 1. 每次重试都会发起新的 HTTP 请求
+     * 2. Advisors 在重试时正确应用
+     * 3. 429 错误能被正确捕获和处理
+     * </p>
      */
     private Map<String, Object> applyStreaming(ChatModelRequest request, ChatClient.ChatClientRequestSpec requestSpec) {
-        // 调用 stream API
-        Flux<ChatResponse> stream = requestSpec.stream().chatResponse();
+        // 使用 Flux.defer() 包装流创建逻辑
+        // 这确保了当 retryWhen 触发重试时，会重新执行 requestSpec.stream().chatResponse()
+        // 而不是重试一个已经失败的流
+        Flux<ChatResponse> stream = Flux.defer(() -> {
+            logger.debug("创建新的 LLM 流式请求");
+            return requestSpec.stream().chatResponse();
+        });
 
         // 如果启用重试且配置了重试策略，添加重试逻辑
         if (enableRetry && retryConfig != null) {
-            stream = stream.retryWhen(RetryUtils.retryFor429(retryConfig));
+            logger.debug("启用 LLM 重试策略: maxRetries={}, initialBackoff={}, backoffMultiplier={}",
+                    retryConfig.getMaxRetries(), retryConfig.getInitialBackoff(), retryConfig.getBackoffMultiplier());
+            // 使用带日志的重试策略，显示当前重试次数和等待时间
+            stream = stream.retryWhen(RetryUtils.retryFor429(retryConfig, "LLM"));
         }
 
         // 创建流式输出包装
@@ -226,7 +245,7 @@ public class LLMNode implements NodeAction {
         private boolean streaming = AgentConstants.Defaults.DEFAULT_STREAMING;
         private Object[] tools;
         private List<Advisor> advisors;
-        private RetryConfig retryConfig;
+        private RetryConfig retryConfig = RetryConfig.getDefault(); // 默认重试配置
         private boolean enableRetry = AgentConstants.Defaults.DEFAULT_ENABLE_RETRY;
 
         private Builder(ChatModel chatModel) {

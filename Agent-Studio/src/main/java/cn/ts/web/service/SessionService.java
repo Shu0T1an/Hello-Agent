@@ -125,6 +125,7 @@ public class SessionService {
                 .checkpointId(UUID.randomUUID().toString())
                 .threadId(sessionId)
                 .nodeId(SessionConstants.Checkpoint.INIT_NODE)
+                .lastNodeId(null) // 初始节点没有上一个节点
                 .state(state)
                 .metadata(metadata)
                 .iteration(SessionConstants.Defaults.DEFAULT_ITERATION)
@@ -185,6 +186,7 @@ public class SessionService {
                     .checkpointId(UUID.randomUUID().toString())
                     .threadId(sessionId)
                     .nodeId(latest.getNodeId())
+                    .lastNodeId(latest.getLastNodeId()) // 保持原有的 lastNodeId
                     .state(state)
                     .metadata(metadata)
                     .iteration(latest.getIteration())
@@ -234,6 +236,7 @@ public class SessionService {
                 .checkpointId(UUID.randomUUID().toString())
                 .threadId(sessionId)
                 .nodeId(latest.getNodeId())
+                .lastNodeId(latest.getLastNodeId()) // 保持原有的 lastNodeId
                 .state(state)
                 .metadata(metadata)
                 .iteration(latest.getIteration())
@@ -330,6 +333,28 @@ public class SessionService {
      */
     public int getSessionCount() {
         return sessionMapper.selectActiveSessions().size();
+    }
+
+    /**
+     * 删除所有会话
+     *
+     * @return 删除的会话数量
+     */
+    @Transactional
+    public int deleteAllSessions() {
+        List<SessionEntity> sessions = sessionMapper.selectActiveSessions();
+        int count = 0;
+
+        for (SessionEntity session : sessions) {
+            // 软删除 Session
+            sessionMapper.softDelete(session.getSessionId());
+            // 删除关联的 Checkpoint
+            checkpointManager.deleteThread(session.getSessionId());
+            count++;
+        }
+
+        log.info("Deleted {} sessions", count);
+        return count;
     }
 
     // ==================== 辅助方法 ====================

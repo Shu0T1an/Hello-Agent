@@ -53,6 +53,7 @@ public class CheckpointManagerImpl implements CheckpointManager {
                 .checkpointId(UUID.randomUUID().toString())
                 .threadId(threadId)
                 .nodeId(context.getCurrentNodeId())
+                .lastNodeId(context.getLastNodeId())
                 .state(context.getOverallState().data())
                 .metadata(metadata)
                 .timestamp(Instant.now())
@@ -80,6 +81,7 @@ public class CheckpointManagerImpl implements CheckpointManager {
         // 创建上下文
         GraphRunnerContext context = GraphRunnerContext.create(state, runConfig);
         context.setCurrentNodeId(snapshot.getNodeId());
+        context.setLastNodeId(snapshot.getLastNodeId());
 
         return context;
     }
@@ -120,6 +122,7 @@ public class CheckpointManagerImpl implements CheckpointManager {
                 .checkpointId(UUID.randomUUID().toString())
                 .threadId(threadId)
                 .nodeId(asNode)
+                .lastNodeId(latest.getLastNodeId()) // 保持原有的 lastNodeId
                 .state(newState)
                 .metadata(metadata)
                 .timestamp(Instant.now())

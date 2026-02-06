@@ -63,6 +63,36 @@
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-model</artifactId>
         </dependency>
+
+        <!-- Micrometer 核心依赖 -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
+            <version>1.13.0</version>
+        </dependency>
+
+        <!-- Micrometer Observation API -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-observation</artifactId>
+            <version>1.13.0</version>
+        </dependency>
+
+        <!-- Prometheus 支持（可选） -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+            <version>1.13.0</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- OpenTelemetry Tracing Bridge（可选） -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-tracing-bridge-otel</artifactId>
+            <version>1.3.0</version>
+            <optional>true</optional>
+        </dependency>
     </dependencies>
 
 

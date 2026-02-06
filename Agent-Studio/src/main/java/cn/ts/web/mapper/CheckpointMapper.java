@@ -21,8 +21,8 @@ public interface CheckpointMapper {
      * 插入 Checkpoint
      */
     @Insert("INSERT INTO checkpoint_snapshots " +
-            "(session_id, checkpoint_id, node_id, parent_id, state_json, metadata_json, source, iteration) " +
-            "VALUES (#{sessionId}, #{checkpointId}, #{nodeId}, #{parentId}, " +
+            "(session_id, checkpoint_id, node_id, last_node_id, parent_id, state_json, metadata_json, source, iteration) " +
+            "VALUES (#{sessionId}, #{checkpointId}, #{nodeId}, #{lastNodeId}, #{parentId}, " +
             "#{stateJson}::jsonb, #{metadataJson}::jsonb, #{source}, #{iteration})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insert(CheckpointEntity entity);

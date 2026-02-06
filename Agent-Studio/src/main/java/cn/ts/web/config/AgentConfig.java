@@ -9,6 +9,7 @@ import cn.ts.agent.mcp.model.McpStatistics;
 import cn.ts.agent.rag.advisor.RagAdvisor;
 import cn.ts.graph.checkpoint.CheckpointManager;
 import cn.ts.graph.hook.Hook;
+import cn.ts.graph.observation.GraphObservationLifecycleListener;
 import cn.ts.web.service.AgentExecutionService;
 import cn.ts.web.tools.SimpleTools;
 import org.slf4j.Logger;
@@ -43,6 +44,7 @@ public class AgentConfig {
     private final ApiKeyConfig apiKeyConfig;
     private final VectorStore vectorStore;
     private final CheckpointManager checkpointManager;
+    private final GraphObservationLifecycleListener observationListener;
 
     public AgentConfig(ChatModel chatModel,
                        AgentExecutionService agentExecutionService,
@@ -51,7 +53,8 @@ public class AgentConfig {
                        NodeJsConfig nodeJsConfig,
                        ApiKeyConfig apiKeyConfig,
                        @Qualifier("vectorStore") VectorStore vectorStore,
-                       CheckpointManager checkpointManager) {
+                       CheckpointManager checkpointManager,
+                       GraphObservationLifecycleListener observationListener) {
         this.chatModel = chatModel;
         this.agentExecutionService = agentExecutionService;
         this.mcpManager = mcpManager;
@@ -60,6 +63,7 @@ public class AgentConfig {
         this.apiKeyConfig = apiKeyConfig;
         this.vectorStore = vectorStore;
         this.checkpointManager = checkpointManager;
+        this.observationListener = observationListener;
     }
 
     /**
@@ -106,6 +110,7 @@ public class AgentConfig {
                 .tools(tools.toArray())
                 .hooks(testAgentHooks)
                 .checkpointManager(checkpointManager)
+                .addLifecycleListener(observationListener)
                 .build();
 
         // 注册到 AgentExecutionService，使其可通过 SSE 端点访问
@@ -141,6 +146,7 @@ public class AgentConfig {
                 .tools(tools.toArray())
                 .hooks(streamingAgentHooks)
                 .checkpointManager(checkpointManager)
+                .addLifecycleListener(observationListener)
                 .build();
 
         // 注册流式 Agent

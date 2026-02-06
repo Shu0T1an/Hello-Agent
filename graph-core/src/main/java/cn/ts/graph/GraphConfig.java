@@ -3,6 +3,7 @@ package cn.ts.graph;
 import cn.ts.graph.checkpoint.CheckpointManager;
 import cn.ts.graph.edge.Edge;
 import cn.ts.graph.node.Node;
+import cn.ts.graph.observation.GraphLifecycleListener;
 import cn.ts.graph.state.State;
 
 import java.util.List;
@@ -23,7 +24,8 @@ public record GraphConfig(
         List<Edge> edges,
         String entryPoint,
         Supplier<State> stateInitializer,
-        CheckpointManager checkpointManager
+        CheckpointManager checkpointManager,
+        List<GraphLifecycleListener> lifecycleListeners
 ) {
     /**
      * Compact constructor 用于数据验证和防御性复制
@@ -32,14 +34,23 @@ public record GraphConfig(
         // 防御性复制，确保不可变性
         nodes = Map.copyOf(nodes);
         edges = List.copyOf(edges);
+        lifecycleListeners = lifecycleListeners != null ? List.copyOf(lifecycleListeners) : List.of();
         Objects.requireNonNull(entryPoint, "Entry point cannot be null");
     }
 
     /**
-     * 创建不带 checkpoint manager 的配置
+     * 创建不带 checkpoint manager 和监听器的配置
      */
     public GraphConfig(Map<String, Node> nodes, List<Edge> edges, String entryPoint, Supplier<State> stateInitializer) {
-        this(nodes, edges, entryPoint, stateInitializer, null);
+        this(nodes, edges, entryPoint, stateInitializer, null, List.of());
+    }
+
+    /**
+     * 创建不带监听器的配置
+     */
+    public GraphConfig(Map<String, Node> nodes, List<Edge> edges, String entryPoint,
+                      Supplier<State> stateInitializer, CheckpointManager checkpointManager) {
+        this(nodes, edges, entryPoint, stateInitializer, checkpointManager, List.of());
     }
 
     /**

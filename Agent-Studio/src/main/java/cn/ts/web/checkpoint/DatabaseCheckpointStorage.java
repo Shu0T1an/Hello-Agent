@@ -63,6 +63,7 @@ public class DatabaseCheckpointStorage implements CheckpointStorage {
         entity.setSessionId(sessionId);
         entity.setCheckpointId(snapshot.getCheckpointId());
         entity.setNodeId(snapshot.getNodeId());
+        entity.setLastNodeId(snapshot.getLastNodeId());
 
         // 处理元数据
         CheckpointMetadata metadata = snapshot.getMetadata();
@@ -171,6 +172,7 @@ public class DatabaseCheckpointStorage implements CheckpointStorage {
                 .checkpointId(entity.getCheckpointId())
                 .threadId(entity.getSessionId())  // 使用 sessionId 作为 threadId
                 .nodeId(entity.getNodeId())
+                .lastNodeId(entity.getLastNodeId())
                 .state(state)
                 .metadata(metadata)
                 .timestamp(entity.getCreatedAt())

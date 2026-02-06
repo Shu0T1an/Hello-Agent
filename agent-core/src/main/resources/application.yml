@@ -27,7 +27,7 @@ spring:
 # Agent 配置
 agent:
   # 默认最大迭代次数
-  max-iterations: 10
+  max-iterations: 100
   # 默认温度参数
   temperature: 0.7
   # 默认系统提示词

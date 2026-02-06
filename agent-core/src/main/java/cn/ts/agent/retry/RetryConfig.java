@@ -13,7 +13,7 @@ public class RetryConfig {
     /**
      * 最大重试次数
      */
-    private int maxRetries = 3;
+    private int maxRetries = 10;
 
     /**
      * 初始退避时间

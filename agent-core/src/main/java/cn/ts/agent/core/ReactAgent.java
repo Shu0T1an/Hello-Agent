@@ -13,6 +13,7 @@ import cn.ts.graph.node.AsyncNodeActionWithConfig;
 import cn.ts.graph.node.InterruptableAction;
 import cn.ts.graph.node.Node;
 import cn.ts.graph.node.NodeAction;
+import cn.ts.graph.observation.GraphLifecycleListener;
 import cn.ts.graph.edge.EdgeAction;
 import cn.ts.graph.state.MapState;
 import cn.ts.graph.state.State;
@@ -108,6 +109,7 @@ public class ReactAgent implements Agent {
         private boolean streaming;
         private List<Hook> hooks;
         private CheckpointManager checkpointManager;
+        private List<GraphLifecycleListener> lifecycleListeners;
 
 
         public Builder name(String name) {
@@ -168,9 +170,40 @@ public class ReactAgent implements Agent {
             return this;
         }
 
+        /**
+         * 添加生命周期监听器
+         * <p>
+         * 用于监听图执行的各个阶段，实现可观测性、日志记录、性能监控等功能
+         * </p>
+         *
+         * @param listener 生命周期监听器
+         * @return this
+         */
+        public Builder addLifecycleListener(GraphLifecycleListener listener) {
+            if (this.lifecycleListeners == null) {
+                this.lifecycleListeners = new ArrayList<>();
+            }
+            this.lifecycleListeners.add(listener);
+            return this;
+        }
+
+        /**
+         * 设置生命周期监听器列表
+         * <p>
+         * 用于监听图执行的各个阶段，实现可观测性、日志记录、性能监控等功能
+         * </p>
+         *
+         * @param listeners 生命周期监听器列表
+         * @return this
+         */
+        public Builder lifecycleListeners(List<GraphLifecycleListener> listeners) {
+            this.lifecycleListeners = listeners != null ? new ArrayList<>(listeners) : null;
+            return this;
+        }
+
         public ReactAgent build() {
-            // 构建 ReAct 图，传递 checkpointManager
-            CompiledGraph compiledGraph = buildReActGraph(chatModel, advisors, streaming, tools, hooks, checkpointManager);
+            // 构建 ReAct 图，传递 checkpointManager 和 lifecycleListeners
+            CompiledGraph compiledGraph = buildReActGraph(chatModel, advisors, streaming, tools, hooks, checkpointManager, lifecycleListeners);
             this.graph = compiledGraph;
             return new ReactAgent(this);
         }
@@ -272,15 +305,18 @@ public class ReactAgent implements Agent {
      * 支持 Hook 集成和检查点管理
      * </p>
      *
-     * @param chatModel        ChatModel 实例
-     * @param advisors         Advisor 列表
-     * @param streaming        是否启用流式输出
-     * @param tools            工具对象数组
-     * @param hooks            Hook 列表
+     * @param chatModel         ChatModel 实例
+     * @param advisors          Advisor 列表
+     * @param streaming         是否启用流式输出
+     * @param tools             工具对象数组
+     * @param hooks             Hook 列表
      * @param checkpointManager 检查点管理器（可选）
+     * @param lifecycleListeners 生命周期监听器（可选）
      * @return 编译后的图
      */
-    private static CompiledGraph buildReActGraph(ChatModel chatModel, List<Advisor> advisors, boolean streaming, Object[] tools, List<Hook> hooks, CheckpointManager checkpointManager) {
+    private static CompiledGraph buildReActGraph(ChatModel chatModel, List<Advisor> advisors, boolean streaming,
+                                                  Object[] tools, List<Hook> hooks, CheckpointManager checkpointManager,
+                                                  List<GraphLifecycleListener> lifecycleListeners) {
         StateGraph graph = new StateGraph();
 
         // 配置状态初始化器
@@ -289,6 +325,13 @@ public class ReactAgent implements Agent {
         // 配置检查点管理器（如果提供）
         if (checkpointManager != null) {
             graph.setCheckpointManager(checkpointManager);
+        }
+
+        // 配置生命周期监听器（如果提供）
+        if (lifecycleListeners != null && !lifecycleListeners.isEmpty()) {
+            for (GraphLifecycleListener listener : lifecycleListeners) {
+                graph.withLifecycleListener(listener);
+            }
         }
 
         // 处理 null tools，使用空数组
@@ -518,8 +561,12 @@ public class ReactAgent implements Agent {
      */
     private static String routeFromTool(State state) {
         int iteration = state.<Integer>value(StateKeys.ITERATION).orElse(0);
-        int maxIterations = state.<Integer>value(StateKeys.MAX_ITERATIONS).orElse(10);
+        int maxIterations = state.<Integer>value(StateKeys.MAX_ITERATIONS).orElse(100);
         // iteration 已在 ToolNode 中递增
+
+        if(iteration >= maxIterations){
+            logger.info("Max iterations reached, ending the loop. Current iteration: {}", iteration);
+        }
         return (iteration < maxIterations) ? NodeNames.MODEL : NodeNames.END;
     }
 

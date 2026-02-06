@@ -30,7 +30,7 @@ agent:
     timeout: 300s              # 执行超时时间
     heartbeat-interval: 30s    # 心跳间隔
     max-title-length: 15        # 标题最大长度
-    default-max-iterations: 10  # 默认最大迭代次数
+    default-max-iterations: 100  # 默认最大迭代次数
     debug-mode: false           # 调试模式
     retry:
       enabled: true             # 是否启用重试
@@ -60,3 +60,28 @@ nodejs:
 api:
   keys:
     keys: {}  # API 密钥映射，在 application-dev.yml 中配置
+
+# 可观测性配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus,health,info,metrics
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name:Agent-Studio}
+      environment: ${spring.profiles.active:default}
+  observation:
+    enabled: true
+  tracing:
+    sampling:
+      probability: 1.0  # 100% 采样（开发环境）
+
+# 可观测性日志
+logging:
+  level:
+    io.micrometer.observation: DEBUG
+    cn.ts.graph.observation: DEBUG

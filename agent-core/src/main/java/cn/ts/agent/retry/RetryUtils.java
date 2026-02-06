@@ -1,5 +1,7 @@
 package cn.ts.agent.retry;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.util.retry.Retry;
 
@@ -12,6 +14,8 @@ import java.util.function.Predicate;
  */
 public class RetryUtils {
 
+    private static final Logger logger = LoggerFactory.getLogger(RetryUtils.class);
+
     /**
      * 创建针对 429 错误的重试策略
      * 使用指数退避算法
@@ -20,9 +24,34 @@ public class RetryUtils {
      * @return Retry 实例
      */
     public static Retry retryFor429(RetryConfig config) {
+        return retryFor429(config, null);
+    }
+
+    /**
+     * 创建针对 429 错误的重试策略（带日志）
+     * 使用指数退避算法，并在每次重试前记录日志
+     *
+     * @param config 重试配置
+     * @param nodeName 节点名称（用于日志）
+     * @return Retry 实例
+     */
+    public static Retry retryFor429(RetryConfig config, String nodeName) {
+        String nodeInfo = nodeName != null ? "[" + nodeName + "] " : "";
+
         return Retry.backoff(config.getMaxRetries(), config.getInitialBackoff())
                 .filter(is429Error())
-                .maxBackoff(config.getMaxBackoff());
+                .maxBackoff(config.getMaxBackoff())
+                .doBeforeRetry(signal -> {
+                    long currentRetry = signal.totalRetries() + 1;
+                    logger.warn("{}LLM 调用失败 (429)，准备第 {} 次重试",
+                            nodeInfo, currentRetry);
+                })
+                .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> {
+                    long totalRetries = retrySignal.totalRetries();
+                    logger.error("{}LLM 调用失败，已达到最大重试次数 ({}次)，放弃重试",
+                            nodeInfo, totalRetries);
+                    return retrySignal.failure();
+                });
     }
 
     /**

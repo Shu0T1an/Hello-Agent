@@ -29,6 +29,7 @@ public class GraphRunnerContext {
     private static final int MAX_HISTORY_SIZE = 1000;
 
     private String currentNodeId;
+    private String lastNodeId;
     private final State overallState;
     private final RunnableConfig config;
     private final List<GraphResponse<?>> history;
@@ -37,12 +38,14 @@ public class GraphRunnerContext {
 
     private GraphRunnerContext(
             String currentNodeId,
+            String lastNodeId,
             State overallState,
             RunnableConfig config,
             List<GraphResponse<?>> history,
             int iteration,
             CheckpointManager checkpointManager) {
         this.currentNodeId = currentNodeId;
+        this.lastNodeId = lastNodeId;
         this.overallState = Objects.requireNonNull(overallState, "OverallState cannot be null");
         this.config = Objects.requireNonNull(config, "Config cannot be null");
         this.history = new ArrayList<>(history != null ? history : List.of());
@@ -76,7 +79,7 @@ public class GraphRunnerContext {
         if (initialState != null && !initialState.isEmpty()) {
             state.merge(initialState);
         }
-        return new GraphRunnerContext(null, state, config, new ArrayList<>(), 0, checkpointManager);
+        return new GraphRunnerContext(null, null, state, config, new ArrayList<>(), 0, checkpointManager);
     }
 
     /**
@@ -99,7 +102,7 @@ public class GraphRunnerContext {
      * @return GraphRunnerContext 实例
      */
     public static GraphRunnerContext create(State state, RunnableConfig config, CheckpointManager checkpointManager) {
-        return new GraphRunnerContext(null, state, config, new ArrayList<>(), 0, checkpointManager);
+        return new GraphRunnerContext(null, null, state, config, new ArrayList<>(), 0, checkpointManager);
     }
 
     /**
@@ -118,6 +121,24 @@ public class GraphRunnerContext {
      */
     public void setCurrentNodeId(String currentNodeId) {
         this.currentNodeId = currentNodeId;
+    }
+
+    /**
+     * 获取上一个节点ID
+     *
+     * @return 上一个节点ID，如果不存在则返回 null
+     */
+    public String getLastNodeId() {
+        return lastNodeId;
+    }
+
+    /**
+     * 设置上一个节点ID
+     *
+     * @param lastNodeId 上一个节点ID
+     */
+    public void setLastNodeId(String lastNodeId) {
+        this.lastNodeId = lastNodeId;
     }
 
     /**
@@ -190,7 +211,7 @@ public class GraphRunnerContext {
      * @return 新的上下文
      */
     public GraphRunnerContext forNextIteration(String nextNodeId) {
-        return new GraphRunnerContext(nextNodeId, overallState, config, history, iteration + 1, checkpointManager);
+        return new GraphRunnerContext(nextNodeId, currentNodeId, overallState, config, history, iteration + 1, checkpointManager);
     }
 
     /**
@@ -203,7 +224,7 @@ public class GraphRunnerContext {
         State newState = new MapState();
         newState.merge(overallState.data());
         newState.merge(updates);
-        return new GraphRunnerContext(currentNodeId, newState, config, history, iteration, checkpointManager);
+        return new GraphRunnerContext(currentNodeId, lastNodeId, newState, config, history, iteration, checkpointManager);
     }
 
     /**
@@ -218,7 +239,8 @@ public class GraphRunnerContext {
     @Override
     public String toString() {
         return "GraphRunnerContext{" +
-                "currentNodeId='" + currentNodeId + '\'' +
+                "lastNodeId='" + lastNodeId + '\'' +
+                ", currentNodeId='" + currentNodeId + '\'' +
                 ", overallState=" + overallState +
                 ", iteration=" + iteration +
                 '}';

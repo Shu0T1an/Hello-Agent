@@ -38,6 +38,11 @@ public class CheckpointEntity implements Serializable {
     private String nodeId;
 
     /**
+     * 上一个执行的节点ID
+     */
+    private String lastNodeId;
+
+    /**
      * 父 Checkpoint ID，支持检查点链
      */
     private String parentId;
@@ -102,6 +107,15 @@ public class CheckpointEntity implements Serializable {
 
     public CheckpointEntity setNodeId(String nodeId) {
         this.nodeId = nodeId;
+        return this;
+    }
+
+    public String getLastNodeId() {
+        return lastNodeId;
+    }
+
+    public CheckpointEntity setLastNodeId(String lastNodeId) {
+        this.lastNodeId = lastNodeId;
         return this;
     }
 

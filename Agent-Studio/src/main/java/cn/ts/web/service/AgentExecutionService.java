@@ -98,6 +98,10 @@ public class AgentExecutionService {
 
         String executionId = UUID.randomUUID().toString();
 
+        // 将 executionId 添加到初始状态中，以便监听器可以获取
+        Map<String, Object> stateWithExecutionId = new HashMap<>(initialState);
+        stateWithExecutionId.put("executionId", executionId);
+
         // 构建 RunnableConfig，支持 threadId
         cn.ts.graph.config.RunnableConfig.Builder configBuilder = cn.ts.graph.config.RunnableConfig.builder()
                 .executionId(executionId);
@@ -112,7 +116,7 @@ public class AgentExecutionService {
             }
         }
 
-        return graph.stream(initialState, configBuilder.timeout(timeout).build())
+        return graph.stream(stateWithExecutionId, configBuilder.timeout(timeout).build())
                 .map(response -> responseBuilder.build(response, executionId))
                 .onErrorResume(throwable -> Flux.just(responseBuilder.buildErrorResponse(throwable.getMessage(), executionId)));
     }
@@ -169,7 +173,11 @@ public class AgentExecutionService {
 
         String executionId = UUID.randomUUID().toString();
 
-        return graph.stream(initialState,
+        // 将 executionId 添加到初始状态中，以便监听器可以获取
+        Map<String, Object> stateWithExecutionId = new HashMap<>(initialState);
+        stateWithExecutionId.put("executionId", executionId);
+
+        return graph.stream(stateWithExecutionId,
                         cn.ts.graph.config.RunnableConfig.builder()
                                 .executionId(executionId)
                                 .timeout(timeout)
@@ -252,6 +260,9 @@ public class AgentExecutionService {
 
         // 获取状态并处理 messages 字段的反序列化
         Map<String, Object> initState = new HashMap<>(stateSnapshot.get().getState());
+
+        // 将 executionId 添加到初始状态中，以便监听器可以获取
+        initState.put("executionId", executionId);
 
         // 处理 messages 字段：将 LinkedHashMap 转换回 Message 对象
         Object messagesObj = initState.get(StateKeys.MESSAGES);
