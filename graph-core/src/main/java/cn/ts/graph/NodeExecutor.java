@@ -11,6 +11,14 @@ import cn.ts.graph.node.Node;
 import cn.ts.graph.node.NodeAction;
 import cn.ts.graph.node.NodeActionAsyncUtils;
 import cn.ts.graph.node.NodeActionWithConfig;
+import cn.ts.graph.record.DefaultExecutionRecordManager;
+import cn.ts.graph.record.ExecutionRecord;
+import cn.ts.graph.record.ExecutionRecordManager;
+import cn.ts.graph.record.ExecutionRecords;
+import cn.ts.graph.record.InputMessage;
+import cn.ts.graph.record.TokenUsage;
+import cn.ts.graph.record.ToolCallInfo;
+import cn.ts.graph.record.ToolExecutionRecord;
 import cn.ts.graph.state.State;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,6 +28,7 @@ import org.springframework.ai.chat.model.ChatResponse;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -43,6 +52,29 @@ import java.util.concurrent.ForkJoinPool;
 public class NodeExecutor {
 
     private static final Logger logger = LoggerFactory.getLogger(NodeExecutor.class);
+
+    private final ExecutionRecordManager recordManager;
+
+    /**
+     * 创建默认的节点执行器
+     */
+    public NodeExecutor() {
+        this.recordManager = new DefaultExecutionRecordManager();
+    }
+
+    /**
+     * 创建带有自定义记录管理器的节点执行器
+     */
+    public NodeExecutor(ExecutionRecordManager recordManager) {
+        this.recordManager = recordManager != null ? recordManager : new DefaultExecutionRecordManager();
+    }
+
+    /**
+     * 获取执行记录管理器
+     */
+    public ExecutionRecordManager getRecordManager() {
+        return recordManager;
+    }
 
     /**
      * 执行节点并返回响应式流
@@ -151,22 +183,86 @@ public class NodeExecutor {
             return handleGraphFlux(node, context, flux.get(), updates);
         }
 
+        // 检查是否有执行信息（由节点提供的 __execution_info__）
+        Optional<Map<String, Object>> execInfo = extractExecutionInfo(updates);
+
+        // 移除 __execution_info__ 不合并到状态中
+        if (execInfo.isPresent()) {
+            updates.remove("__execution_info__");
+        }
+
         // 普通结果 - 合并状态
         context.mergeIntoCurrentState(updates);
 
         String nodeId = context.getCurrentNodeId();
 
         // 记录开始时间
-        java.time.Instant startTime = java.time.Instant.now();
+        Instant startTime = Instant.now();
 
         // 创建 STARTING 和 COMPLETED 响应
         GraphResponse<NodeOutput> startingResponse = GraphResponse.of(nodeId, NodeOutput.starting(nodeId, node));
         GraphResponse<NodeOutput> completedResponse = GraphResponse.of(nodeId, NodeOutput.completed(nodeId, node, updates, context.getOverallState(), startTime));
 
+        // 如果有执行信息，创建并保存执行记录
+        if (execInfo.isPresent()) {
+            ExecutionRecord record = createRecordFromInfo(nodeId, execInfo.get(), context);
+            recordManager.saveRecord(record, context.getOverallState());
+        }
+
         // 返回 STARTING → COMPLETED 流，并在完成后创建检查点
         return Flux.just(completedResponse)
                 .startWith(startingResponse)
                 .doOnComplete(() -> createCheckpointAfterNode(context, nodeId));
+    }
+
+    /**
+     * 从状态更新中提取执行信息
+     *
+     * @param updates 状态更新
+     * @return 执行信息的 Optional
+     */
+    @SuppressWarnings("unchecked")
+    private Optional<Map<String, Object>> extractExecutionInfo(Map<String, Object> updates) {
+        if (updates == null || updates.isEmpty()) {
+            return Optional.empty();
+        }
+        Object execInfo = updates.get("__execution_info__");
+        if (execInfo instanceof Map<?, ?> map) {
+            return Optional.of((Map<String, Object>) map);
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * 从执行信息创建执行记录
+     *
+     * @param nodeId    节点ID
+     * @param execInfo  执行信息
+     * @param context   执行上下文
+     * @return 执行记录
+     */
+    @SuppressWarnings("unchecked")
+    private ExecutionRecord createRecordFromInfo(String nodeId, Map<String, Object> execInfo, GraphRunnerContext context) {
+        String nodeType = (String) execInfo.get("nodeType");
+        Instant startTime = Instant.parse((String) execInfo.get("startTime"));
+
+        if ("tool".equals(nodeType)) {
+            // Tool 节点执行记录
+            List<Map<String, Object>> executions = (List<Map<String, Object>>) execInfo.getOrDefault("executions", List.of());
+            List<ToolExecutionRecord.ToolExecution> toolExecutions = new ArrayList<>();
+            for (Map<String, Object> execMap : executions) {
+                toolExecutions.add(ToolExecutionRecord.ToolExecution.fromMap(execMap));
+            }
+            return ExecutionRecords.toolSuccess(nodeId, startTime, Instant.now(), toolExecutions);
+        }
+
+        // 默认返回通用成功记录
+        return ExecutionRecords.success(
+            ExecutionRecord.NodeType.fromValue(nodeType),
+            nodeId,
+            startTime,
+            Instant.now()
+        );
     }
 
     /**
@@ -284,16 +380,17 @@ public class NodeExecutor {
                     if (!responsesQueue.isEmpty()) {
                         // 1. 聚合 messages
                         List<Message> messages = aggregateChatResponses(context, new ArrayList<>(responsesQueue));
+                        context.mergeIntoCurrentState(Map.of("messages", messages));
 
-                        // 2. 生成 LLM execution_record
-                        Map<String, Object> executionRecord = buildLLMExecutionRecord(
+                        // 2. 生成并保存 LLM 执行记录（使用新的记录管理器）
+                        ExecutionRecord record = buildLLMExecutionRecord(
+                                nodeName,
                                 context,
                                 responsesQueue,
                                 fullContentBuilder.toString(),
                                 startTime
                         );
-                        context.mergeIntoCurrentState(Map.of("messages", messages));
-                        context.mergeIntoCurrentState(Map.of("execution_record", executionRecord));
+                        recordManager.saveRecord(record, context.getOverallState());
                     }
                     // 节点完成后创建检查点
                     createCheckpointAfterNode(context, nodeName);
@@ -461,80 +558,75 @@ public class NodeExecutor {
     /**
      * 构建 LLM 节点的执行记录
      * <p>
-     * 在流完成时调用，聚合完整的执行信息
+     * 在流完成时调用，聚合完整的执行信息，返回 ExecutionRecord 对象
      * </p>
      *
+     * @param nodeName       节点名称
      * @param context        执行上下文
      * @param responsesQueue ChatResponse 队列
      * @param fullContent    聚合后的完整输出
      * @param startTime      开始时间
-     * @return 执行记录 Map
+     * @return 执行记录
      */
-    private Map<String, Object> buildLLMExecutionRecord(
+    private ExecutionRecord buildLLMExecutionRecord(
+            String nodeName,
             GraphRunnerContext context,
             ConcurrentLinkedQueue<ChatResponse> responsesQueue,
             String fullContent,
-            java.time.Instant startTime) {
-
-        Map<String, Object> record = new HashMap<>();
-        record.put("nodeType", "llm");
-        record.put("startTime", startTime.toString());
-        record.put("endTime", java.time.Instant.now().toString());
+            Instant startTime) {
 
         // 提取输入 messages（执行前的 messages）
-        List<Map<String, Object>> input = extractInputMessages(context);
-        record.put("input", input);
-
-        // 完整输出
-        record.put("output", fullContent);
+        List<InputMessage> inputMessages = extractInputMessages(context);
 
         // 提取 toolCalls
-        List<Map<String, Object>> toolCalls = extractToolCallsFromResponses(responsesQueue);
-        record.put("toolCalls", toolCalls);
+        List<ToolCallInfo> toolCalls = extractToolCallsFromResponses(responsesQueue);
 
         // 提取 usage
-        Map<String, Object> usage = aggregateUsage(responsesQueue);
-        record.put("usage", usage);
+        TokenUsage usage = aggregateUsage(responsesQueue);
 
-        return record;
+        return ExecutionRecords.llmSuccess(
+                nodeName,
+                startTime,
+                Instant.now(),
+                inputMessages,
+                fullContent,
+                usage
+        );
     }
 
     /**
      * 从上下文中提取输入 messages
      * <p>
-     * 将 Message 对象简化为可序列化的 Map 格式
+     * 将 Message 对象简化为 InputMessage 格式
      * </p>
      *
      * @param context 执行上下文
      * @return 简化的 messages 列表
      */
-    private List<Map<String, Object>> extractInputMessages(GraphRunnerContext context) {
-        List<Map<String, Object>> result = new ArrayList<>();
+    private List<InputMessage> extractInputMessages(GraphRunnerContext context) {
+        List<InputMessage> result = new ArrayList<>();
         List<Message> messages = context.getOverallState()
                 .<List<Message>>value("messages")
                 .orElse(new ArrayList<>());
 
         for (Message message : messages) {
-            Map<String, Object> msgMap = new HashMap<>();
-            msgMap.put("role", message.getMessageType().getValue());
+            String role = message.getMessageType().getValue();
+            String content = null;
 
             // 根据消息类型获取内容
-            String content = null;
             if (message instanceof AssistantMessage am) {
                 content = am.getText();
             } else if (message instanceof org.springframework.ai.chat.messages.UserMessage um) {
                 content = um.getText();
             } else if (message instanceof org.springframework.ai.chat.messages.SystemMessage sm) {
                 content = sm.getText();
-            } else if(message instanceof  org.springframework.ai.chat.messages.ToolResponseMessage tm){
+            } else if (message instanceof org.springframework.ai.chat.messages.ToolResponseMessage tm) {
                 content = tm.getResponses().toString();
             }
 
             if (content != null) {
-                msgMap.put("content", content);
+                result.add(new InputMessage(role, content));
             }
-
-            result.add(msgMap);
         }
 
         return result;
@@ -546,17 +638,13 @@ public class NodeExecutor {
      * @param responses ChatResponse 队列
      * @return toolCalls 列表
      */
-    private List<Map<String, Object>> extractToolCallsFromResponses(ConcurrentLinkedQueue<ChatResponse> responses) {
-        List<Map<String, Object>> toolCalls = new ArrayList<>();
+    private List<ToolCallInfo> extractToolCallsFromResponses(ConcurrentLinkedQueue<ChatResponse> responses) {
+        List<ToolCallInfo> toolCalls = new ArrayList<>();
         for (ChatResponse response : responses) {
             var output = response.getResult() != null ? response.getResult().getOutput() : null;
             if (output != null && output.getToolCalls() != null && !output.getToolCalls().isEmpty()) {
                 for (AssistantMessage.ToolCall tc : output.getToolCalls()) {
-                    Map<String, Object> tcMap = new HashMap<>();
-                    tcMap.put("id", tc.id());
-                    tcMap.put("name", tc.name());
-                    tcMap.put("arguments", tc.arguments());
-                    toolCalls.add(tcMap);
+                    toolCalls.add(new ToolCallInfo(tc.id(), tc.name(), tc.arguments()));
                 }
             }
         }
@@ -569,15 +657,15 @@ public class NodeExecutor {
      * @param responses ChatResponse 队列
      * @return usage 统计
      */
-    private Map<String, Object> aggregateUsage(ConcurrentLinkedQueue<ChatResponse> responses) {
+    private TokenUsage aggregateUsage(ConcurrentLinkedQueue<ChatResponse> responses) {
         long promptTokens = 0;
         long completionTokens = 0;
         long totalTokens = 0;
 
         for (ChatResponse response : responses) {
-            if(response.getMetadata() != null && response.getMetadata().getUsage() != null ){
+            if (response.getMetadata() != null && response.getMetadata().getUsage() != null) {
                 var usage = response.getMetadata().getUsage();
-                if(usage != null && usage.getTotalTokens() > 0){
+                if (usage != null && usage.getTotalTokens() > 0) {
                     promptTokens = usage.getPromptTokens();
                     completionTokens = usage.getCompletionTokens();
                     totalTokens = usage.getTotalTokens();
@@ -585,11 +673,7 @@ public class NodeExecutor {
             }
         }
 
-        return Map.of(
-                "promptTokens", promptTokens,
-                "completionTokens", completionTokens,
-                "totalTokens", totalTokens
-        );
+        return new TokenUsage(promptTokens, completionTokens, totalTokens);
     }
 
     /**
@@ -643,5 +727,15 @@ public class NodeExecutor {
      */
     public static NodeExecutor create() {
         return new NodeExecutor();
+    }
+
+    /**
+     * 创建带有自定义记录管理器的节点执行器
+     *
+     * @param recordManager 执行记录管理器
+     * @return NodeExecutor 实例
+     */
+    public static NodeExecutor create(ExecutionRecordManager recordManager) {
+        return new NodeExecutor(recordManager);
     }
 }

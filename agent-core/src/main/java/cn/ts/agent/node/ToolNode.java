@@ -29,6 +29,7 @@ import static cn.ts.agent.Tool.ToolUtils.getAllToolCallbacksFromTools;
  * 2. 执行工具调用
  * 3. 将 ToolResponseMessage 追加到 messages 列表
  * 4. 递增 iteration 计数
+ * 5. 提供执行信息供 NodeExecutor 创建执行记录
  * </p>
  *
  * @author tianshuo
@@ -85,16 +86,15 @@ public class ToolNode implements NodeAction {
         AssistantMessage am = lastMessageOpt.get();
 
         Map<String, Object> extraStateFromToolCall = new HashMap<>();
-        Map<String, Object> updateState;
 
-        // 2. 执行所有工具调用并收集执行记录
+        // 2. 执行所有工具调用并收集执行信息
         List<ToolResponseMessage.ToolResponse> responses = new ArrayList<>();
         List<Map<String, Object>> executions = new ArrayList<>();
 
         for (AssistantMessage.ToolCall tc : am.getToolCalls()) {
-            ToolExecutionResult result = executeToolCall(tc, state, extraStateFromToolCall);
+            ToolExecutionResult result = executeToolCall(tc, state, extraStateFromToolCall, startTime);
             responses.add(result.response());
-            executions.add(result.executionRecord());
+            executions.add(result.executionInfo());
         }
 
         // 3. 创建 ToolResponseMessage
@@ -104,12 +104,33 @@ public class ToolNode implements NodeAction {
         int nextIteration = state.<Integer>value("iteration").orElse(0) + 1;
         logger.debug("ToolNode completed, iteration: {}", nextIteration);
 
-        // 5. 创建执行记录并返回结果
-        updateState = buildResult(toolResponseMessage, nextIteration, startTime, executions);
+        // 5. 构建结果
+        Map<String, Object> result = new HashMap<>();
+        result.put("messages", List.of(toolResponseMessage));
+        result.put("iteration", nextIteration);
 
-        // 合并两个Map updateState 和 extraStateFromToolCall
-        updateState.putAll(extraStateFromToolCall);
-        return updateState;
+        // 6. 添加执行信息供 NodeExecutor 使用
+        result.put("__execution_info__", buildExecutionInfo(startTime, executions));
+
+        // 7. 合并工具调用产生的额外状态
+        result.putAll(extraStateFromToolCall);
+
+        return result;
+    }
+
+    /**
+     * 构建执行信息
+     *
+     * @param startTime   开始时间
+     * @param executions 执行记录列表
+     * @return 执行信息 Map
+     */
+    private Map<String, Object> buildExecutionInfo(Instant startTime, List<Map<String, Object>> executions) {
+        Map<String, Object> execInfo = new HashMap<>();
+        execInfo.put("nodeType", "tool");
+        execInfo.put("startTime", startTime.toString());
+        execInfo.put("executions", executions);
+        return execInfo;
     }
 
     /**
@@ -158,21 +179,29 @@ public class ToolNode implements NodeAction {
      * 执行单个工具调用
      *
      * @param toolCall               工具调用对象
-     * @param state
-     * @param extraStateFromToolCall
-     * @return 工具执行结果（响应和执行记录）
+     * @param state                  状态
+     * @param extraStateFromToolCall 额外状态
+     * @param nodeStartTime          节点开始时间
+     * @return 工具执行结果（响应和执行信息）
      */
-    private ToolExecutionResult executeToolCall(AssistantMessage.ToolCall toolCall, State state, Map<String, Object> extraStateFromToolCall) {
+    private ToolExecutionResult executeToolCall(
+            AssistantMessage.ToolCall toolCall,
+            State state,
+            Map<String, Object> extraStateFromToolCall,
+            Instant nodeStartTime) {
+
         logger.debug("Executing tool call: {}", toolCall.name());
 
         ToolCallback tool = findTool(toolCall.name());
         String result;
         boolean success;
 
-        Map<String, Object> toolContextMap = new HashMap<>();
+        Instant toolStartTime = Instant.now();
 
-        toolContextMap.put(TOOL_STATE_CONTEXT_KEY,state);
+        Map<String, Object> toolContextMap = new HashMap<>();
+        toolContextMap.put(TOOL_STATE_CONTEXT_KEY, state);
         toolContextMap.put(TOOL_EXTRA_STATE_KEY, extraStateFromToolCall);
+
         if (tool != null) {
             try {
                 result = tool.call(toolCall.arguments(), new ToolContext(toolContextMap));
@@ -189,73 +218,45 @@ public class ToolNode implements NodeAction {
             success = false;
         }
 
+        Instant toolEndTime = Instant.now();
+
         ToolResponseMessage.ToolResponse response =
                 new ToolResponseMessage.ToolResponse(toolCall.id(), toolCall.name(), result);
 
-        Map<String, Object> executionRecord = createSingleExecutionRecord(
-                toolCall.id(), toolCall.name(), toolCall.arguments(), result, success
+        Map<String, Object> executionInfo = createExecutionInfo(
+                toolCall.id(), toolCall.name(), toolCall.arguments(),
+                result, success, toolStartTime, toolEndTime
         );
 
-        return new ToolExecutionResult(response, executionRecord);
+        return new ToolExecutionResult(response, executionInfo);
     }
 
     /**
-     * 创建单个工具执行的记录
+     * 创建单个工具执行的执行信息
      *
-     * @param id        工具调用 ID
-     * @param name      工具名称
-     * @param arguments 工具参数
-     * @param result    执行结果
-     * @param success   是否成功
-     * @return 执行记录 Map
+     * @param id          工具调用 ID
+     * @param name        工具名称
+     * @param arguments   工具参数
+     * @param result      执行结果
+     * @param success     是否成功
+     * @param startTime   开始时间
+     * @param endTime     结束时间
+     * @return 执行信息 Map
      */
-    private Map<String, Object> createSingleExecutionRecord(
-            String id, String name, String arguments, String result, boolean success) {
+    private Map<String, Object> createExecutionInfo(
+            String id, String name, String arguments, String result,
+            boolean success, Instant startTime, Instant endTime) {
+
+        long duration = java.time.Duration.between(startTime, endTime).toMillis();
+
         return Map.of(
                 "id", id,
                 "name", name,
                 "arguments", arguments,
                 "result", result,
-                "success", success
+                "success", success,
+                "duration", duration
         );
-    }
-
-    /**
-     * 创建 ToolNode 的执行记录
-     *
-     * @param startTime  开始时间
-     * @param executions 所有工具执行的记录列表
-     * @return 执行记录 Map
-     */
-    private Map<String, Object> createExecutionRecord(Instant startTime, List<Map<String, Object>> executions) {
-        Map<String, Object> record = new HashMap<>();
-        record.put("nodeType", "tool");
-        record.put("startTime", startTime.toString());
-        record.put("endTime", Instant.now().toString());
-        record.put("executions", executions);
-        return record;
-    }
-
-    /**
-     * 构建返回结果
-     *
-     * @param toolResponseMessage 工具响应消息
-     * @param nextIteration       下一次迭代次数
-     * @param startTime           开始时间
-     * @param executions          执行记录列表
-     * @return 返回结果 Map
-     */
-    private Map<String, Object> buildResult(
-            ToolResponseMessage toolResponseMessage,
-            int nextIteration,
-            Instant startTime,
-            List<Map<String, Object>> executions) {
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("messages", List.of(toolResponseMessage));
-        result.put("iteration", nextIteration);
-        result.put("execution_record", createExecutionRecord(startTime, executions));
-        return result;
     }
 
     /**
@@ -292,11 +293,11 @@ public class ToolNode implements NodeAction {
     /**
      * 工具执行结果（内部记录类）
      *
-     * @param response        工具响应
-     * @param executionRecord 执行记录
+     * @param response       工具响应
+     * @param executionInfo  执行信息
      */
     private record ToolExecutionResult(
             ToolResponseMessage.ToolResponse response,
-            Map<String, Object> executionRecord
+            Map<String, Object> executionInfo
     ) {}
 }
