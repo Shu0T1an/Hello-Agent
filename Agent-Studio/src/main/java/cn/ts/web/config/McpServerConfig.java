@@ -7,6 +7,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -52,6 +53,16 @@ public class McpServerConfig {
         private StdioConfigProperties stdio;
 
         /**
+         * SSE 连接配置
+         */
+        private SseConfigProperties sse;
+
+        /**
+         * HTTP 连接配置
+         */
+        private HttpConfigProperties http;
+
+        /**
          * 连接超时时间（秒）
          */
         private Integer timeoutSeconds;
@@ -93,6 +104,25 @@ public class McpServerConfig {
         }
 
         /**
+         * SSE 配置属性
+         */
+        @Data
+        public static class SseConfigProperties {
+            private String url;
+            private Map<String, String> headers;
+        }
+
+        /**
+         * HTTP 配置属性
+         */
+        @Data
+        public static class HttpConfigProperties {
+            private String url;
+            private Map<String, String> headers;
+            private String method = "POST";
+        }
+
+        /**
          * 转换为 McpConnectionConfig
          */
         public McpConnectionConfig toMcpConnectionConfig() {
@@ -109,6 +139,25 @@ public class McpServerConfig {
                         .env(this.stdio.getEnv())
                         .build();
                 builder.stdioConfig(stdioConfig);
+            }
+
+            // 配置 SSE
+            if (this.sse != null) {
+                McpConnectionConfig.SseConfig sseConfig = McpConnectionConfig.SseConfig.builder()
+                        .url(this.sse.getUrl())
+                        .headers(this.sse.getHeaders() != null ? this.sse.getHeaders() : new HashMap<>())
+                        .build();
+                builder.sseConfig(sseConfig);
+            }
+
+            // 配置 HTTP
+            if (this.http != null) {
+                McpConnectionConfig.HttpConfig httpConfig = McpConnectionConfig.HttpConfig.builder()
+                        .url(this.http.getUrl())
+                        .headers(this.http.getHeaders() != null ? this.http.getHeaders() : new HashMap<>())
+                        .method(this.http.getMethod())
+                        .build();
+                builder.httpConfig(httpConfig);
             }
 
             // 配置超时和重试

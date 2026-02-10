@@ -10,6 +10,7 @@ import cn.ts.agent.mcp.model.McpStatistics;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.modelcontextprotocol.client.McpClient;
 import io.modelcontextprotocol.client.McpSyncClient;
+import io.modelcontextprotocol.client.transport.HttpClientSseClientTransport;
 import io.modelcontextprotocol.client.transport.ServerParameters;
 import io.modelcontextprotocol.client.transport.StdioClientTransport;
 import io.modelcontextprotocol.spec.McpClientTransport;
@@ -364,28 +365,57 @@ public class McpManagerImpl implements McpManager {
     /**
      * 创建 MCP 客户端
      * <p>
-     * 注意：此方法需要根据实际的 MCP SDK API 进行调整
+     * 根据连接类型创建对应的 MCP 客户端：
+     * - STDIO: 标准输入输出连接
+     * - SSE: Server-Sent Events 连接
+     * - HTTP: HTTP 连接（暂不支持）
      * </p>
      */
     private McpSyncClient createMcpClient(McpConnectionConfig config) {
-        // TODO: 实现 MCP 客户端创建逻辑
-        // 由于 MCP SDK API 可能变化，暂时返回 null
+        ObjectMapper objectMapper = new ObjectMapper();
 
-        if(config.getStdioConfig()!=null){
-            ServerParameters params = ServerParameters
-                    .builder(config.getStdioConfig().getCommand())
-                    .args(config.getStdioConfig().getArgs())
-                    .env(config.getStdioConfig().getEnv())
-                    .build();
-//            JacksonMcpJsonMapper jsonMapper = new JacksonMcpJsonMapper(new ObjectMapper());
-            ObjectMapper objectMapper = new ObjectMapper();
-            McpClientTransport transport = new StdioClientTransport(params, objectMapper);
-            return McpClient.sync(transport)
-                    .build();
+        return switch (config.getType()) {
+            case STDIO -> {
+                if (config.getStdioConfig() == null) {
+                    throw new IllegalArgumentException("STDIO 配置不能为空");
+                }
+                ServerParameters params = ServerParameters
+                        .builder(config.getStdioConfig().getCommand())
+                        .args(config.getStdioConfig().getArgs())
+                        .env(config.getStdioConfig().getEnv())
+                        .build();
+                McpClientTransport transport = new StdioClientTransport(params, objectMapper);
+                yield McpClient.sync(transport).build();
+            }
 
-        }
-        logger.warn("MCP 客户端创建功能待实现，类型: {}", config.getType());
-        return null;
+            case SSE -> {
+                if (config.getSseConfig() == null) {
+                    throw new IllegalArgumentException("SSE 配置不能为空");
+                }
+                String url = config.getSseConfig().getUrl();
+                if (url == null || url.isBlank()) {
+                    throw new IllegalArgumentException("SSE URL 不能为空");
+                }
+                try {
+                    logger.info("创建 SSE 客户端，URL: {}", url);
+                    // 使用 Builder 方式创建 SSE 传输层
+                    McpClientTransport transport = HttpClientSseClientTransport.builder(url)
+                            .objectMapper(objectMapper)
+                            .build();
+                    McpSyncClient client = McpClient.sync(transport).build();
+                    logger.info("SSE 客户端创建成功");
+                    yield client;
+                } catch (Exception e) {
+                    logger.error("创建 SSE 客户端失败: {}", url, e);
+                    throw new RuntimeException("创建 SSE 客户端失败: " + e.getMessage(), e);
+                }
+            }
+
+            case HTTP -> {
+                logger.warn("HTTP 类型暂不支持，请使用 SSE 类型");
+                yield null;
+            }
+        };
     }
 
     /**
