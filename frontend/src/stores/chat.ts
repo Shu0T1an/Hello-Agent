@@ -1,10 +1,11 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
-import type { Message, ChatSession, Strategy } from '@/types/message'
+import type { Message, ChatSession, Strategy, MessageAttachment, CitationReference, MessageRole } from '@/types/message'
 import { useAgentStore } from './agent'
 import { useAgentTimelineStore } from './agentTimeline'
 import { API_BASE, DEFAULT_SESSION_TITLE } from '@/utils/constants'
 import { formatTimestamp, generateSessionId } from '@/utils/helpers'
+import { uploadTemporaryFiles, type TemporaryFileContent } from '@/api/file'
 
 // SSE 事件数据类型（与后端 AgentResponse 一致）
 interface AgentEvent {
@@ -51,6 +52,7 @@ export interface AgentExecuteRequest {
   sessionId?: string
   timeout?: number
   initialState?: Record<string, unknown>
+  fileContents?: TemporaryFileContent[]
 }
 
 // 后端会话数据类型
@@ -281,18 +283,41 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   // 发送消息
-  async function sendMessage(content: string) {
-    if (!content.trim() || isProcessing.value) return
+  async function sendMessage(content: string, files?: File[]) {
+    if ((!content.trim() && !files?.length) || isProcessing.value) return
 
     const agentStore = useAgentStore()
     const agentTimelineStore = useAgentTimelineStore()
+
+    // 上传文件（如果有）
+    let fileContents: TemporaryFileContent[] | null = null
+    let attachments: MessageAttachment[] | undefined
+
+    if (files && files.length > 0) {
+      try {
+        const response = await uploadTemporaryFiles(files, currentSessionId.value || undefined)
+        fileContents = response.fileContents
+        attachments = files.map((f, i) => ({
+          id: `attach-${Date.now()}-${i}`,
+          fileName: f.name,
+          fileSize: f.size,
+          fileType: f.type
+        }))
+        console.log('文件上传成功:', response.summary)
+      } catch (error) {
+        console.error('文件上传失败:', error)
+        alert('文件上传失败: ' + (error as Error).message)
+        return
+      }
+    }
 
     // 创建用户消息
     const userMessage: Message = {
       id: `${Date.now()}`,
       role: 'user',
       content,
-      timestamp: new Date().toLocaleString('zh-CN')
+      timestamp: new Date().toLocaleString('zh-CN'),
+      attachments
     }
 
     // 创建 AI 消息占位符
@@ -318,7 +343,8 @@ export const useChatStore = defineStore('chat', () => {
       input: content,
       sessionId: currentSessionId.value || undefined,
       timeout: undefined, // 使用默认超时
-      initialState: currentKnowledgeBaseId.value ? { knowledgeBaseId: currentKnowledgeBaseId.value } : undefined
+      initialState: currentKnowledgeBaseId.value ? { knowledgeBaseId: currentKnowledgeBaseId.value } : undefined,
+      fileContents: fileContents || undefined
     }
 
     const url = `${API_BASE}/api/stream/agent/${encodeURIComponent(agentStore.currentAgent)}/execute`
@@ -656,15 +682,24 @@ export const useChatStore = defineStore('chat', () => {
         // 全量覆盖：仅 _AGENT_MODEL_ 节点 - 重新获取最新消息引用
         const completedMsg = messages[msgIndex]
         if (data.nodeId === '_AGENT_MODEL_' && data.message && completedMsg) {
-          console.log('[updateAIMessage] completed - 全量覆盖:', data.message)
+          console.log('[updateAIMessage] completed - _AGENT_MODEL_')
+          console.log('[updateAIMessage] metadata:', data.metadata)
+          console.log('[updateAIMessage] metadata.citations:', data.metadata?.citations)
+
+          // 提取 citations
+          const citations = data.metadata?.citations as CitationReference[] | undefined
+
           messages[msgIndex] = {
             ...completedMsg,
             id: completedMsg.id,
             role: completedMsg.role,
-            content: data.message,  // 全量覆盖，防止增量丢失
+            content: data.message,
             timestamp: completedMsg.timestamp,
-            status: 'thinking'
+            status: 'thinking',
+            citations: citations?.length ? citations : undefined
           }
+
+          console.log('[updateAIMessage] 已设置 citations:', citations?.length || 0)
         }
         break
 
@@ -673,6 +708,7 @@ export const useChatStore = defineStore('chat', () => {
         const graphCompletedMsg = messages[msgIndex]
         if (graphCompletedMsg) {
           console.log('[updateAIMessage] GRAPH_COMPLETED - 完成')
+          console.log('[updateAIMessage] citations 已存在:', graphCompletedMsg.citations?.length || 0)
           messages[msgIndex] = {
             ...graphCompletedMsg,
             id: graphCompletedMsg.id,
@@ -680,6 +716,7 @@ export const useChatStore = defineStore('chat', () => {
             content: graphCompletedMsg.content,
             timestamp: graphCompletedMsg.timestamp,
             status: 'completed'
+            // citations 已经在 completed 事件中设置了
           }
         }
         onComplete()
@@ -753,8 +790,10 @@ export const useChatStore = defineStore('chat', () => {
     const aiMessage = currentSession.value.messages[msgIndex]
 
     // 更新消息状态为思考中
-    aiMessage.status = 'thinking'
-    aiMessage.content += '\n\n--- 审批通过，继续执行 ---\n\n'
+    if (aiMessage) {
+      aiMessage.status = 'thinking'
+      aiMessage.content += '\n\n--- 审批通过，继续执行 ---\n\n'
+    }
 
     // 创建 AbortController
     const controller = new AbortController()
@@ -824,7 +863,7 @@ export const useChatStore = defineStore('chat', () => {
               const data: AgentEvent = JSON.parse(jsonStr)
               console.log(`[resumeAgent] SSE ${data.eventType}`)
 
-              handleSSEMessage(data, aiMessage, agentTimelineStore, controller, () => {
+              handleSSEMessage(data, aiMessage!, agentTimelineStore, controller, () => {
                 isProcessing.value = false
               })
             } catch (error) {
@@ -838,7 +877,7 @@ export const useChatStore = defineStore('chat', () => {
         console.log('[resumeAgent] Fetch aborted')
       } else {
         console.error('[resumeAgent] SSE 连接错误:', error)
-        handleSSEError(aiMessage)
+        handleSSEError(aiMessage!)
       }
     } finally {
       isProcessing.value = false

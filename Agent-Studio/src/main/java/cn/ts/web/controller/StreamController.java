@@ -3,13 +3,19 @@ package cn.ts.web.controller;
 import cn.ts.graph.state.State;
 import cn.ts.web.config.AgentExecutionConfig;
 import cn.ts.web.dto.AgentResponse;
+import cn.ts.web.dto.CitationReference;
 import cn.ts.web.dto.GraphStateVO;
 import cn.ts.web.dto.SessionDetailDTO;
+import cn.ts.web.dto.TemporaryFileContent;
 import cn.ts.web.service.AgentExecutionService;
+import cn.ts.web.service.CitationService;
 import cn.ts.web.service.GraphStateService;
 import cn.ts.web.service.SessionService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
@@ -36,18 +42,25 @@ import java.util.Map;
 @CrossOrigin(origins = "*")
 public class StreamController {
 
+    private static final Logger logger = LoggerFactory.getLogger(StreamController.class);
+
     private final AgentExecutionService agentExecutionService;
     private final SessionService sessionService;
     private final AgentExecutionConfig config;
     private final GraphStateService graphStateService;
+    private final CitationService citationService;
+
     public StreamController(
             AgentExecutionService agentExecutionService,
             SessionService sessionService,
-            AgentExecutionConfig config, GraphStateService graphStateService) {
+            AgentExecutionConfig config,
+            GraphStateService graphStateService,
+            CitationService citationService) {
         this.agentExecutionService = agentExecutionService;
         this.sessionService = sessionService;
         this.config = config;
         this.graphStateService = graphStateService;
+        this.citationService = citationService;
     }
 
     /**
@@ -111,10 +124,26 @@ public class StreamController {
         Map<String, Object> stateData = initialState.getStateData();
         Map<String, Object> mergedState = new HashMap<>(stateData);
         List<Message> messages = (List<Message>)mergedState.get("messages");
+
+        // 处理临时文件内容和引用
+        List<TemporaryFileContent> fileContents = request.getFileContents();
+        String enhancedInput = request.getInput();
+
+        if (fileContents != null && !fileContents.isEmpty()) {
+            // 构建带引用标记的上下文
+            String annotatedContext = citationService.buildAnnotatedContext(fileContents);
+            String citationInstruction = citationService.buildCitationInstruction(annotatedContext);
+
+            // 添加引用系统消息
+            messages.add(new SystemMessage(citationInstruction));
+
+            logger.info("已添加临时文件引用上下文，文件数: {}", fileContents.size());
+        }
+
         // 保存用户输入，用于 extractUserInput 提取
-        if (request.getInput() != null && !request.getInput().isEmpty()) {
-            mergedState.put("input", request.getInput());
-            messages.add(new UserMessage(request.getInput()));
+        if (enhancedInput != null && !enhancedInput.isEmpty()) {
+            mergedState.put("input", enhancedInput);
+            messages.add(new UserMessage(enhancedInput));
         }
 
         // 确定超时时间
@@ -122,11 +151,49 @@ public class StreamController {
                 ? java.time.Duration.ofSeconds(request.getTimeout())
                 : config.getTimeout();
 
+        // 存储文件内容到状态中，用于后续引用提取
+        if (fileContents != null && !fileContents.isEmpty()) {
+            mergedState.put("fileContents", fileContents);
+        }
+
         return agentExecutionService.executeAgentStreamWithSession(
                         agentName,
                         mergedState.isEmpty() ? null : mergedState,
                         sessionId,
                         actualTimeout)
+                .map(response -> {
+                    // 如果有文件内容且执行完成，提取引用信息
+                    if ("completed".equals(response.getEventType())) {
+                        logger.info("=== completed 事件处理 ===");
+                        logger.info("fileContents: {}", fileContents != null ? "存在 (" + fileContents.size() + " 个文件)" : "null");
+                        logger.info("nodeId: {}", response.getNodeId());
+                        logger.info("message: {}", response.getMessage() != null ? "存在 (" + response.getMessage().substring(0, Math.min(100, response.getMessage().length())) + "...)" : "null");
+
+                        if (fileContents != null && !fileContents.isEmpty() && response.getMessage() != null) {
+                            List<CitationReference> citations = citationService.extractCitations(
+                                    response.getMessage(),
+                                    fileContents
+                            );
+                            logger.info("提取到 {} 个引用", citations.size());
+
+                            if (!citations.isEmpty()) {
+                                Map<String, Object> metadata = response.getMetadata();
+                                if (metadata == null) {
+                                    metadata = new HashMap<>();
+                                }
+                                metadata.put("citations", citations);
+                                response.setMetadata(metadata);
+
+                                logger.info("已将 citations 添加到 metadata");
+                            }
+                        } else {
+                            logger.warn("引用提取条件不满足: fileContents={}, message={}",
+                                fileContents != null && !fileContents.isEmpty(),
+                                response.getMessage() != null);
+                        }
+                    }
+                    return response;
+                })
                 .map(response -> ServerSentEvent.<AgentResponse>builder()
                         .data(response)
                         .id(response.getExecutionId())
