@@ -43,8 +43,9 @@
     <div class="flex-1 flex flex-col overflow-hidden">
       <!-- 内容区域：消息和时间线 -->
       <div class="flex-1 flex overflow-hidden min-h-0">
-        <!-- 消息列表 -->
+        <!-- Conversation 标签页内容 -->
         <div
+          v-if="activeTab === 'conversation'"
           ref="messagesRef"
           :class="[
             'flex-1 overflow-y-auto custom-scrollbar-glass',
@@ -76,6 +77,20 @@
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- Summary 标签页内容 -->
+        <div
+          v-else-if="activeTab === 'summary'"
+          class="flex-1 overflow-y-auto custom-scrollbar-glass"
+        >
+          <SessionSummary
+            :session-id="chatStore.currentSessionId"
+            :loading="summaryLoading"
+            :summary="summaryData"
+            :error="summaryError"
+            @retry="handleRetrySummary"
+          />
         </div>
 
         <!-- 拖拽手柄 -->
@@ -172,6 +187,9 @@ import ChatMessage from './ChatMessage.vue'
 import MessageInput from './MessageInput.vue'
 import WelcomeScreen from './WelcomeScreen.vue'
 import AgentTimeline from '@/components/agent/AgentTimeline.vue'
+import SessionSummary from './SessionSummary.vue'
+import { fetchSessionSummary } from '@/api/session'
+import type { SessionSummary as SessionSummaryType } from '@/types/summary'
 
 // 接收知识库ID和列表
 const props = defineProps<{
@@ -186,6 +204,11 @@ const { isMobile } = useBreakpoints()
 
 // 当前激活的标签页
 const activeTab = ref<'conversation' | 'summary'>('conversation')
+
+// Summary 相关状态
+const summaryData = ref<SessionSummaryType | null>(null)
+const summaryLoading = ref(false)
+const summaryError = ref<string | null>(null)
 
 // 处理知识库切换
 function handleKnowledgeBaseChange(kbId: string) {
@@ -223,6 +246,43 @@ watch(() => chatStore.currentSessionId, (newSessionId) => {
     agentTimeline.startCollecting(newSessionId)
   }
 }, { immediate: true })
+
+// 监听 activeTab 变化，切换到 summary 时加载数据
+watch(activeTab, async (newTab) => {
+  if (newTab === 'summary' && chatStore.currentSessionId) {
+    await loadSummaryData()
+  }
+})
+
+// 监听 sessionId 变化，切换会话时清空 summary 数据
+watch(() => chatStore.currentSessionId, () => {
+  if (activeTab.value === 'summary') {
+    summaryData.value = null
+    summaryError.value = null
+  }
+})
+
+// 加载会话摘要数据
+async function loadSummaryData() {
+  if (!chatStore.currentSessionId) return
+
+  summaryLoading.value = true
+  summaryError.value = null
+
+  try {
+    summaryData.value = await fetchSessionSummary(chatStore.currentSessionId)
+  } catch (err) {
+    console.error('加载会话摘要失败:', err)
+    summaryError.value = err instanceof Error ? err.message : '加载失败'
+  } finally {
+    summaryLoading.value = false
+  }
+}
+
+// 重试加载摘要数据
+function handleRetrySummary() {
+  loadSummaryData()
+}
 
 // 平滑滚动到底部
 function smoothScrollToBottom() {

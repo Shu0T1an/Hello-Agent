@@ -140,3 +140,33 @@ export function throttle<T extends (...args: unknown[]) => unknown>(
     }
   }
 }
+
+/**
+ * 格式化数字（添加千分位）
+ */
+export function formatNumber(num?: number): string {
+  if (num === undefined || num === null) return '-'
+  return num.toLocaleString('zh-CN')
+}
+
+/**
+ * 格式化时长（毫秒转为可读格式）
+ */
+export function formatDuration(ms?: number): string {
+  if (ms === undefined || ms === null) return '-'
+
+  if (ms < 1000) {
+    return `${ms}ms`
+  } else if (ms < 60000) {
+    const seconds = (ms / 1000).toFixed(1)
+    return `${seconds}s`
+  } else if (ms < 3600000) {
+    const minutes = Math.floor(ms / 60000)
+    const seconds = Math.floor((ms % 60000) / 1000)
+    return `${minutes}m ${seconds}s`
+  } else {
+    const hours = Math.floor(ms / 3600000)
+    const minutes = Math.floor((ms % 3600000) / 60000)
+    return `${hours}h ${minutes}m`
+  }
+}

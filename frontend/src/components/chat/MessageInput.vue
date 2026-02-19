@@ -1,7 +1,37 @@
 <template>
   <div class="message-input-container">
+    <!-- 文件预览区域 -->
+    <div v-if="attachedFiles.length > 0" class="file-preview-area">
+      <div v-for="file in attachedFiles" :key="file.id" class="file-preview-item">
+        <FileText :size="16" class="file-icon" />
+        <span class="file-name">{{ file.name }}</span>
+        <span class="file-size">{{ formatFileSize(file.size) }}</span>
+        <button @click="removeFile(file.id)" class="remove-file-btn">
+          <X :size="14" />
+        </button>
+      </div>
+    </div>
+
     <!-- 第一行：输入框和发送按钮 -->
     <div class="input-main-row">
+      <!-- 文件上传按钮 -->
+      <button
+        @click="triggerFileInput"
+        class="file-upload-btn"
+        title="上传文件（PDF、TXT、MD）"
+        :disabled="isSending"
+      >
+        <Paperclip :size="20" />
+      </button>
+      <input
+        ref="fileInputRef"
+        type="file"
+        multiple
+        accept=".pdf,.txt,.md,.markdown"
+        @change="handleFileSelect"
+        style="display: none"
+      />
+
       <textarea
         ref="textareaRef"
         v-model="inputContent"
@@ -63,11 +93,21 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Send } from 'lucide-vue-next'
+import { Send, Paperclip, FileText, X } from 'lucide-vue-next'
 import { useChatStore } from '@/stores/chat'
 import { useAgentStore } from '@/stores/agent'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseDropdown from '@/components/base/BaseDropdown.vue'
+import { isFileTypeSupported, isFileSizeValid, formatFileSize } from '@/api/file'
+
+// 附件文件接口
+interface AttachedFile {
+  id: string
+  file: File
+  name: string
+  size: number
+  type: string
+}
 
 // Props
 const props = defineProps<{
@@ -84,7 +124,9 @@ const chatStore = useChatStore()
 const agentStore = useAgentStore()
 const inputContent = ref('')
 const textareaRef = ref<HTMLTextAreaElement>()
+const fileInputRef = ref<HTMLInputElement>()
 const isSending = ref(false)
+const attachedFiles = ref<AttachedFile[]>([])
 
 // Agent 列表
 const agents = computed(() => agentStore.agents)
@@ -119,7 +161,7 @@ const hasKnowledgeBases = computed(() => {
 
 // 是否可以发送消息
 const canSend = computed(() => {
-  return inputContent.value.trim().length > 0 && !chatStore.isProcessing
+  return (inputContent.value.trim().length > 0 || attachedFiles.value.length > 0) && !chatStore.isProcessing
 })
 
 // 处理 Agent 切换
@@ -132,13 +174,77 @@ function handleKnowledgeBaseChange(kbId: string): void {
   emit('knowledge-base-change', kbId)
 }
 
+// 触发文件选择
+function triggerFileInput(): void {
+  fileInputRef.value?.click()
+}
+
+// 处理文件选择
+function handleFileSelect(event: Event): void {
+  const target = event.target as HTMLInputElement
+  const files = target.files
+
+  if (!files || files.length === 0) return
+
+  // 验证并添加文件
+  Array.from(files).forEach(file => {
+    // 验证文件类型
+    if (!isFileTypeSupported(file.name)) {
+      alert(`不支持的文件类型: ${file.name}\n支持的类型: PDF、TXT、MD`)
+      return
+    }
+
+    // 验证文件大小
+    if (!isFileSizeValid(file.size)) {
+      alert(`文件过大: ${file.name}\n最大支持 10MB`)
+      return
+    }
+
+    // 检查是否已存在
+    const exists = attachedFiles.value.some(f => f.name === file.name)
+    if (exists) {
+      alert(`文件已存在: ${file.name}`)
+      return
+    }
+
+    // 添加到附件列表
+    attachedFiles.value.push({
+      id: `file-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      file,
+      name: file.name,
+      size: file.size,
+      type: file.type
+    })
+  })
+
+  // 清空 input 以便可以再次选择相同文件
+  target.value = ''
+}
+
+// 移除文件
+function removeFile(fileId: string): void {
+  attachedFiles.value = attachedFiles.value.filter(f => f.id !== fileId)
+}
+
 // 发送消息
 async function handleSend(): Promise<void> {
   if (!canSend.value) return
 
   isSending.value = true
-  chatStore.sendMessage(inputContent.value)
+
+  // 获取文件列表
+  const files = attachedFiles.value.map(f => f.file)
+
+  // 发送消息
+  if (files.length > 0) {
+    await chatStore.sendMessage(inputContent.value, files)
+  } else {
+    await chatStore.sendMessage(inputContent.value)
+  }
+
+  // 清空输入和附件
   inputContent.value = ''
+  attachedFiles.value = []
 
   // 重置 textarea 高度
   if (textareaRef.value) {
@@ -182,11 +288,125 @@ defineExpose({
   background: transparent;
 }
 
+.file-preview-area {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="dark"] .file-preview-area {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.file-preview-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: white;
+  border-radius: 8px;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+[data-theme="dark"] .file-preview-item {
+  background: #2d2d2d;
+}
+
+.file-preview-item:hover {
+  background: rgba(79, 70, 229, 0.05);
+}
+
+[data-theme="dark"] .file-preview-item:hover {
+  background: rgba(79, 70, 229, 0.1);
+}
+
+.file-icon {
+  color: #4f46e5;
+  flex-shrink: 0;
+}
+
+.file-name {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-primary);
+}
+
+.file-size {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+
+.remove-file-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.remove-file-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
 .input-main-row {
   display: flex;
   gap: 12px;
   align-items: flex-end;
   margin-bottom: 12px;
+}
+
+.file-upload-btn {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: none;
+  background: #ffffff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #64748b;
+  transition: all 0.2s;
+  box-shadow:
+    0 1px 3px 0 rgba(0, 0, 0, 0.06),
+    0 4px 12px 0 rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .file-upload-btn {
+  background: #2d2d2d;
+  color: #94a3b8;
+  box-shadow:
+    0 1px 3px 0 rgba(0, 0, 0, 0.3),
+    0 4px 12px 0 rgba(0, 0, 0, 0.2);
+}
+
+.file-upload-btn:hover:not(:disabled) {
+  color: #4f46e5;
+  background: rgba(79, 70, 229, 0.05);
+}
+
+.file-upload-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .message-textarea {

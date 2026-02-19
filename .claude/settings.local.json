@@ -41,7 +41,20 @@
       "Bash(xargs:*)",
       "Bash(curl:*)",
       "Bash(unzip:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(python scripts/init_skill.py:*)",
+      "Bash(python scripts/package_skill.py:*)",
+      "Bash(python:*)",
+      "Bash(cmd:*)",
+      "Bash(git reset:*)",
+      "Skill(glm-plan-usage:usage-query-skill)",
+      "Bash(npm run type-check:*)",
+      "Bash(npm run)",
+      "Bash(tr:*)",
+      "Bash(jar:*)",
+      "Bash(java:*)",
+      "Bash(javap:*)",
+      "Bash(npx vue-tsc:*)"
     ]
   }
 }

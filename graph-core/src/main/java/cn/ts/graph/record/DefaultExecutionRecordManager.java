@@ -30,7 +30,7 @@ public class DefaultExecutionRecordManager implements ExecutionRecordManager {
      * 构造函数（使用默认历史大小 100）
      */
     public DefaultExecutionRecordManager() {
-        this(100);
+        this(1000);
     }
 
     /**

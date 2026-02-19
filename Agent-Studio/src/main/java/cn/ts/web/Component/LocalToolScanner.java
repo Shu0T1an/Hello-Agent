@@ -115,7 +115,7 @@ public class LocalToolScanner {
                 if (toolAnnotation != null) {
                     ScannedTool scannedTool = createScannedTool(beanName, bean, method, toolAnnotation);
                     scannedTools.add(scannedTool);
-                    logger.debug("Found tool: {} in class: {}", scannedTool.toolName, targetClass.getSimpleName());
+//                    logger.debug("Found tool: {} in class: {}", scannedTool.toolName, targetClass.getSimpleName());
                 }
             }
         }

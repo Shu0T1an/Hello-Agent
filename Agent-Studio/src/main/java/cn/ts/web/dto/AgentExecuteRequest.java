@@ -1,11 +1,13 @@
 package cn.ts.web.dto;
 
+import cn.ts.web.dto.TemporaryFileContent;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -39,4 +41,12 @@ public class AgentExecuteRequest {
      * 初始状态（可选，用于自定义 Agent 执行的初始状态）
      */
     private Map<String, Object> initialState;
+
+    /**
+     * 临时文件内容列表（包含分块信息）
+     * <p>
+     * 用于会话级别的临时文件上传，文件内容会被注入到 LLM 上下文中
+     * </p>
+     */
+    private List<TemporaryFileContent> fileContents;
 }

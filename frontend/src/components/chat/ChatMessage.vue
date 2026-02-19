@@ -23,37 +23,118 @@
       <div class="message-content">
         <!-- Tool Call 结构化展示 -->
         <div v-if="message.role === 'tool_call' && message.metadata?.tool_calls" class="tool-call-content">
-          <div class="flex items-center gap-2 text-indigo-700 mb-3">
-            <Sparkles :size="16" />
-            <span class="text-sm font-medium">Function Call</span>
-          </div>
-          <div v-for="(toolCall, idx) in message.metadata.tool_calls" :key="toolCall.id || idx" class="tool-call-item">
-            <div class="flex items-center gap-2 mb-2">
-              <code class="text-xs font-mono px-2 py-1 bg-indigo-100 text-indigo-700 rounded">{{ toolCall.name }}</code>
+          <div
+            class="tool-thumbnail"
+            :class="{ 'tool-thumbnail--collapsed': isToolCollapsed }"
+            @click="toggleCollapse"
+          >
+            <div class="flex items-center justify-between w-full">
+              <div class="flex items-center gap-2">
+                <Sparkles :size="16" />
+                <span class="text-sm font-medium">Function Call</span>
+              </div>
+              <component :is="isToolCollapsed ? ChevronDown : ChevronUp" :size="16" class="collapse-icon" />
             </div>
-            <div class="text-xs text-zinc-600 mb-1">Arguments:</div>
-            <pre class="font-mono text-xs bg-white border border-zinc-200 rounded p-3 overflow-x-auto text-zinc-700">{{ formatToolArguments(toolCall.arguments) }}</pre>
+            <div v-if="isToolCollapsed" class="tool-names">
+              <template v-for="(toolCall, idx) in message.metadata.tool_calls" :key="toolCall.id || idx">
+                <code class="text-xs font-mono px-2 py-1 bg-indigo-100 text-indigo-700 rounded">{{ toolCall.name }}</code>
+              </template>
+            </div>
           </div>
+          <Transition name="collapse">
+            <div v-if="!isToolCollapsed" class="tool-details">
+              <div v-for="(toolCall, idx) in message.metadata.tool_calls" :key="toolCall.id || idx" class="tool-call-item">
+                <div class="flex items-center gap-2 mb-2">
+                  <code class="text-xs font-mono px-2 py-1 bg-indigo-100 text-indigo-700 rounded">{{ toolCall.name }}</code>
+                </div>
+                <div class="text-xs text-zinc-600 mb-1">Arguments:</div>
+                <pre class="font-mono text-xs bg-white border border-zinc-200 rounded p-3 overflow-x-auto text-zinc-700">{{ formatToolArguments(toolCall.arguments) }}</pre>
+              </div>
+            </div>
+          </Transition>
         </div>
 
         <!-- Tool Response 结构化展示 -->
         <div v-else-if="message.role === 'tool_response' && message.metadata?.tool_responses" class="tool-response-content">
-          <div class="flex items-center gap-2 text-emerald-700 mb-3">
-            <Terminal :size="16" />
-            <span class="text-sm font-medium">Tool Execution</span>
-          </div>
-          <div v-for="(response, idx) in message.metadata.tool_responses" :key="response.id || idx" class="tool-response-item">
-            <div class="flex items-center gap-2 mb-2">
-              <code class="text-xs font-mono px-2 py-1 bg-emerald-100 text-emerald-700 rounded">{{ response.name }}</code>
-              <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Success</span>
+          <div
+            class="tool-thumbnail tool-thumbnail--response"
+            :class="{ 'tool-thumbnail--collapsed': isToolCollapsed }"
+            @click="toggleCollapse"
+          >
+            <div class="flex items-center justify-between w-full">
+              <div class="flex items-center gap-2">
+                <Terminal :size="16" />
+                <span class="text-sm font-medium">Tool Execution</span>
+              </div>
+              <component :is="isToolCollapsed ? ChevronDown : ChevronUp" :size="16" class="collapse-icon" />
             </div>
-            <div class="text-xs text-zinc-600 mb-1">Result:</div>
-            <pre class="font-mono text-xs bg-white border border-zinc-200 rounded p-3 overflow-x-auto text-zinc-700">{{ response.response }}</pre>
+            <div v-if="isToolCollapsed" class="tool-names">
+              <template v-for="(response, idx) in message.metadata.tool_responses" :key="response.id || idx">
+                <code class="text-xs font-mono px-2 py-1 bg-emerald-100 text-emerald-700 rounded">{{ response.name }}</code>
+                <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Success</span>
+              </template>
+            </div>
           </div>
+          <Transition name="collapse">
+            <div v-if="!isToolCollapsed" class="tool-details">
+              <div v-for="(response, idx) in message.metadata.tool_responses" :key="response.id || idx" class="tool-response-item">
+                <div class="flex items-center gap-2 mb-2">
+                  <code class="text-xs font-mono px-2 py-1 bg-emerald-100 text-emerald-700 rounded">{{ response.name }}</code>
+                  <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Success</span>
+                </div>
+                <div class="text-xs text-zinc-600 mb-1">Result:</div>
+                <pre class="font-mono text-xs bg-white border border-zinc-200 rounded p-3 overflow-x-auto text-zinc-700">{{ response.response }}</pre>
+              </div>
+            </div>
+          </Transition>
         </div>
 
         <!-- 普通 Markdown 内容 -->
-        <div v-else class="message-text prose prose-sm max-w-none dark:prose-invert" v-html="renderedContent"></div>
+        <div
+          v-else
+          ref="markdownContainer"
+          class="message-text prose prose-sm max-w-none dark:prose-invert"
+          v-html="renderedContent"
+          @click="handleMarkdownClick"
+        ></div>
+
+        <!-- 用户消息附件列表 -->
+        <div v-if="message.attachments?.length && message.role === 'user'" class="message-attachments">
+          <div v-for="attach in message.attachments" :key="attach.id" class="attachment-item">
+            <FileText :size="16" />
+            <span>{{ attach.fileName }}</span>
+            <span class="attachment-size">({{ formatFileSize(attach.fileSize) }})</span>
+          </div>
+        </div>
+
+        <!-- AI 消息引用列表 -->
+        <div v-if="message.citations?.length && message.role === 'assistant'" class="message-citations">
+          <div class="citations-header">
+            <FileText :size="14" />
+            <span>引用来源</span>
+          </div>
+          <div class="citations-list">
+            <div
+              v-for="(citation, index) in message.citations"
+              :key="citation.chunkId"
+              class="citation-item"
+              @click="toggleCitation(index)"
+            >
+              <div class="citation-header">
+                <span class="citation-file">{{ citation.fileName }}</span>
+                <span class="citation-index">段落 {{ citation.chunkIndex + 1 }}</span>
+                <ChevronDown
+                  :size="14"
+                  class="chevron-icon"
+                  :class="{ 'rotated': expandedCitations.has(index) }"
+                />
+              </div>
+              <div v-show="expandedCitations.has(index)" class="citation-content">
+                {{ citation.content }}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- 消息底部信息 -->
@@ -101,13 +182,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import { Bot, User, CheckCircle, Sparkles, Terminal } from 'lucide-vue-next'
+import { ref, computed, watch, nextTick } from 'vue'
+import { Bot, User, CheckCircle, Sparkles, Terminal, ChevronDown, ChevronUp, FileText } from 'lucide-vue-next'
 import BaseTag from '@/components/base/BaseTag.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import ApprovalDialog from '@/components/chat/ApprovalDialog.vue'
 import type { Message } from '@/types/message'
-import { renderMarkdown } from '@/utils/markdown'
+import { renderMarkdown, testCitationRendering, clearCache } from '@/utils/markdown'
 import { formatTime, getMessageStatusLabel, getMessageStatusVariant } from '@/utils/helpers'
 import { useChatStore } from '@/stores/chat'
 
@@ -123,6 +204,41 @@ const emit = defineEmits<{
 
 const renderedContent = ref('')
 const approvalDialogOpen = ref(false)
+const isToolCollapsed = ref(true)
+const expandedCitations = ref<Set<number>>(new Set())
+const markdownContainer = ref<HTMLElement | null>(null)
+
+// 将测试函数暴露到全局（用于调试）
+if (typeof window !== 'undefined') {
+  (window as any).testCitationRendering = testCitationRendering
+  (window as any).clearMarkdownCache = clearCache
+  console.log('[ChatMessage] 测试函数已注册到全局:')
+  console.log('  - window.testCitationRendering() - 测试引用标记渲染')
+  console.log('  - window.clearMarkdownCache() - 清除缓存')
+}
+
+function toggleCollapse() {
+  isToolCollapsed.value = !isToolCollapsed.value
+}
+
+function toggleCitation(index: number) {
+  if (expandedCitations.value.has(index)) {
+    expandedCitations.value.delete(index)
+  } else {
+    expandedCitations.value.add(index)
+  }
+  // 触发响应式更新
+  expandedCitations.value = new Set(expandedCitations.value)
+}
+
+// 格式化文件大小
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
 
 // 格式化工具参数
 function formatToolArguments(args: string): string {
@@ -189,11 +305,54 @@ async function handleApprovalSubmit(feedbacks: Array<{ id: string; name: string;
 
 // 异步渲染 markdown
 async function updateRenderedContent() {
-  renderedContent.value = await renderMarkdown(props.message.content)
+  console.log('[ChatMessage] updateRenderedContent 开始')
+  console.log('[ChatMessage] citations 数据:', props.message.citations)
+  console.log('[ChatMessage] content:', props.message.content)
+
+  const result = await renderMarkdown(props.message.content, {
+    theme: 'github-dark',
+    citations: props.message.citations || []
+  })
+
+  console.log('[ChatMessage] 渲染结果是否包含 citation-marker:', result.includes('citation-marker'))
+  console.log('[ChatMessage] 渲染结果片段:', result.substring(0, 500))
+
+  renderedContent.value = result
 }
 
 // 监听消息内容变化，自动重新渲染
 watch(() => props.message.content, updateRenderedContent, { immediate: true })
+watch(() => props.message.citations, updateRenderedContent, { immediate: true })
+
+// 处理 Markdown 内容中的点击事件
+function handleMarkdownClick(event: MouseEvent) {
+  const target = event.target as HTMLElement
+  if (target.classList.contains('citation-marker')) {
+    const citationIndex = target.getAttribute('data-citation-index')
+    if (citationIndex !== null) {
+      const index = parseInt(citationIndex, 10)
+      // 展开对应的引用
+      if (!expandedCitations.value.has(index)) {
+        expandedCitations.value.add(index)
+        expandedCitations.value = new Set(expandedCitations.value)
+      }
+
+      // 滚动到引用位置
+      nextTick(() => {
+        const citationElement = document.querySelector(`[data-citation-index="${index}"]`) as HTMLElement
+        citationElement?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+
+        // 添加高亮动画效果
+        if (citationElement) {
+          citationElement.classList.add('citation-highlight')
+          setTimeout(() => {
+            citationElement.classList.remove('citation-highlight')
+          }, 2000)
+        }
+      })
+    }
+  }
+}
 </script>
 
 <style scoped>
@@ -411,5 +570,273 @@ watch(() => props.message.content, updateRenderedContent, { immediate: true })
   font-size: 12px;
   color: var(--color-text-muted);
   padding: 0 4px;
+}
+
+/* 工具消息折叠样式 */
+.tool-thumbnail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.tool-thumbnail:hover {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+}
+
+.tool-thumbnail--response {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(52, 211, 153, 0.05) 100%);
+}
+
+.tool-thumbnail--response:hover {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(52, 211, 153, 0.1) 100%);
+}
+
+[data-theme="dark"] .tool-thumbnail {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%);
+}
+
+[data-theme="dark"] .tool-thumbnail:hover {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.25) 0%, rgba(139, 92, 246, 0.25) 100%);
+}
+
+[data-theme="dark"] .tool-thumbnail--response {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(52, 211, 153, 0.15) 100%);
+}
+
+[data-theme="dark"] .tool-thumbnail--response:hover {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(52, 211, 153, 0.25) 100%);
+}
+
+.tool-thumbnail--collapsed {
+  padding: 8px 12px;
+}
+
+.tool-names {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.collapse-icon {
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.tool-details {
+  overflow: hidden;
+}
+
+/* 折叠动画 */
+.collapse-enter-active,
+.collapse-leave-active {
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.collapse-enter-from,
+.collapse-leave-to {
+  opacity: 0;
+  max-height: 0;
+  margin-top: 0;
+}
+
+.collapse-enter-to,
+.collapse-leave-from {
+  opacity: 1;
+  max-height: 500px;
+  margin-top: 12px;
+}
+
+/* 附件列表样式 */
+.message-attachments {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+[data-theme="dark"] .message-attachments {
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+.attachment-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--color-text-primary);
+}
+
+[data-theme="dark"] .attachment-item {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.attachment-item svg {
+  color: #4f46e5;
+  flex-shrink: 0;
+}
+
+.attachment-size {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+
+/* 引用列表样式 */
+.message-citations {
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(79, 70, 229, 0.05);
+  border-radius: 8px;
+  border-left: 3px solid #4f46e5;
+}
+
+[data-theme="dark"] .message-citations {
+  background: rgba(79, 70, 229, 0.1);
+}
+
+.citations-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: 8px;
+}
+
+.citations-header svg {
+  color: #4f46e5;
+}
+
+.citations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.citation-item {
+  padding: 8px;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+[data-theme="dark"] .citation-item {
+  background: #2d2d2d;
+}
+
+.citation-item:hover {
+  background: rgba(79, 70, 229, 0.05);
+}
+
+[data-theme="dark"] .citation-item:hover {
+  background: rgba(79, 70, 229, 0.1);
+}
+
+.citation-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.citation-file {
+  font-size: 13px;
+  font-weight: 500;
+  color: #4f46e5;
+}
+
+.citation-index {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.chevron-icon {
+  color: var(--color-text-secondary);
+  transition: transform 0.2s ease;
+}
+
+.chevron-icon.rotated {
+  transform: rotate(180deg);
+}
+
+.citation-content {
+  margin-top: 8px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 4px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+  white-space: pre-wrap;
+}
+
+[data-theme="dark"] .citation-content {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* 引用标记样式 */
+.message-text :deep(.citation-marker) {
+  display: inline-block;
+  padding: 2px 6px;
+  background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+  color: white;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  margin: 0 2px;
+  font-family: 'Courier New', monospace;
+}
+
+/* 有完整引用数据的标记 - 可点击 */
+.message-text :deep(.citation-marker:not(.citation-simple)) {
+  cursor: pointer;
+}
+
+.message-text :deep(.citation-marker:not(.citation-simple):hover) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+}
+
+/* 简单引用标记 - 无点击功能 */
+.message-text :deep(.citation-marker.citation-simple) {
+  cursor: default;
+  opacity: 0.9;
+}
+
+.message-text :deep(.citation-marker.citation-simple:hover) {
+  opacity: 1;
+}
+
+/* 引用高亮动画 */
+.message-text :deep(.citation-marker.citation-highlight) {
+  animation: citation-pulse 2s ease-in-out;
+}
+
+@keyframes citation-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(79, 70, 229, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(79, 70, 229, 0);
+  }
 }
 </style>

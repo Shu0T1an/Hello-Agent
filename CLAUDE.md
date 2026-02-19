@@ -34,7 +34,7 @@ Hello-Agent 是一个基于 Java 21 和 Spring Boot 3.3 构建的 AI Agent 框�
   - `ApiKeyConfig`: API 密钥统一管理
   - `McpServerConfig`: MCP 服务器连接配置
   - `NodeJsConfig`: Node.js/NPX 路径配置
-  - 集成 MyBatis、MySQL、WebFlux
+  - 集成 MyBatis、PostgreSQL、WebFlux
 
 - **frontend**: Vue 3 + TypeScript + Vite 前端项目
 
@@ -59,6 +59,16 @@ mvn spring-boot:run
 # 运行单个模块测试
 cd graph-core
 mvn test
+
+# 运行特定测试类
+mvn test -Dtest=StateGraphTest
+
+# 运行特定测试方法
+mvn test -Dtest=StateGraphTest#testAddNode
+
+# 生成 JaCoCo 覆盖率报告
+mvn clean test jacoco:report
+# 报告位于 target/site/jacoco/index.html
 ```
 
 ### 前端
@@ -75,6 +85,12 @@ npm run build   # 生产构建
 ### 状态图执行流程
 
 1. **图定义**: 使用 `StateGraph` 添加节点和边
+   ```java
+   StateGraph graph = new StateGraph()
+       .addNode("node1", state -> { ... })
+       .addEdge("node1", "node2")
+       .setEntryPoint("node1");
+   ```
 2. **编译**: 调用 `compile()` 生成 `CompiledGraph`
 3. **执行**:
    - 同步执行: `compiledGraph.invoke(initialState)`
@@ -114,6 +130,16 @@ START → MODEL → (有toolCalls?) → TOOL → MODEL → ...
 - **从 TOOL 节点**:
   - iteration < maxIterations → MODEL
   - 其他 → END
+
+**Builder 模式创建 Agent**:
+```java
+ReactAgent agent = ReactAgent.builder()
+    .name("my-agent")
+    .chatModel(chatModel)
+    .tools(tools)
+    .maxIterations(10)
+    .build();
+```
 
 ### 响应式执行
 
@@ -215,8 +241,14 @@ agent:
     timeout: 300s              # 执行超时时间
     heartbeat-interval: 30s    # 心跳间隔
     max-title-length: 15        # 标题最大长度
-    default-max-iterations: 10  # 默认最大迭代次数
+    default-max-iterations: 100  # 默认最大迭代次数
     debug-mode: false           # 调试模式
+    retry:
+      enabled: true             # 是否启用重试
+      max-retries: 3            # 最大重试次数
+      initial-backoff: 1s       # 初始退避时间
+      backoff-multiplier: 2.0   # 退避时间倍数
+      max-backoff: 30s          # 最大退避时间
 ```
 
 ### mcp.manager 配置
@@ -329,18 +361,209 @@ List<ToolCallback> allCallbacks = ToolUtils.getAllToolCallbacksFromTools(tools);
 ## 配置说明
 
 - `application.yml`: 基础配置（端口 8080）
-- `application-dev.yml`: 开发环境配置（MySQL 连接等）
+- `application-dev.yml`: 开发环境配置（PostgreSQL 连接等）
 - Spring AI 相关配置需要添加 API Key 配置
+
+### 数据库连接配置
+
+**PostgreSQL**（当前默认）:
+```yaml
+spring:
+  datasource:
+    url: jdbc:postgresql://127.0.0.1:5432/agent_studio_db
+    driver-class-name: org.postgresql.Driver
+    username: admin
+    password: 123456
+```
 
 ## 代码规范
 
-- Java 版本: 21
-- 使用 Lombok 简化代码
-- 异常处理: 使用 `GraphException` 及其子类
-- 响应式编程: 使用 Reactor Core
+- **Java 版本**: 21
+- **使用 Lombok 简化代码**
+- **异常处理**: 使用 `GraphException` 及其子类
+- **响应式编程**: 使用 Reactor Core
+- **日志记录**: 使用 SLF4J
+
+### Git 提交规范
+
+**重要限制**:
+- **不要**在 Git 提交信息的结尾添加 `Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>` 或类似的署名信息
+- 提交信息应该简洁明了，描述实际做了什么改动
+- 使用中文编写提交信息
+
+**提交信息格式**:
+```
+<type>: <subject>
+
+<body>
+```
+
+**类型 (type)**:
+- `feat`: 新功能
+- `fix`: 修复 bug
+- `refactor`: 重构代码
+- `chore`: 构建/工具链相关
+- `docs`: 文档更新
+- `test`: 测试相关
+
+**示例**:
+```
+feat: 添加 MCP 工具自动发现功能
+
+实现了基于注解的工具自动发现机制，
+支持 Spring AI @Tool 注解和 MCP 客户端工具。
+```
+
+### 测试规范
+
+**测试工具**:
+- JUnit 5（单元测试）
+- Mockito（Mock 框架）
+- Spring Boot Test（集成测试）
+
+**测试类别**:
+- 单元测试：各模块的 `src/test/java` 目录
+- 集成测试：MyBatis 数据库集成测试、MCP 连接测试
+- 示例代码：`EmailProcessingExample` 展示图执行引擎用法
+
+### 数据库
+
+**当前使用**:
+- PostgreSQL（主要数据库）
+- pgvector 扩展（向量存储）
+
+**迁移历史**:
+- 项目从 MySQL 迁移到 PostgreSQL
+- 配置文件保留两者兼容性
+
+**Schema 初始化**:
+- 位置: `Agent-Studio/src/main/resources/db/`
+- 文件:
+  - `schema.sql`: 主表结构
+  - `schema-checkpoint.sql`: 检查点表
+  - `schema-rag.sql`: RAG 相关表
+  - `data.sql`: 初始数据
+
+### 常见开发任务
+
+**添加新的 Agent**:
+1. 在数据库中创建 Agent 配置（通过 API 或直接插入）
+2. Agent 会自动注册到 `AgentExecutionService`
+3. 使用 `/api/stream/agent/{agentName}/execute` 执行
+
+**添加新的工具**:
+1. 创建工具类并使用 `@Tool` 注解（Spring AI）或实现 MCP 客户端
+2. 通过 API 注册工具定义
+3. 将工具关联到 Agent 配置
+
+**调试 Agent 执行**:
+1. 设置 `agent.execution.debug-mode: true`
+2. 查看日志输出（级别设为 DEBUG）
+3. 使用 Prometheus 端点查看指标
+4. 检查检查点记录（如果启用）
+
+### 重要文件位置
+
+- **图可视化**: `MermaidGraphVisualizer`（支持导出 Mermaid 格式）
+- **状态常量**: `StateKeys`（agent-core）、`GraphConstants`（graph-core）
+- **异常层次**: `GraphException` 及其子类
+- **测试工具**: `TestFixture`、`TestUtils`
 
 ## Web API
 
-- `GET /api/stream/agent/{agentName}/execute`: SSE 流式执行
-- `GET /api/stream/agent/{agentName}/exists`: 检查 Agent 是否存在
-- `GET /api/stream/agents`: 获取所有已注册 Agent
+### Agent 管理
+- `POST /api/agents` - 创建 Agent
+- `PUT /api/agents/{id}` - 更新 Agent
+- `DELETE /api/agents/{id}` - 删除 Agent
+- `GET /api/agents/{id}` - 获取 Agent 详情
+- `GET /api/agents` - 获取所有 Agent
+
+### 流式执行
+- `GET /api/stream/agent/{agentName}/execute` - SSE 流式执行
+- `GET /api/stream/agent/{agentName}/exists` - 检查 Agent 是否存在
+- `GET /api/stream/agents` - 获取所有已注册 Agent
+
+### MCP 管理
+- `GET /api/mcp/servers` - 获取所有 MCP 服务器
+- `POST /api/mcp/servers` - 添加 MCP 服务器
+- `DELETE /api/mcp/servers/{name}` - 删除 MCP 服务器
+
+### RAG (检索增强生成)
+- `POST /api/rag/upload` - 上传文档到知识库
+- `POST /api/rag/query` - 查询知识库
+- `GET /api/rag/knowledge-bases` - 获取知识库列表
+- `DELETE /api/rag/knowledge-bases/{id}` - 删除知识库
+
+### 可观测性
+- `GET /actuator/prometheus` - Prometheus 指标端点
+- `GET /actuator/health` - 健康检查端点
+- `GET /actuator/metrics` - 指标列表端点
+
+## 高级功能
+
+### 钩子机制 (Hook System)
+
+钩子系统允许在节点执行前后插入自定义逻辑：
+
+**可用钩子接口**:
+- `GraphLifecycleListener`: 图生命周期监听器
+- `HumanInTheLoopHook`: 人机交互钩子，支持中断等待用户输入
+- `LoggingHook`: 日志记录钩子
+
+**钩子类型**:
+- `BEFORE_NODE`: 节点执行前
+- `AFTER_NODE`: 节点执行后
+- `ON_ERROR`: 错误发生时
+
+**使用示例**:
+```java
+// 参见 agent-core/src/test/java/cn/ts/agent/hook/HookIntegrationExample.java
+HumanInTheLoopHook hook = new HumanInTheLoopHook();
+ReactAgent agent = ReactAgent.builder()
+    .hook(hook)
+    .build();
+```
+
+### 可观测性 (Observability)
+
+**Micrometer 集成**:
+- 自动收集执行指标（执行时间、节点调用次数等）
+- 支持 Prometheus 导出
+- 通过 `GraphObservationLifecycleListener` 实现
+
+**自定义指标名称**:
+参见 `ObservationMetricNames` 和 `ObservationMetricAttributes`
+
+**记录系统 (ExecutionRecord)**:
+- `LLMExecutionRecord`: LLM 调用记录（包含 token 使用情况）
+- `ToolExecutionRecord`: 工具执行记录
+- `ExecutionRecordManager`: 统一管理所有执行记录
+
+### 重试机制
+
+**配置参数**（见 `agent.execution.retry`）:
+- `enabled`: 是否启用重试
+- `max-retries`: 最大重试次数
+- `initial-backoff`: 初始退避时间
+- `backoff-multiplier`: 退避时间倍数
+- `max-backoff`: 最大退避时间
+
+**LLM 节点自动重试**:
+- 在 LLM 调用失败时自动重试
+- 支持指数退避策略
+
+### RAG 功能
+
+**支持的文档格式**:
+- PDF（使用 PDFBox）
+- TXT、MD、Markdown
+
+**文本分块配置**（见 `rag.text-splitter`）:
+- `chunk-size`: 块大小
+- `chunk-overlap`: 块重叠大小
+- `min-chunk-size`: 最小块大小
+
+**向量存储**:
+- 使用 PostgreSQL + pgvector
+- 支持相似度检索
+- 可配置相似度阈值

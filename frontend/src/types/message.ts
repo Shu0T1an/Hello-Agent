@@ -18,6 +18,22 @@ export interface ToolResponse {
   response: string
 }
 
+// 消息附件
+export interface MessageAttachment {
+  id: string
+  fileName: string
+  fileSize: number
+  fileType: string
+}
+
+// 引用信息
+export interface CitationReference {
+  chunkId: string
+  fileName: string
+  content: string
+  chunkIndex: number
+}
+
 export interface Message {
   id: string
   role: MessageRole
@@ -29,6 +45,7 @@ export interface Message {
   metadata?: {
     tool_calls?: ToolCall[]
     tool_responses?: ToolResponse[]
+    citations?: CitationReference[]
   }
   interruptionData?: {
     message: string
@@ -40,6 +57,8 @@ export interface Message {
       result: string
     }>
   }
+  attachments?: MessageAttachment[]
+  citations?: CitationReference[]
 }
 
 export interface ChatSession {
