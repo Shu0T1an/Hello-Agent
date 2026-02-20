@@ -82,6 +82,27 @@ npm run build   # 生产构建
 
 ## 核心架构概念
 
+### 设计模式
+
+**Builder 模式**: 广泛用于创建复杂对象
+- `StateGraph`: 流式 API 构建状态图
+- `ReactAgent.Builder`: 构建 Agent 配置
+- `LLMNode.Builder`: 构建 LLM 节点
+
+**策略模式**: 状态合并策略
+- `ReplaceStrategy`: 覆盖旧值（默认）
+- `AppendStrategy`: 追加到列表（用于 messages 等）
+
+**观察者模式**: 生命周期监听
+- `GraphLifecycleListener`: 监听图执行事件
+- `Hook`: 在特定位置插入自定义逻辑
+
+**工厂模式**: 对象创建
+- `StateFactory`: 统一状态创建
+- `AgentFactory`: 创建 Agent 实例
+
+### 核心概念
+
 ### 状态图执行流程
 
 1. **图定义**: 使用 `StateGraph` 添加节点和边
@@ -299,6 +320,38 @@ api:
 
 ## 前端技术栈
 
+### 前端架构
+
+**项目结构**:
+- `src/components/`: Vue 组件（按功能分组：agent, chat, sidebar, base, common）
+- `src/views/`: 页面视图（AgentManagement, McpManagement, RagQueryView 等）
+- `src/stores/`: Pinia 状态管理（agent, chat, agentTimeline, modelConfig 等）
+- `src/api/`: API 调用封装
+- `src/types/`: TypeScript 类型定义
+- `src/utils/`: 工具函数（markdown, helpers, constants）
+- `src/composables/`: Vue 组合式函数
+- `src/layouts/`: 布局组件（MainLayout）
+
+**关键 Store**:
+- `useChatStore`: 会话和消息管理，SSE 流处理，工具调用消息处理
+- `useAgentStore`: Agent 配置管理
+- `useAgentTimelineStore`: Agent 执行时间线追踪
+
+**SSE 事件类型**（与后端 AgentResponse 一致）:
+- `running`: 节点运行中（增量输出）
+- `completed`: 节点完成
+- `GRAPH_COMPLETED`: 图执行完成
+- `failed`: 节点失败
+- `INTERRUPTION`: 人工在环中断
+- `TITLE_GENERATED`: 会话标题生成
+
+**消息类型**:
+- `user`: 用户消息
+- `assistant`: AI 消息
+- `tool_call`: 工具调用（Function Call）
+- `tool_response`: 工具执行结果
+- `system`: 系统消息
+
 ### 核心依赖
 
 - **Vue 3.5**: 渐进式 JavaScript 框架
@@ -462,6 +515,41 @@ feat: 添加 MCP 工具自动发现功能
 3. 使用 Prometheus 端点查看指标
 4. 检查检查点记录（如果启用）
 
+**查看 Checkpoint 记录**:
+```sql
+-- 查看会话的所有 Checkpoint
+SELECT * FROM checkpoint_snapshots WHERE session_id = ? ORDER BY created_at DESC;
+
+-- 查看执行记录
+SELECT state_json->'execution_record' FROM checkpoint_snapshots WHERE session_id = ?;
+
+-- 查看执行历史
+SELECT state_json->'execution_history' FROM checkpoint_snapshots WHERE session_id = ?;
+```
+
+### 重要常量
+
+**graph-core 模块** (`GraphConstants`):
+- `START`: 图起始节点标识
+- `END`: 图结束节点标识
+- `AGENT_MODEL`: Agent MODEL 节点名称
+- `AGENT_TOOL`: Agent TOOL 节点名称
+- `AGENT_END`: Agent END 节点名称
+
+**agent-core 模块** (`StateKeys`):
+- `MESSAGES`: 消息列表状态键
+- `ITERATION`: 当前迭代次数
+- `MAX_ITERATIONS`: 最大迭代次数
+- `CHAT_RESPONSE`: ChatModel 响应
+- `EXECUTION_RECORD`: 当前执行记录
+- `EXECUTION_HISTORY`: 执行历史记录
+
+**Event 常量** (`EventConstants`):
+- `NODE_STARTED`: 节点开始事件
+- `NODE_COMPLETED`: 节点完成事件
+- `NODE_FAILED`: 节点失败事件
+- `GRAPH_COMPLETED`: 图执行完成事件
+
 ### 重要文件位置
 
 - **图可视化**: `MermaidGraphVisualizer`（支持导出 Mermaid 格式）
@@ -499,7 +587,87 @@ feat: 添加 MCP 工具自动发现功能
 - `GET /actuator/health` - 健康检查端点
 - `GET /actuator/metrics` - 指标列表端点
 
+### 会话管理
+- `GET /api/sessions` - 获取所有会话列表
+- `POST /api/sessions` - 创建新会话
+- `GET /api/sessions/{sessionId}` - 获取会话详情
+- `DELETE /api/sessions/{sessionId}` - 删除会话
+- `DELETE /api/sessions/delete-all` - 删除所有会话
+- `GET /api/sessions/{sessionId}/summary` - 获取会话摘要（统计信息）
+
+### Agent 执行
+- `POST /api/stream/agent/{agentName}/execute` - 执行 Agent（SSE 流式）
+- `POST /api/stream/agent/{agentName}/resume` - 恢复执行（审批后）
+- `GET /api/stream/agent/{agentName}/exists` - 检查 Agent 是否存在
+- `GET /api/stream/agents` - 获取所有已注册 Agent
+
+### 文件上传
+- `POST /api/files/upload` - 上传临时文件（支持 PDF、TXT、MD）
+- 返回 `TemporaryFileContent` 包含文件内容和元数据
+
 ## 高级功能
+
+### 会话系统
+
+会话系统基于 **Session 和 Checkpoint 分离设计**：
+
+**Session 表** (`sessions`):
+- 存储会话级别的元数据（标题、Agent、状态等）
+- `session_id`: 会话唯一标识
+- `current_agent`: 当前使用的 Agent 名称
+- `agent_switch_history`: Agent 切换历史（JSON 数组）
+- `status`: 会话状态（active/deleted）
+
+**Checkpoint 表** (`checkpoint_snapshots`):
+- 存储执行状态快照，用于状态恢复和历史追踪
+- `session_id`: 关联的会话ID（外键）
+- `checkpoint_id`: Checkpoint 唯一标识
+- `last_node_id`: 上一个执行的节点ID，用于追踪执行流程
+- `parent_id`: 父 Checkpoint ID，支持检查点链
+- `state_json`: 完整状态（JSON 格式）
+- `source`: Checkpoint 来源（auto/manual/error/restore）
+
+**会话摘要服务** (`SessionSummaryService`):
+- 计算会话级别的统计数据
+- Token 使用情况统计
+- 工具调用统计（按名称分组）
+- LLM 调用详情列表
+
+### 执行记录系统 (ExecutionRecord)
+
+统一的执行记录系统，记录所有 LLM 和工具调用：
+
+**LLMExecutionRecord**:
+- `nodeId`: 节点ID
+- `usage`: Token 使用情况（prompt/completion/total）
+- `toolCalls`: 工具调用列表
+- `inputMessages`: 输入消息
+- `startTime`/`endTime`: 时间戳
+- `duration`: 执行时长
+
+**ToolExecutionRecord**:
+- `executions`: 工具执行列表
+- 每个执行包含：`id`, `name`, `arguments`, `result`, `success`, `duration`
+
+**ExecutionRecordManager**:
+- 统一管理所有执行记录
+- 自动记录到状态中的 `execution_record` 键
+- 历史记录累积到 `execution_history` 键
+
+### 文档引用系统 (Citation Reference)
+
+RAG 查询结果支持文档引用：
+
+**CitationReference**:
+- `chunkId`: 文档块ID
+- `source`: 文档来源（文件名）
+- `content`: 引用内容
+- `metadata`: 额外元数据
+
+**前端集成**:
+- `Message` 类型包含 `citations` 字段
+- ChatMessage 组件渲染引用标记
+- Markdown 渲染器处理引用标记
 
 ### 钩子机制 (Hook System)
 
@@ -524,6 +692,19 @@ ReactAgent agent = ReactAgent.builder()
     .build();
 ```
 
+**会话恢复**:
+- 从 Checkpoint 恢复执行上下文
+- 支持 INTERRUPTION 后的审批恢复
+- API: `POST /api/stream/agent/{agentName}/resume`
+- 请求参数: `checkpointId`, `feedbackData`, `sessionId`
+
+**前端审批流程**:
+1. SSE 事件类型 `INTERRUPTION` 触发
+2. 显示 `ApprovalDialog` 组件
+3. 用户审批工具调用结果
+4. 调用 `resumeAgent` 恢复执行
+5. 继续接收 SSE 流事件
+
 ### 可观测性 (Observability)
 
 **Micrometer 集成**:
@@ -533,11 +714,6 @@ ReactAgent agent = ReactAgent.builder()
 
 **自定义指标名称**:
 参见 `ObservationMetricNames` 和 `ObservationMetricAttributes`
-
-**记录系统 (ExecutionRecord)**:
-- `LLMExecutionRecord`: LLM 调用记录（包含 token 使用情况）
-- `ToolExecutionRecord`: 工具执行记录
-- `ExecutionRecordManager`: 统一管理所有执行记录
 
 ### 重试机制
 
@@ -567,3 +743,8 @@ ReactAgent agent = ReactAgent.builder()
 - 使用 PostgreSQL + pgvector
 - 支持相似度检索
 - 可配置相似度阈值
+
+**文档引用**:
+- 查询结果返回 `CitationReference` 对象
+- 包含 `chunkId`, `source`, `content`, `metadata`
+- 前端 ChatMessage 组件渲染引用标记

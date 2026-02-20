@@ -1406,3 +1406,27 @@ public class AgentExample {
 **文档版本**: 1.0
 **最后更新**: 2026-02-01
 **作者**: Spring AI Alibaba 项目
+
+---
+
+## Hook vs Interceptor
+
+### Scope
+- Hook: graph-level flow extension (node orchestration, jump, interruption, cross-node control).
+- Model Interceptor: model-invocation enhancement only (request/response around LLM call).
+
+### Lifecycle
+- Hook is integrated as graph nodes (`BEFORE_MODEL` and `AFTER_MODEL` in current project).
+- Interceptor is an in-node responsibility chain around `LLMNode` invocation.
+
+### Use Cases
+- Use Hook when you need routing, interruption, or graph flow semantics.
+- Use Interceptor when you need request enrichment, response post-processing, or invocation-level policy.
+
+### Ordering
+- Hook ordering follows graph node connection semantics.
+- Interceptor ordering follows `getOrder()` ascending, and preserves registration order when equal.
+
+### Failure Behavior
+- Current model interceptor default is fail-fast: interceptor exception aborts this model invocation.
+- Hook behavior remains unchanged.

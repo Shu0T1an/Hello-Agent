@@ -1,0 +1,798 @@
+/*
+ * Copyright 2024-2025 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.alibaba.cloud.ai.graph.agent.extension.tools.model;
+
+import com.alibaba.cloud.ai.graph.agent.ReactAgent;
+
+import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.model.ToolContext;
+import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.function.FunctionToolCallback;
+
+import java.util.Map;
+import java.util.function.BiFunction;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonPropertyDescription;
+
+/**
+ * Tool that enables invoking subagents to handle complex, isolated tasks.
+ *
+ * This tool allows the main agent to delegate work to specialized subagents,
+ * each with their own context and capabilities.
+ */
+public class TaskTool implements BiFunction<TaskTool.TaskRequest, ToolContext, String> {
+
+	private final Map<String, ReactAgent> subAgents;
+
+	public TaskTool(Map<String, ReactAgent> subAgents) {
+		this.subAgents = subAgents;
+	}
+
+	@Override
+	public String apply(TaskRequest request, ToolContext toolContext) {
+		// Validate subagent type
+		if (!subAgents.containsKey(request.subagentType)) {
+			return "Error: invoked agent of type " + request.subagentType +
+					", the only allowed types are " + subAgents.keySet();
+		}
+
+		// Get the subagent
+		ReactAgent subAgent = subAgents.get(request.subagentType);
+
+		try {
+			// Invoke the subagent with the task description
+			AssistantMessage result = subAgent.call(request.description);
+
+			// Return the subagent's response
+			return result.getText();
+		}
+		catch (Exception e) {
+			return "Error executing subagent task: " + e.getMessage();
+		}
+	}
+
+	/**
+	 * Create a ToolCallback for the task tool.
+	 */
+	public static ToolCallback createTaskToolCallback(Map<String, ReactAgent> subAgents, String description) {
+		return FunctionToolCallback.builder("task", new TaskTool(subAgents))
+				.description(description)
+				.inputType(TaskRequest.class)
+				.build();
+	}
+
+	/**
+	 * Request structure for the task tool.
+	 */
+	public static class TaskRequest {
+
+		@JsonProperty(required = true)
+		@JsonPropertyDescription("Detailed description of the task to be performed by the subagent")
+		public String description;
+
+		@JsonProperty(required = true, value = "subagent_type")
+		@JsonPropertyDescription("The type of subagent to use for this task")
+		public String subagentType;
+
+		public TaskRequest() {
+		}
+
+		public TaskRequest(String description, String subagentType) {
+			this.description = description;
+			this.subagentType = subagentType;
+		}
+	}
+}
+--------------------------------分割线----------------
+/*
+ * Copyright 2024-2025 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.alibaba.cloud.ai.graph.agent.extension.interceptor;
+
+import com.alibaba.cloud.ai.graph.agent.extension.tools.model.TaskTool;
+import com.alibaba.cloud.ai.graph.agent.ReactAgent;
+import com.alibaba.cloud.ai.graph.agent.hook.Hook;
+import com.alibaba.cloud.ai.graph.agent.interceptor.Interceptor;
+import com.alibaba.cloud.ai.graph.agent.interceptor.ModelCallHandler;
+import com.alibaba.cloud.ai.graph.agent.interceptor.ModelInterceptor;
+import com.alibaba.cloud.ai.graph.agent.interceptor.ModelRequest;
+import com.alibaba.cloud.ai.graph.agent.interceptor.ModelResponse;
+import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
+
+import org.springframework.ai.chat.messages.SystemMessage;
+import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.tool.ToolCallback;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * SubAgent interceptor that provides subagent invocation capabilities to agents.
+ *
+ * This interceptor adds a `task` tool to the agent that can be used to invoke subagents.
+ * Subagents are useful for handling complex tasks that require multiple steps, or tasks
+ * that require a lot of context to resolve.
+ *
+ * A chief benefit of subagents is that they can handle multi-step tasks, and then return
+ * a clean, concise response to the main agent.
+ *
+ * This interceptor comes with a default general-purpose subagent that can be used to
+ * handle the same tasks as the main agent, but with isolated context.
+ *
+ * Example:
+ * <pre>
+ * SubAgentInterceptor interceptor = SubAgentInterceptor.builder()
+ *     .defaultModel(chatModel)
+ *     .addSubAgent(SubAgentSpec.builder()
+ *         .name("research-analyst")
+ *         .description("Use this agent to conduct thorough research on complex topics")
+ *         .systemPrompt("You are a research analyst...")
+ *         .build())
+ *     .build();
+ * </pre>
+ */
+public class SubAgentInterceptor extends ModelInterceptor {
+
+	private static final String DEFAULT_SUBAGENT_PROMPT = "In order to complete the objective that the user asks of you, you have access to a number of standard tools.";
+
+	private static final String DEFAULT_SYSTEM_PROMPT = """
+		## `task` (subagent spawner)
+		
+		You have access to a `task` tool to launch short-lived subagents that handle isolated tasks. These agents are ephemeral — they live only for the duration of the task and return a single result.
+		
+		When to use the task tool:
+		- When a task is complex and multi-step, and can be fully delegated in isolation
+		- When a task is independent of other tasks and can run in parallel
+		- When a task requires focused reasoning or heavy token/context usage that would bloat the orchestrator thread
+		- When sandboxing improves reliability (e.g. code execution, structured searches, data formatting)
+		- When you only care about the output of the subagent, and not the intermediate steps (ex. performing a lot of research and then returned a synthesized report, performing a series of computations or lookups to achieve a concise, relevant answer.)
+		
+		Subagent lifecycle:
+		1. **Spawn** → Provide clear role, instructions, and expected output
+		2. **Run** → The subagent completes the task autonomously
+		3. **Return** → The subagent provides a single structured result
+		4. **Reconcile** → Incorporate or synthesize the result into the main thread
+		
+		When NOT to use the task tool:
+		- If you need to see the intermediate reasoning or steps after the subagent has completed (the task tool hides them)
+		- If the task is trivial (a few tool calls or simple lookup)
+		- If delegating does not reduce token usage, complexity, or context switching
+		- If splitting would add latency without benefit
+		
+		## Important Task Tool Usage Notes to Remember
+		- Whenever possible, parallelize the work that you do. This is true for both tool_calls, and for tasks. Whenever you have independent steps to complete - make tool_calls, or kick off tasks (subagents) in parallel to accomplish them faster. This saves time for the user, which is incredibly important.
+		- Remember to use the `task` tool to silo independent tasks within a multi-part objective.
+		- You should use the `task` tool whenever you have a complex task that will take multiple steps, and is independent from other tasks that the agent needs to complete. These agents are highly competent and efficient.
+		""";
+
+	private static final String DEFAULT_GENERAL_PURPOSE_DESCRIPTION =
+			"General-purpose agent for researching complex questions, searching for files and content, " +
+			"and executing multi-step tasks. This agent has access to all tools as the main agent.";
+
+	private static final String TASK_TOOL_DESCRIPTION = """
+			Launch an ephemeral subagent to handle complex, multi-step independent tasks with isolated context.
+			
+			Available agent types and the tools they have access to:
+			{available_agents}
+			
+			When using the Task tool, you must specify a subagent_type parameter to select which agent type to use.
+			
+			## Usage notes:
+			1. Launch multiple agents concurrently whenever possible to maximize performance
+			2. When the agent is done, it will return a single message back to you
+			3. Each agent invocation is stateless - provide a highly detailed task description
+			4. The agent's outputs should generally be trusted
+			5. Clearly tell the agent whether you expect it to create content, perform analysis, or just do research
+			6. If the agent description mentions that it should be used proactively, then you should try your best to use it without the user having to ask for it first. Use your judgement.
+			7. When only the general-purpose agent is provided, you should use it for all tasks. It is great for isolating context and token usage, and completing specific, complex tasks, as it has all the same capabilities as the main agent.
+			
+			### Example usage of the general-purpose agent:
+			
+			<example_agent_descriptions>
+			"general-purpose": use this agent for general purpose tasks, it has access to all tools as the main agent.
+			</example_agent_descriptions>
+			
+			<example>
+			User: "I want to conduct research on the accomplishments of Lebron James, Michael Jordan, and Kobe Bryant, and then compare them."
+			Assistant: *Uses the task tool in parallel to conduct isolated research on each of the three players*
+			Assistant: *Synthesizes the results of the three isolated research tasks and responds to the User*
+			<commentary>
+			Research is a complex, multi-step task in it of itself.
+			The research of each individual player is not dependent on the research of the other players.
+			The assistant uses the task tool to break down the complex objective into three isolated tasks.
+			Each research task only needs to worry about context and tokens about one player, then returns synthesized information about each player as the Tool Result.
+			This means each research task can dive deep and spend tokens and context deeply researching each player, but the final result is synthesized information, and saves us tokens in the long run when comparing the players to each other.
+			</commentary>
+			</example>
+			
+			<example>
+			User: "Analyze a single large code repository for security vulnerabilities and generate a report."
+			Assistant: *Launches a single `task` subagent for the repository analysis*
+			Assistant: *Receives report and integrates results into final summary*
+			<commentary>
+			Subagent is used to isolate a large, context-heavy task, even though there is only one. This prevents the main thread from being overloaded with details.
+			If the user then asks followup questions, we have a concise report to reference instead of the entire history of analysis and tool calls, which is good and saves us time and money.
+			</commentary>
+			</example>
+			
+			<example>
+			User: "Schedule two meetings for me and prepare agendas for each."
+			Assistant: *Calls the task tool in parallel to launch two `task` subagents (one per meeting) to prepare agendas*
+			Assistant: *Returns final schedules and agendas*
+			<commentary>
+			Tasks are simple individually, but subagents help silo agenda preparation.
+			Each subagent only needs to worry about the agenda for one meeting.
+			</commentary>
+			</example>
+			
+			<example>
+			User: "I want to order a pizza from Dominos, order a burger from McDonald's, and order a salad from Subway."
+			Assistant: *Calls tools directly in parallel to order a pizza from Dominos, a burger from McDonald's, and a salad from Subway*
+			<commentary>
+			The assistant did not use the task tool because the objective is super simple and clear and only requires a few trivial tool calls.
+			It is better to just complete the task directly and NOT use the `task`tool.
+			</commentary>
+			</example>
+			
+			### Example usage with custom agents:
+			
+			<example_agent_descriptions>
+			"content-reviewer": use this agent after you are done creating significant content or documents
+			"greeting-responder": use this agent when to respond to user greetings with a friendly joke
+			"research-analyst": use this agent to conduct thorough research on complex topics
+			</example_agent_description>
+			
+			<example>
+			user: "Please write a function that checks if a number is prime"
+			assistant: Sure let me write a function that checks if a number is prime
+			assistant: First let me use the Write tool to write a function that checks if a number is prime
+			assistant: I'm going to use the Write tool to write the following code:
+			<code>
+			function isPrime(n) {{
+			  if (n <= 1) return false
+			  for (let i = 2; i * i <= n; i++) {{
+			    if (n % i === 0) return false
+			  }}
+			  return true
+			}}
+			</code>
+			<commentary>
+			Since significant content was created and the task was completed, now use the content-reviewer agent to review the work
+			</commentary>
+			assistant: Now let me use the content-reviewer agent to review the code
+			assistant: Uses the Task tool to launch with the content-reviewer agent
+			</example>
+			
+			<example>
+			user: "Can you help me research the environmental impact of different renewable energy sources and create a comprehensive report?"
+			<commentary>
+			This is a complex research task that would benefit from using the research-analyst agent to conduct thorough analysis
+			</commentary>
+			assistant: I'll help you research the environmental impact of renewable energy sources. Let me use the research-analyst agent to conduct comprehensive research on this topic.
+			assistant: Uses the Task tool to launch with the research-analyst agent, providing detailed instructions about what research to conduct and what format the report should take
+			</example>
+			
+			<example>
+			user: "Hello"
+			<commentary>
+			Since the user is greeting, use the greeting-responder agent to respond with a friendly joke
+			</commentary>
+			assistant: "I'm going to use the Task tool to launch with the greeting-responder agent"
+			</example>
+			""";
+
+	private final List<ToolCallback> tools;
+	private final String systemPrompt;
+	private final Map<String, ReactAgent> subAgents;
+	private final boolean includeGeneralPurpose;
+
+	private SubAgentInterceptor(Builder builder) {
+		this.systemPrompt = builder.systemPrompt != null ? builder.systemPrompt : DEFAULT_SYSTEM_PROMPT;
+		this.subAgents = new HashMap<>(builder.subAgents);
+		this.includeGeneralPurpose = builder.includeGeneralPurpose;
+
+		// Add general-purpose agent if enabled
+		if (includeGeneralPurpose && builder.defaultModel != null) {
+			ReactAgent generalPurposeAgent = createGeneralPurposeAgent(
+				builder.defaultModel,
+				builder.defaultTools,
+				builder.defaultInterceptors
+			);
+			this.subAgents.put("general-purpose", generalPurposeAgent);
+		}
+
+		// Create task tool using the factory method
+		ToolCallback taskTool = TaskTool.createTaskToolCallback(
+			this.subAgents,
+			buildTaskToolDescription()
+		);
+
+		this.tools = Collections.singletonList(taskTool);
+	}
+
+	private ReactAgent createGeneralPurposeAgent(
+			ChatModel model,
+			List<ToolCallback> tools,
+			List<? extends Interceptor> interceptors) {
+
+		com.alibaba.cloud.ai.graph.agent.Builder builder = ReactAgent.builder()
+				.name("general-purpose")
+				.model(model)
+				.systemPrompt(DEFAULT_SUBAGENT_PROMPT)
+				.saver(new MemorySaver());
+
+		if (tools != null && !tools.isEmpty()) {
+			builder.tools(tools);
+		}
+
+		if (interceptors != null && !interceptors.isEmpty()) {
+			builder.interceptors(interceptors);
+		}
+
+		return builder.build();
+	}
+
+	private String buildTaskToolDescription() {
+		StringBuilder agentDescriptions = new StringBuilder();
+
+		if (includeGeneralPurpose) {
+			agentDescriptions.append("- general-purpose: ")
+					.append(DEFAULT_GENERAL_PURPOSE_DESCRIPTION)
+					.append("\n");
+		}
+
+		for (Map.Entry<String, ReactAgent> entry : subAgents.entrySet()) {
+			if (!"general-purpose".equals(entry.getKey())) {
+				agentDescriptions.append("- ")
+						.append(entry.getKey())
+						.append(": ")
+						.append(entry.getValue().description() != null ?
+								entry.getValue().description() : "Custom subagent")
+						.append("\n");
+			}
+		}
+
+		return TASK_TOOL_DESCRIPTION.replace("{available_agents}", agentDescriptions.toString());
+	}
+
+	public static Builder builder() {
+		return new Builder();
+	}
+
+	@Override
+	public List<ToolCallback> getTools() {
+		return tools;
+	}
+
+	@Override
+	public String getName() {
+		return "SubAgent";
+	}
+
+	@Override
+	public ModelResponse interceptModel(ModelRequest request, ModelCallHandler handler) {
+		// Enhance the system prompt with subagent guidance
+		SystemMessage enhancedSystemMessage;
+
+		if (request.getSystemMessage() == null) {
+			enhancedSystemMessage = new SystemMessage(this.systemPrompt);
+		} else {
+			enhancedSystemMessage = new SystemMessage(request.getSystemMessage().getText() + "\n\n" + systemPrompt);
+		}
+
+		// Create enhanced request
+		ModelRequest enhancedRequest = ModelRequest.builder(request)
+				.systemMessage(enhancedSystemMessage)
+				.build();
+
+		// Call the handler with enhanced request
+		return handler.call(enhancedRequest);
+	}
+
+	public static class Builder {
+		private String systemPrompt;
+		private ChatModel defaultModel;
+		private List<ToolCallback> defaultTools;
+		private List<Interceptor> defaultInterceptors;
+		private List<Hook> defaultHooks;
+		private Map<String, ReactAgent> subAgents = new HashMap<>();
+		private boolean includeGeneralPurpose = true;
+
+		/**
+		 * Set custom system prompt to guide subagent usage.
+		 */
+		public Builder systemPrompt(String systemPrompt) {
+			this.systemPrompt = systemPrompt;
+			return this;
+		}
+
+		/**
+		 * Set the default model to use for subagents.
+		 */
+		public Builder defaultModel(ChatModel model) {
+			this.defaultModel = model;
+			return this;
+		}
+
+		/**
+		 * Set the default tools available to subagents.
+		 */
+		public Builder defaultTools(List<ToolCallback> tools) {
+			this.defaultTools = tools;
+			return this;
+		}
+
+
+		public Builder defaultInterceptors(Interceptor... interceptors) {
+			this.defaultInterceptors = Arrays.asList(interceptors);
+			return this;
+		}
+
+		/**
+		 * Set the default hooks to apply to subagents.
+		 */
+		public Builder defaultHooks(Hook... hooks) {
+			this.defaultHooks = Arrays.asList(hooks);
+			return this;
+		}
+
+		/**
+		 * Add a custom subagent.
+		 */
+		public Builder addSubAgent(String name, ReactAgent agent) {
+			this.subAgents.put(name, agent);
+			return this;
+		}
+
+		/**
+		 * Add a subagent from specification.
+		 */
+		public Builder addSubAgent(SubAgentSpec spec) {
+			ReactAgent agent = createSubAgentFromSpec(spec);
+			this.subAgents.put(spec.getName(), agent);
+			return this;
+		}
+
+		/**
+		 * Whether to include the default general-purpose subagent.
+		 */
+		public Builder includeGeneralPurpose(boolean include) {
+			this.includeGeneralPurpose = include;
+			return this;
+		}
+
+		private ReactAgent createSubAgentFromSpec(SubAgentSpec spec) {
+			com.alibaba.cloud.ai.graph.agent.Builder builder = ReactAgent.builder()
+					.name(spec.getName())
+					.description(spec.getDescription())
+					.instruction(spec.getSystemPrompt())
+					.saver(new MemorySaver());
+
+			ChatModel model = spec.getModel() != null ? spec.getModel() : defaultModel;
+			if (model != null) {
+				builder.model(model);
+			}
+
+			List<ToolCallback> tools = spec.getTools() != null ? spec.getTools() : defaultTools;
+			if (tools != null && !tools.isEmpty()) {
+				builder.tools(tools);
+			}
+
+			// Apply default interceptors first, then custom ones
+			List<Interceptor> allInterceptors = new ArrayList<>();
+			if (defaultInterceptors != null) {
+				allInterceptors.addAll(defaultInterceptors);
+			}
+			if (spec.getInterceptors() != null) {
+				allInterceptors.addAll(spec.getInterceptors());
+			}
+
+			if (!allInterceptors.isEmpty()) {
+				builder.interceptors(allInterceptors);
+			}
+
+			if (defaultHooks != null) {
+				builder.hooks(defaultHooks);
+			}
+
+			builder.enableLogging(spec.isEnableLoopingLog());
+
+			return builder.build();
+		}
+
+		public SubAgentInterceptor build() {
+			return new SubAgentInterceptor(this);
+		}
+	}
+}
+
+
+
+-------------分割线------------------
+
+/*
+ * Copyright 2024-2025 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.alibaba.cloud.ai.examples.deepresearch;
+
+import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
+import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
+import com.alibaba.cloud.ai.graph.agent.ReactAgent;
+import com.alibaba.cloud.ai.graph.agent.extension.interceptor.FilesystemInterceptor;
+import com.alibaba.cloud.ai.graph.agent.extension.interceptor.LargeResultEvictionInterceptor;
+import com.alibaba.cloud.ai.graph.agent.extension.interceptor.PatchToolCallsInterceptor;
+import com.alibaba.cloud.ai.graph.agent.extension.interceptor.SubAgentInterceptor;
+import com.alibaba.cloud.ai.graph.agent.extension.interceptor.SubAgentSpec;
+import com.alibaba.cloud.ai.graph.agent.hook.hip.HumanInTheLoopHook;
+import com.alibaba.cloud.ai.graph.agent.hook.shelltool.ShellToolAgentHook;
+import com.alibaba.cloud.ai.graph.agent.hook.summarization.SummarizationHook;
+import com.alibaba.cloud.ai.graph.agent.hook.toolcalllimit.ToolCallLimitHook;
+import com.alibaba.cloud.ai.graph.agent.interceptor.Interceptor;
+import com.alibaba.cloud.ai.graph.agent.interceptor.contextediting.ContextEditingInterceptor;
+import com.alibaba.cloud.ai.graph.agent.interceptor.todolist.TodoListInterceptor;
+import com.alibaba.cloud.ai.graph.agent.interceptor.toolretry.ToolRetryInterceptor;
+import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
+
+import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.tool.ToolCallback;
+
+import java.util.List;
+
+import static com.alibaba.cloud.ai.examples.deepresearch.DeepResearchAgent.Prompts.researchInstructions;
+import static com.alibaba.cloud.ai.examples.deepresearch.DeepResearchAgent.Prompts.subCritiquePrompt;
+import static com.alibaba.cloud.ai.examples.deepresearch.DeepResearchAgent.Prompts.subResearchPrompt;
+
+public class DeepResearchAgent {
+	private static final String BASE_AGENT_PROMPT =
+			"In order to complete the objective that the user asks of you, " +
+					"you have access to a number of standard tools.";
+
+	private String systemPrompt;
+	private ChatModel chatModel;
+
+	// Interceptors
+	private LargeResultEvictionInterceptor largeResultEvictionInterceptor;
+	private FilesystemInterceptor filesystemInterceptor;
+	private TodoListInterceptor todoListInterceptor;
+	private PatchToolCallsInterceptor patchToolCallsInterceptor;
+	private ContextEditingInterceptor contextEditingInterceptor;
+	private ToolRetryInterceptor toolRetryInterceptor;
+
+	// Hooks
+	private SummarizationHook summarizationHook;
+	private HumanInTheLoopHook humanInTheLoopHook;
+	private ToolCallLimitHook toolCallLimitHook;
+	private ShellToolAgentHook shellToolAgent;
+
+    public DeepResearchAgent() {
+		// Create DashScopeApi instance using the API key from environment variable
+        //	private ShellTool shellTool = ShellTool.builder().build();
+        String apiKey = "sk-1c7794d42765440fa4913b1cbb097fb2";
+        DashScopeApi dashScopeApi = DashScopeApi.builder().apiKey(apiKey).build();
+		// Create DashScope ChatModel instance
+		this.chatModel = DashScopeChatModel.builder().dashScopeApi(dashScopeApi).build();
+
+		this.systemPrompt = researchInstructions + "\n\n" + BASE_AGENT_PROMPT;
+
+		// Initialize interceptors
+		this.largeResultEvictionInterceptor = LargeResultEvictionInterceptor
+				.builder()
+				.excludeFilesystemTools()
+				.toolTokenLimitBeforeEvict(5000)
+				.build();
+
+		this.filesystemInterceptor = FilesystemInterceptor.builder()
+				.readOnly(false)
+				.build();
+
+		this.todoListInterceptor = TodoListInterceptor.builder().build();
+
+		this.patchToolCallsInterceptor = PatchToolCallsInterceptor.builder().build();
+
+		this.toolRetryInterceptor = ToolRetryInterceptor.builder()
+				.maxRetries(1).onFailure(ToolRetryInterceptor.OnFailureBehavior.RETURN_MESSAGE)
+				.build();
+
+		// Initialize hooks
+		this.summarizationHook = SummarizationHook.builder()
+				.model(chatModel) // should use another model for summarization
+				.maxTokensBeforeSummary(120000)
+				.messagesToKeep(6)
+				.build();
+
+		this.humanInTheLoopHook = HumanInTheLoopHook.builder()
+				.approvalOn("search_web", "Please approve the search_web tool.")
+				.build();
+
+		this.toolCallLimitHook = ToolCallLimitHook.builder()
+				.runLimit(25)
+				.build();
+
+		this.shellToolAgent = ShellToolAgentHook.builder().build();
+
+		this.contextEditingInterceptor = ContextEditingInterceptor.builder()
+				.trigger(10000)
+				.clearAtLeast(6000)
+				.keep(4)
+				.excludeTools("write_todos")
+				.build();
+
+	}
+
+	private static SubAgentSpec createCritiqueAgent(String subCritiquePrompt) {
+		return SubAgentSpec.builder()
+				.name("critique-agent")
+				.description("Used to critique the final report. Provide information about " +
+						"how you want the report to be critiqued.")
+				.systemPrompt(subCritiquePrompt)
+				.enableLoopingLog(true)
+				.build();
+	}
+
+	private static SubAgentSpec createResearchAgent(List<ToolCallback> toolsFromMcp, String subResearchPrompt) {
+		return SubAgentSpec.builder()
+				.name("research-agent")
+				.description("Used to research in-depth questions. Only give one topic at a time. " +
+						"Break down large topics into components and call multiple research agents " +
+						"in parallel for each sub-question.")
+				.systemPrompt(subResearchPrompt)
+				.tools(toolsFromMcp)
+				.enableLoopingLog(true)
+				.build();
+	}
+
+	public ReactAgent getResearchAgent(List<ToolCallback> toolsFromMcp) {
+		// Build the ReactAgent with all interceptors
+		return ReactAgent.builder()
+				.name("DeepResearchAgent")
+				.model(chatModel)
+				.tools(toolsFromMcp)
+				.systemPrompt(systemPrompt)
+				.enableLogging(true)
+				.interceptors(todoListInterceptor,
+						filesystemInterceptor,
+						largeResultEvictionInterceptor,
+						patchToolCallsInterceptor,
+//						contextEditingInterceptor,
+						toolRetryInterceptor,
+						subAgentAsInterceptors(toolsFromMcp))
+				.hooks(humanInTheLoopHook, summarizationHook, toolCallLimitHook)
+				.saver(new MemorySaver())
+				.build();
+
+	}
+
+	private Interceptor subAgentAsInterceptors(List<ToolCallback> toolsFromMcp) {
+		SubAgentSpec researchAgent = createResearchAgent(toolsFromMcp, subResearchPrompt);
+		SubAgentSpec critiqueAgent = createCritiqueAgent(subCritiquePrompt);
+
+		SubAgentInterceptor.Builder subAgentBuilder = SubAgentInterceptor.builder()
+				.defaultModel(chatModel)
+				.defaultInterceptors(
+						todoListInterceptor,
+						filesystemInterceptor,
+//						contextEditingInterceptor,
+						patchToolCallsInterceptor,
+						largeResultEvictionInterceptor
+				)
+				.defaultHooks(humanInTheLoopHook, summarizationHook, toolCallLimitHook)
+				.addSubAgent(researchAgent)
+				.includeGeneralPurpose(true)
+				.addSubAgent(critiqueAgent);
+		return subAgentBuilder.build();
+	}
+
+	public static class Prompts {
+		// Main research instructions
+		public static String researchInstructions = """
+				You are an expert researcher. Your job is to conduct thorough research and write a polished report.
+				
+				**Workflow:**
+				1. First, write the original user question to `question.txt` for reference
+				2. Use the research-agent to conduct deep research on sub-topics
+				   - Break down complex topics into specific sub-questions
+				   - Call multiple research agents in parallel for independent sub-questions
+				3. When you have enough information, write the final report to `final_report.md`
+				4. Call the critique-agent to get feedback on the report
+				5. Iterate: Do more research and edit `final_report.md` based on critique
+				6. Repeat steps 4-5 until satisfied with the quality
+				
+				**Report Format Requirements:**
+				- CRITICAL: Write in the SAME language as the user's question!
+				- Use clear Markdown with proper structure (# for title, ## for sections, ### for subsections)
+				- Include specific facts and insights from research
+				- Reference sources using [Title](URL) format
+				- Provide balanced, thorough analysis
+				- Be comprehensive - users expect detailed, in-depth answers
+				- End with a "### Sources" section listing all references
+				
+				**Citation Rules:**
+				- Assign each unique URL a single citation number [1], [2], etc.
+				- Number sources sequentially without gaps in the final list
+				- Each source should be a separate list item
+				- Format: [1] Source Title: URL
+				
+				Structure your report appropriately for the question type:
+				- Comparison: intro → overview A → overview B → comparison → conclusion
+				- List: Simple numbered/bulleted list or separate sections per item
+				- Overview/Summary: intro → concept 1 → concept 2 → ... → conclusion
+				- Analysis: thesis → evidence → analysis → conclusion
+				""";
+
+		// Sub-agent prompt for research
+		public static String subResearchPrompt = """
+				You are a dedicated researcher. Your job is to conduct research based on the user's questions.
+				
+				Conduct thorough research and then reply to the user with a detailed answer to their question.
+				
+				IMPORTANT: Only your FINAL answer will be passed on to the user. They will have NO knowledge
+				of anything except your final message, so your final report should be comprehensive and self-contained!
+				""";
+
+		// Sub-agent prompt for critique
+		public static String subCritiquePrompt = """
+				You are a dedicated editor. You are being tasked to critique a report.
+				
+				You can find the report at `final_report.md`.
+				You can find the question/topic for this report at `question.txt`.
+				
+				The user may ask for specific areas to critique the report in.
+				Respond with a detailed critique of the report. Focus on areas that could be improved.
+				
+				You can use the search tool to search for information, if that will help you critique the report.
+				
+				Do not write to the `final_report.md` yourself.
+				
+				Things to check:
+				- Each section is appropriately named and structured
+				- The report is written in essay/textbook style - text heavy, not just bullet points
+				- The report is comprehensive without missing important details
+				- The article covers key areas ensuring overall understanding
+				- The article deeply analyzes causes, impacts, and trends with valuable insights
+				- The article closely follows the research topic and directly answers questions
+				- The article has clear structure, fluent language, and is easy to understand
+				""";
+	}
+}
