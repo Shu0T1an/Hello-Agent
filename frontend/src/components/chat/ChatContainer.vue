@@ -25,8 +25,28 @@
         >
           Summary
         </button>
+        <button
+          :class="[
+            'text-sm font-medium pb-1 border-b-2 transition-all',
+            activeTab === 'checkpoints'
+              ? 'text-indigo-600 border-indigo-600'
+              : 'text-zinc-500 border-transparent hover:text-zinc-700'
+          ]"
+          @click="activeTab = 'checkpoints'"
+        >
+          Checkpoints
+        </button>
       </div>
       <div class="flex items-center gap-2">
+        <BaseButton
+          variant="glass"
+          size="sm"
+          class="md:hidden"
+          @click="todoVisible = true"
+        >
+          <ListTodo :size="16" />
+          <span class="ml-1">Todo</span>
+        </BaseButton>
         <BaseButton
           variant="glass"
           size="sm"
@@ -93,6 +113,18 @@
           />
         </div>
 
+        <!-- Checkpoints 标签页内容 -->
+        <div
+          v-else-if="activeTab === 'checkpoints'"
+          class="flex-1 overflow-hidden"
+        >
+          <CheckpointViewer :session-id="chatStore.currentSessionId" />
+        </div>
+
+        <aside class="hidden md:block w-[320px] flex-shrink-0">
+          <TodoSidebar />
+        </aside>
+
         <!-- 拖拽手柄 -->
         <div
           v-if="timelineVisible"
@@ -151,12 +183,38 @@
         </Transition>
       </Teleport>
 
+      <Teleport to="body">
+        <Transition
+          enter-active-class="transition-all duration-300"
+          enter-from-class="translate-x-full"
+          enter-to-class="translate-x-0"
+          leave-active-class="transition-all duration-300"
+          leave-from-class="translate-x-0"
+          leave-to-class="translate-x-full"
+        >
+          <div
+            v-if="todoVisible && isMobile"
+            class="fixed inset-y-0 right-0 w-[88vw] max-w-[360px] glass-panel border-l border-l-glass-border shadow-xl z-50 md:hidden"
+          >
+            <div class="flex items-center justify-between p-4 border-b border-b-glass-border">
+              <h3 class="text-lg font-semibold">Todo</h3>
+              <BaseButton variant="glass" size="sm" @click="todoVisible = false">
+                <X :size="20" />
+              </BaseButton>
+            </div>
+            <div class="h-[calc(100vh-60px)]">
+              <TodoSidebar />
+            </div>
+          </div>
+        </Transition>
+      </Teleport>
+
       <!-- 遮罩（移动端时间线打开时） -->
       <Teleport to="body">
         <div
-          v-if="timelineVisible && isMobile"
+          v-if="(timelineVisible || todoVisible) && isMobile"
           class="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 md:hidden"
-          @click="timelineVisible = false"
+          @click="closeMobilePanels"
         />
       </Teleport>
     </div>
@@ -177,7 +235,7 @@
 
 <script setup lang="ts">
 import { ref, nextTick, watch, onUnmounted } from 'vue'
-import { Activity, X } from 'lucide-vue-next'
+import { Activity, ListTodo, X } from 'lucide-vue-next'
 import { useChatStore } from '@/stores/chat'
 import { useAgentStore } from '@/stores/agent'
 import { useAgentTimelineStore } from '@/stores/agentTimeline'
@@ -187,7 +245,9 @@ import ChatMessage from './ChatMessage.vue'
 import MessageInput from './MessageInput.vue'
 import WelcomeScreen from './WelcomeScreen.vue'
 import AgentTimeline from '@/components/agent/AgentTimeline.vue'
+import TodoSidebar from '@/components/todo/TodoSidebar.vue'
 import SessionSummary from './SessionSummary.vue'
+import CheckpointViewer from '@/components/checkpoint/CheckpointViewer.vue'
 import { fetchSessionSummary } from '@/api/session'
 import type { SessionSummary as SessionSummaryType } from '@/types/summary'
 
@@ -203,7 +263,7 @@ const agentTimeline = useAgentTimelineStore()
 const { isMobile } = useBreakpoints()
 
 // 当前激活的标签页
-const activeTab = ref<'conversation' | 'summary'>('conversation')
+const activeTab = ref<'conversation' | 'summary' | 'checkpoints'>('conversation')
 
 // Summary 相关状态
 const summaryData = ref<SessionSummaryType | null>(null)
@@ -229,6 +289,7 @@ const messageInputRef = ref<InstanceType<typeof MessageInput>>()
 
 // 时间线显示状态
 const timelineVisible = ref(false)
+const todoVisible = ref(false)
 const timelineWidth = ref(400)
 const minWidth = 300
 const maxWidth = 600
@@ -303,6 +364,11 @@ function toggleTimeline() {
   } else {
     agentTimeline.stopCollecting()
   }
+}
+
+function closeMobilePanels() {
+  timelineVisible.value = false
+  todoVisible.value = false
 }
 
 // 开始调整大小

@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import type { Message, ChatSession, Strategy, MessageAttachment, CitationReference, MessageRole } from '@/types/message'
 import { useAgentStore } from './agent'
 import { useAgentTimelineStore } from './agentTimeline'
+import { useTodoStore } from './todo'
 import { API_BASE, DEFAULT_SESSION_TITLE } from '@/utils/constants'
 import { formatTimestamp, generateSessionId } from '@/utils/helpers'
 import { uploadTemporaryFiles, type TemporaryFileContent } from '@/api/file'
@@ -13,6 +14,12 @@ interface AgentEvent {
   nodeId?: string
   nodeType?: string  // 'llm' | 'tool' | 'custom'
   stateData?: Record<string, unknown> & {
+    todos?: unknown
+    todos_meta?: unknown
+    execution_record?: {
+      toolCalls?: Array<Record<string, unknown>>
+      executions?: Array<Record<string, unknown>>
+    }
     interruption?: {
       metadata: {
         nodeId: string
@@ -30,6 +37,7 @@ interface AgentEvent {
         timestamp: string
       }
       checkpointId: string
+      threadId?: string
     }
   }
   message?: string
@@ -126,6 +134,7 @@ export const useChatStore = defineStore('chat', () => {
   const isProcessing = ref<boolean>(false)
   const isLoading = ref<boolean>(false)
   const currentKnowledgeBaseId = ref<string>('')
+  const todoStore = useTodoStore()
 
   // 计算属性
   const currentSession = computed(() => {
@@ -154,6 +163,7 @@ export const useChatStore = defineStore('chat', () => {
         const firstSession = sessions.value[0]
         if (firstSession) {
           currentSessionId.value = firstSession.id
+          todoStore.clearOnSessionReset()
         }
       }
     } catch (error) {
@@ -207,6 +217,7 @@ export const useChatStore = defineStore('chat', () => {
       const newSession = backendSessionToFrontend(result.data)
       sessions.value.unshift(newSession)
       currentSessionId.value = newSession.id
+      todoStore.clearOnSessionReset()
       return newSession
     } catch (error) {
       console.error('创建会话失败:', error)
@@ -214,6 +225,7 @@ export const useChatStore = defineStore('chat', () => {
       const newSession = createLocalSession()
       sessions.value.unshift(newSession)
       currentSessionId.value = newSession.id
+      todoStore.clearOnSessionReset()
       return newSession
     }
   }
@@ -278,6 +290,7 @@ export const useChatStore = defineStore('chat', () => {
 
   function switchSession(sessionId: string) {
     currentSessionId.value = sessionId
+    todoStore.clearOnSessionReset()
     // 从后端加载会话详情
     loadSessionDetail(sessionId)
   }
@@ -486,11 +499,12 @@ export const useChatStore = defineStore('chat', () => {
     console.log('收到事件:', data.eventType, data)
 
     // 添加到时间线
+    todoStore.syncFromStateData(data.stateData, `${data.eventType}:${data.nodeId || 'unknown'}`)
     agentTimelineStore.addEvent({
       eventType: data.eventType as any,
       nodeId: data.nodeId || '',
       nodeType: data.nodeType as any || 'custom',
-      stateData: data.stateData || {},
+      stateData: (data.stateData || {}) as any,
       message: data.message,
       timestamp: data.timestamp || new Date().toISOString(),
       title: data.title,
@@ -787,13 +801,11 @@ export const useChatStore = defineStore('chat', () => {
       return
     }
 
-    const aiMessage = currentSession.value.messages[msgIndex]
+    const aiMessage = currentSession.value.messages[msgIndex]!
 
     // 更新消息状态为思考中
-    if (aiMessage) {
-      aiMessage.status = 'thinking'
-      aiMessage.content += '\n\n--- 审批通过，继续执行 ---\n\n'
-    }
+    aiMessage.status = 'thinking'
+    aiMessage.content += '\n\n--- Approval granted, continue execution ---\n\n'
 
     // 创建 AbortController
     const controller = new AbortController()
