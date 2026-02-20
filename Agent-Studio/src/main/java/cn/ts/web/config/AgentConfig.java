@@ -2,6 +2,7 @@ package cn.ts.web.config;
 
 import cn.ts.agent.Tool.WriteToDoTool;
 import cn.ts.agent.core.ReactAgent;
+import cn.ts.agent.extension.tools.TaskTool;
 import cn.ts.agent.hook.HumanInTheLoopHook;
 import cn.ts.agent.hook.LoggingHook;
 import cn.ts.agent.mcp.McpManager;
@@ -10,6 +11,8 @@ import cn.ts.agent.rag.advisor.RagAdvisor;
 import cn.ts.graph.checkpoint.CheckpointManager;
 import cn.ts.graph.hook.Hook;
 import cn.ts.graph.observation.GraphObservationLifecycleListener;
+import cn.ts.web.agent.deepsearch.DeepSearchAgentBuilder;
+import cn.ts.web.agent.deepsearch.DeepSearchProperties;
 import cn.ts.web.service.AgentExecutionService;
 import cn.ts.web.tools.SimpleTools;
 import org.slf4j.Logger;
@@ -45,6 +48,8 @@ public class AgentConfig {
     private final VectorStore vectorStore;
     private final CheckpointManager checkpointManager;
     private final GraphObservationLifecycleListener observationListener;
+    private final DeepSearchProperties deepSearchProperties;
+    private final DeepSearchAgentBuilder deepSearchAgentBuilder;
 
     public AgentConfig(ChatModel chatModel,
                        AgentExecutionService agentExecutionService,
@@ -54,7 +59,9 @@ public class AgentConfig {
                        ApiKeyConfig apiKeyConfig,
                        @Qualifier("vectorStore") VectorStore vectorStore,
                        CheckpointManager checkpointManager,
-                       GraphObservationLifecycleListener observationListener) {
+                       GraphObservationLifecycleListener observationListener,
+                       DeepSearchProperties deepSearchProperties,
+                       DeepSearchAgentBuilder deepSearchAgentBuilder) {
         this.chatModel = chatModel;
         this.agentExecutionService = agentExecutionService;
         this.mcpManager = mcpManager;
@@ -64,6 +71,8 @@ public class AgentConfig {
         this.vectorStore = vectorStore;
         this.checkpointManager = checkpointManager;
         this.observationListener = observationListener;
+        this.deepSearchProperties = deepSearchProperties;
+        this.deepSearchAgentBuilder = deepSearchAgentBuilder;
     }
 
     /**
@@ -83,7 +92,6 @@ public class AgentConfig {
 
         // 添加所有 MCP 客户端作为工具
         tools.addAll(mcpManager.getAllMcpClients());
-
         // ========== 创建非流式 TestAgent ==========
         List<Hook> testAgentHooks = new ArrayList<>();
 
@@ -96,8 +104,8 @@ public class AgentConfig {
 
         // 添加人工审批 Hook - 为敏感操作添加审批
         testAgentHooks.add(HumanInTheLoopHook.builder()
-                .approvalOn("deleteToDo", "删除待办事项，不可逆操作")
-                .approvalOn("clearAllToDos", "清空所有待办事项")
+                .approvalOn("delete_todo", "删除待办事项，不可逆操作")
+                .approvalOn("clear_todos", "清空所有待办事项")
                 .approvalMessage("⚠️ 需要人工审批：以下操作可能影响数据，请确认是否继续")
                 .build());
 
@@ -154,7 +162,35 @@ public class AgentConfig {
 
         logger.info("流式 Agent '{}' 已注册 (包含 {} 个 Hook)", streamingAgent.getName(), streamingAgentHooks.size());
 
-        logger.info("所有 Agent 注册完成 (总计 {} 个 Agent)", 2);
+        registerBuiltInDeepSearchAgent(tools.toArray());
+
+        logger.info("所有 Agent 注册完成");
+    }
+
+    private void registerBuiltInDeepSearchAgent(Object[] tools) {
+        if (!deepSearchProperties.isEnabled()) {
+            logger.info("Built-in DeepSearch agent registration disabled by config.");
+            return;
+        }
+
+        String agentName = deepSearchProperties.getAgentName();
+        if (agentName == null || agentName.isBlank()) {
+            logger.error("Skip built-in DeepSearch registration: agent.deep-search.agent-name must not be blank.");
+            return;
+        }
+
+        if (agentExecutionService.isAgentRegistered(agentName)) {
+            logger.warn("Skip built-in DeepSearch registration because '{}' is already registered (db/runtime priority).", agentName);
+            return;
+        }
+
+        try {
+            ReactAgent deepSearchAgent = deepSearchAgentBuilder.build(chatModel, tools);
+            agentExecutionService.registerGraph(agentName, deepSearchAgent.getGraph());
+            logger.info("Built-in DeepSearch agent '{}' registered successfully.", agentName);
+        } catch (Exception e) {
+            logger.error("Failed to register built-in DeepSearch agent '{}': {}", agentName, e.getMessage(), e);
+        }
     }
 
     /**

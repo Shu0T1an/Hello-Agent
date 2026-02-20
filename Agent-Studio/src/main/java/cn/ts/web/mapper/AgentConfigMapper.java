@@ -15,8 +15,10 @@ public interface AgentConfigMapper {
     /**
      * 插入Agent配置
      */
-    @Insert("INSERT INTO agent_config (agent_name, display_name, description, model_id, system_prompt, max_iterations, temperature, enable_streaming, is_active, created_by) " +
-            "VALUES (#{agentName}, #{displayName}, #{description}, #{modelId}, #{systemPrompt}, #{maxIterations}, #{temperature}, #{enableStreaming}, #{isActive}, #{createdBy})")
+    @Insert("INSERT INTO agent_config (agent_name, display_name, description, model_id, system_prompt, max_iterations, temperature, enable_streaming, is_active, created_by, " +
+            "enable_subagent_interceptor, include_general_purpose, subagent_tools_policy) " +
+            "VALUES (#{agentName}, #{displayName}, #{description}, #{modelId}, #{systemPrompt}, #{maxIterations}, #{temperature}, #{enableStreaming}, #{isActive}, #{createdBy}, " +
+            "#{enableSubAgentInterceptor}, #{includeGeneralPurpose}, #{subAgentToolsPolicy})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insert(AgentConfigEntity entity);
 
@@ -31,7 +33,10 @@ public interface AgentConfigMapper {
             "max_iterations = #{maxIterations}, " +
             "temperature = #{temperature}, " +
             "enable_streaming = #{enableStreaming}, " +
-            "is_active = #{isActive} " +
+            "is_active = #{isActive}, " +
+            "enable_subagent_interceptor = #{enableSubAgentInterceptor}, " +
+            "include_general_purpose = #{includeGeneralPurpose}, " +
+            "subagent_tools_policy = #{subAgentToolsPolicy} " +
             "WHERE id = #{id}")
     int updateById(AgentConfigEntity entity);
 

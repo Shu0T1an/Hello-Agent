@@ -3,25 +3,32 @@ package cn.ts.web.service.impl;
 import cn.ts.agent.core.ReactAgent;
 import cn.ts.web.factory.AgentFactory;
 import cn.ts.web.dto.agent.AgentConfigDTO;
+import cn.ts.web.dto.agent.SubAgentMappingDTO;
+import cn.ts.web.dto.agent.SubAgentToolsPolicy;
 import cn.ts.web.dto.agent.ToolDefinitionDTO;
 import cn.ts.web.entity.AgentConfigEntity;
+import cn.ts.web.entity.SubAgentMappingEntity;
 import cn.ts.web.mapper.AgentConfigMapper;
 import cn.ts.web.mapper.AgentToolMappingMapper;
+import cn.ts.web.mapper.SubAgentMappingMapper;
 import cn.ts.web.service.AgentConfigService;
 import cn.ts.web.service.AgentExecutionService;
 import cn.ts.web.service.ToolDefinitionService;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
- * Agent 配置服务实现
+ * Agent 閰嶇疆鏈嶅姟瀹炵幇
  */
 @Service
 public class AgentConfigServiceImpl implements AgentConfigService {
@@ -32,9 +39,11 @@ public class AgentConfigServiceImpl implements AgentConfigService {
     private final AgentExecutionService agentExecutionService;
     private final AgentConfigMapper agentConfigMapper;
     private final AgentToolMappingMapper agentToolMappingMapper;
+    private final SubAgentMappingMapper subAgentMappingMapper;
     private final ToolDefinitionService toolDefinitionService;
+    private final ObjectMapper objectMapper;
 
-    // Agent 注册表（用于热重载）
+    // Agent 娉ㄥ唽琛紙鐢ㄤ簬鐑噸杞斤級
     private final Map<String, ReactAgent> agentRegistry = new ConcurrentHashMap<>();
 
     public AgentConfigServiceImpl(
@@ -42,27 +51,30 @@ public class AgentConfigServiceImpl implements AgentConfigService {
             AgentExecutionService agentExecutionService,
             AgentConfigMapper agentConfigMapper,
             AgentToolMappingMapper agentToolMappingMapper,
+            SubAgentMappingMapper subAgentMappingMapper,
             ToolDefinitionService toolDefinitionService) {
         this.agentFactory = agentFactory;
         this.agentExecutionService = agentExecutionService;
         this.agentConfigMapper = agentConfigMapper;
         this.agentToolMappingMapper = agentToolMappingMapper;
+        this.subAgentMappingMapper = subAgentMappingMapper;
         this.toolDefinitionService = toolDefinitionService;
+        this.objectMapper = new ObjectMapper();
     }
 
     @Override
     @Transactional
     public AgentConfigDTO createAgent(AgentConfigDTO dto) {
-        // 检查 Agent 名称是否已存在
+        // 妫€鏌?Agent 鍚嶇О鏄惁宸插瓨鍦?
         if (agentConfigMapper.countByAgentName(dto.getAgentName()) > 0) {
             throw new IllegalArgumentException("Agent name already exists: " + dto.getAgentName());
         }
 
-        // 转换为实体并插入
+        // 杞崲涓哄疄浣撳苟鎻掑叆
         AgentConfigEntity entity = toEntity(dto);
         agentConfigMapper.insert(entity);
 
-        // 插入工具关联
+        // 鎻掑叆宸ュ叿鍏宠仈
         if (dto.getToolIds() != null && !dto.getToolIds().isEmpty()) {
             dto.getToolIds().forEach(toolId -> {
                 var mapping = new cn.ts.web.entity.AgentToolMappingEntity();
@@ -71,11 +83,12 @@ public class AgentConfigServiceImpl implements AgentConfigService {
                 agentToolMappingMapper.insert(mapping);
             });
         }
+        saveSubAgentMappings(entity.getId(), dto.getSubAgents());
 
-        // 重新加载完整的配置（包含工具关联）
+        // 閲嶆柊鍔犺浇瀹屾暣鐨勯厤缃紙鍖呭惈宸ュ叿鍏宠仈锛?
         AgentConfigDTO result = getAgentById(entity.getId());
 
-        // 如果是激活状态，自动组装并注册
+        // 濡傛灉鏄縺娲荤姸鎬侊紝鑷姩缁勮骞舵敞鍐?
         if (result.getIsActive() != null && result.getIsActive()) {
             try {
                 ReactAgent agent = assembleAgent(result);
@@ -83,7 +96,7 @@ public class AgentConfigServiceImpl implements AgentConfigService {
                 logger.info("Agent '{}' registered successfully", result.getAgentName());
             } catch (Exception e) {
                 logger.error("Failed to register agent '{}': {}", result.getAgentName(), e.getMessage());
-                // 不影响创建，只是无法注册
+                // 涓嶅奖鍝嶅垱寤猴紝鍙槸鏃犳硶娉ㄥ唽
             }
         }
 
@@ -93,18 +106,18 @@ public class AgentConfigServiceImpl implements AgentConfigService {
     @Override
     @Transactional
     public AgentConfigDTO updateAgent(Long id, AgentConfigDTO dto) {
-        // 检查是否存在
+        // 妫€鏌ユ槸鍚﹀瓨鍦?
         AgentConfigEntity existing = agentConfigMapper.selectById(id);
         if (existing == null) {
             throw new IllegalArgumentException("Agent not found with id: " + id);
         }
 
-        // 检查 Agent 名称是否已被其他记录使用
+        // 妫€鏌?Agent 鍚嶇О鏄惁宸茶鍏朵粬璁板綍浣跨敤
         if (agentConfigMapper.countByAgentNameExcludeId(dto.getAgentName(), id) > 0) {
             throw new IllegalArgumentException("Agent name already exists: " + dto.getAgentName());
         }
 
-        // 更新实体
+        // 鏇存柊瀹炰綋
         existing.setDisplayName(dto.getDisplayName());
         existing.setDescription(dto.getDescription());
         existing.setModelId(dto.getModelId());
@@ -112,14 +125,19 @@ public class AgentConfigServiceImpl implements AgentConfigService {
         existing.setMaxIterations(dto.getMaxIterations());
         existing.setTemperature(dto.getTemperature());
         existing.setEnableStreaming(dto.getEnableStreaming());
-        // 只有明确提供 isActive 时才更新，否则保持原值
+        existing.setEnableSubAgentInterceptor(dto.getEnableSubAgentInterceptor());
+        existing.setIncludeGeneralPurpose(dto.getIncludeGeneralPurpose());
+        if (dto.getSubAgentToolsPolicy() != null) {
+            existing.setSubAgentToolsPolicy(dto.getSubAgentToolsPolicy().name());
+        }
+        // 鍙湁鏄庣‘鎻愪緵 isActive 鏃舵墠鏇存柊锛屽惁鍒欎繚鎸佸師鍊?
         if (dto.getIsActive() != null) {
             existing.setIsActive(dto.getIsActive());
         }
 
         agentConfigMapper.updateById(existing);
 
-        // 更新工具关联
+        // 鏇存柊宸ュ叿鍏宠仈
         agentToolMappingMapper.deleteByAgentId(id);
         if (dto.getToolIds() != null && !dto.getToolIds().isEmpty()) {
             dto.getToolIds().forEach(toolId -> {
@@ -129,15 +147,16 @@ public class AgentConfigServiceImpl implements AgentConfigService {
                 agentToolMappingMapper.insert(mapping);
             });
         }
+        saveSubAgentMappings(id, dto.getSubAgents());
 
-        // 重新加载完整的配置
+        // 閲嶆柊鍔犺浇瀹屾暣鐨勯厤缃?
         AgentConfigDTO result = getAgentById(id);
 
-        // 热重载 Agent（只有激活的才重载）
+        // 鐑噸杞?Agent锛堝彧鏈夋縺娲荤殑鎵嶉噸杞斤級
         if (result.getIsActive() != null && result.getIsActive()) {
             hotReloadAgent(result.getAgentName());
         } else {
-            // 如果停用，注销 Agent
+            // 濡傛灉鍋滅敤锛屾敞閿€ Agent
             unregisterAgentFromExecutionService(result.getAgentName());
         }
 
@@ -152,10 +171,12 @@ public class AgentConfigServiceImpl implements AgentConfigService {
             throw new IllegalArgumentException("Agent not found with id: " + id);
         }
 
-        // 先注销 Agent
+        // 鍏堟敞閿€ Agent
         unregisterAgentFromExecutionService(entity.getAgentName());
 
-        // 删除工具关联（外键会自动级联删除）
+        // 鍒犻櫎宸ュ叿鍏宠仈锛堝閿細鑷姩绾ц仈鍒犻櫎锛?
+        agentToolMappingMapper.deleteByAgentId(id);
+        subAgentMappingMapper.deleteByAgentId(id);
         agentConfigMapper.deleteById(id);
 
         logger.info("Agent '{}' deleted", entity.getAgentName());
@@ -168,7 +189,7 @@ public class AgentConfigServiceImpl implements AgentConfigService {
             return null;
         }
 
-        // 加载关联的工具
+        // 鍔犺浇鍏宠仈鐨勫伐鍏?
         List<ToolDefinitionDTO> tools = toolDefinitionService.getToolsByAgentId(id);
         entity.setToolDefinitions(
                 tools.stream()
@@ -195,7 +216,7 @@ public class AgentConfigServiceImpl implements AgentConfigService {
     public AgentConfigDTO getAgentByName(String agentName) {
         return agentConfigMapper.selectByAgentName(agentName)
                 .map(entity -> {
-                    // 加载关联的工具
+                    // 鍔犺浇鍏宠仈鐨勫伐鍏?
                     List<ToolDefinitionDTO> tools = toolDefinitionService.getToolsByAgentId(entity.getId());
                     entity.setToolDefinitions(
                             tools.stream()
@@ -281,7 +302,7 @@ public class AgentConfigServiceImpl implements AgentConfigService {
         entity.setIsActive(true);
         agentConfigMapper.updateById(entity);
 
-        // 重新加载并注册
+        // 閲嶆柊鍔犺浇骞舵敞鍐?
         AgentConfigDTO config = getAgentById(id);
         ReactAgent agent = assembleAgent(config);
         registerAgentToExecutionService(config.getAgentName(), agent);
@@ -300,7 +321,7 @@ public class AgentConfigServiceImpl implements AgentConfigService {
         entity.setIsActive(false);
         agentConfigMapper.updateById(entity);
 
-        // 注销 Agent
+        // 娉ㄩ攢 Agent
         unregisterAgentFromExecutionService(entity.getAgentName());
 
         logger.info("Agent '{}' deactivated", entity.getAgentName());
@@ -328,12 +349,12 @@ public class AgentConfigServiceImpl implements AgentConfigService {
     }
 
     /**
-     * 热重载 Agent（不影响正在执行的请求）
+     * 鐑噸杞?Agent锛堜笉褰卞搷姝ｅ湪鎵ц鐨勮姹傦級
      */
     private void hotReloadAgent(String agentName) {
         logger.info("Hot reloading agent: {}", agentName);
 
-        // 1. 从数据库获取最新配置
+        // 1. 浠庢暟鎹簱鑾峰彇鏈€鏂伴厤缃?
         AgentConfigDTO config = getAgentByName(agentName);
         if (config == null) {
             logger.warn("Agent '{}' not found in database", agentName);
@@ -346,10 +367,10 @@ public class AgentConfigServiceImpl implements AgentConfigService {
         }
 
         try {
-            // 2. 重新组装 Agent
+            // 2. 閲嶆柊缁勮 Agent
             ReactAgent newAgent = assembleAgent(config);
 
-            // 3. 替换注册表中的 Agent
+            // 3. 鏇挎崲娉ㄥ唽琛ㄤ腑鐨?Agent
             ReactAgent oldAgent = agentRegistry.get(agentName);
             if (oldAgent != null) {
                 agentExecutionService.unregisterAgent(agentName);
@@ -365,7 +386,7 @@ public class AgentConfigServiceImpl implements AgentConfigService {
     }
 
     /**
-     * 实体转 DTO
+     * 瀹炰綋杞?DTO
      */
     private AgentConfigDTO toDTO(AgentConfigEntity entity) {
         AgentConfigDTO dto = new AgentConfigDTO();
@@ -379,11 +400,15 @@ public class AgentConfigServiceImpl implements AgentConfigService {
         dto.setTemperature(entity.getTemperature());
         dto.setEnableStreaming(entity.getEnableStreaming());
         dto.setIsActive(entity.getIsActive());
+        dto.setEnableSubAgentInterceptor(entity.getEnableSubAgentInterceptor());
+        dto.setIncludeGeneralPurpose(entity.getIncludeGeneralPurpose());
+        dto.setSubAgentToolsPolicy(parseToolsPolicy(entity.getSubAgentToolsPolicy()));
+        dto.setSubAgents(loadSubAgentMappings(entity.getId()));
         dto.setCreatedBy(entity.getCreatedBy());
         dto.setCreatedAt(entity.getCreatedAt());
         dto.setUpdatedAt(entity.getUpdatedAt());
 
-        // 转换工具列表
+        // 杞崲宸ュ叿鍒楄〃
         if (entity.getToolDefinitions() != null) {
             List<ToolDefinitionDTO> tools = entity.getToolDefinitions().stream()
                     .map(te -> {
@@ -401,7 +426,7 @@ public class AgentConfigServiceImpl implements AgentConfigService {
                     })
                     .collect(Collectors.toList());
             dto.setToolDefinitions(tools);
-            // 同时设置 toolIds，方便前端使用
+            // 鍚屾椂璁剧疆 toolIds锛屾柟渚垮墠绔娇鐢?
             dto.setToolIds(tools.stream().map(ToolDefinitionDTO::getId).collect(Collectors.toList()));
         }
 
@@ -409,7 +434,7 @@ public class AgentConfigServiceImpl implements AgentConfigService {
     }
 
     /**
-     * DTO 转实体
+     * DTO 杞疄浣?
      */
     private AgentConfigEntity toEntity(AgentConfigDTO dto) {
         AgentConfigEntity entity = new AgentConfigEntity();
@@ -422,7 +447,112 @@ public class AgentConfigServiceImpl implements AgentConfigService {
         entity.setTemperature(dto.getTemperature());
         entity.setEnableStreaming(dto.getEnableStreaming() != null ? dto.getEnableStreaming() : true);
         entity.setIsActive(dto.getIsActive() != null ? dto.getIsActive() : true);
+        entity.setEnableSubAgentInterceptor(dto.getEnableSubAgentInterceptor() != null ? dto.getEnableSubAgentInterceptor() : false);
+        entity.setIncludeGeneralPurpose(dto.getIncludeGeneralPurpose() != null ? dto.getIncludeGeneralPurpose() : true);
+        entity.setSubAgentToolsPolicy(
+                dto.getSubAgentToolsPolicy() != null ? dto.getSubAgentToolsPolicy().name() : SubAgentToolsPolicy.INHERIT.name()
+        );
         entity.setCreatedBy(dto.getCreatedBy() != null ? dto.getCreatedBy() : "system");
         return entity;
     }
+
+    private SubAgentToolsPolicy parseToolsPolicy(String value) {
+        if (value == null || value.isBlank()) {
+            return SubAgentToolsPolicy.INHERIT;
+        }
+        try {
+            return SubAgentToolsPolicy.valueOf(value);
+        } catch (IllegalArgumentException e) {
+            logger.warn("Unknown subAgentToolsPolicy '{}', fallback to INHERIT", value);
+            return SubAgentToolsPolicy.INHERIT;
+        }
+    }
+
+    private void saveSubAgentMappings(Long agentId, List<SubAgentMappingDTO> mappings) {
+        subAgentMappingMapper.deleteByAgentId(agentId);
+        if (mappings == null || mappings.isEmpty()) {
+            return;
+        }
+
+        int index = 0;
+        for (SubAgentMappingDTO mapping : mappings) {
+            if (mapping == null || mapping.getSubagentType() == null || mapping.getSubagentType().isBlank()
+                    || mapping.getTargetAgentId() == null) {
+                continue;
+            }
+
+            SubAgentMappingEntity entity = new SubAgentMappingEntity();
+            entity.setAgentId(agentId);
+            entity.setSubagentType(mapping.getSubagentType());
+            entity.setTargetAgentId(mapping.getTargetAgentId());
+            entity.setDescription(mapping.getDescription());
+            SubAgentToolsPolicy toolsPolicy = mapping.getToolsPolicy() != null
+                    ? mapping.getToolsPolicy()
+                    : SubAgentToolsPolicy.INHERIT;
+            entity.setToolsPolicy(toolsPolicy.name());
+            entity.setCustomToolIds(toJson(mapping.getCustomToolIds()));
+            entity.setSortOrder(mapping.getSortOrder() != null ? mapping.getSortOrder() : index);
+            entity.setEnabled(mapping.getEnabled() != null ? mapping.getEnabled() : true);
+            subAgentMappingMapper.insert(entity);
+            index++;
+        }
+    }
+
+    private List<SubAgentMappingDTO> loadSubAgentMappings(Long agentId) {
+        if (agentId == null) {
+            return List.of();
+        }
+        List<SubAgentMappingEntity> entities = subAgentMappingMapper.selectByAgentId(agentId);
+        if (entities == null || entities.isEmpty()) {
+            return List.of();
+        }
+        List<SubAgentMappingDTO> result = new ArrayList<>(entities.size());
+        for (SubAgentMappingEntity entity : entities) {
+            result.add(toSubAgentDTO(entity));
+        }
+        return result;
+    }
+
+    private SubAgentMappingDTO toSubAgentDTO(SubAgentMappingEntity entity) {
+        SubAgentMappingDTO dto = new SubAgentMappingDTO();
+        dto.setId(entity.getId());
+        dto.setAgentId(entity.getAgentId());
+        dto.setSubagentType(entity.getSubagentType());
+        dto.setTargetAgentId(entity.getTargetAgentId());
+        dto.setDescription(entity.getDescription());
+        dto.setToolsPolicy(parseToolsPolicy(entity.getToolsPolicy()));
+        dto.setCustomToolIds(fromJsonArray(entity.getCustomToolIds()));
+        dto.setSortOrder(entity.getSortOrder());
+        dto.setEnabled(entity.getEnabled());
+        dto.setCreatedAt(entity.getCreatedAt());
+        dto.setUpdatedAt(entity.getUpdatedAt());
+        return dto;
+    }
+
+    private String toJson(List<Long> values) {
+        if (values == null || values.isEmpty()) {
+            return "[]";
+        }
+        try {
+            return objectMapper.writeValueAsString(values);
+        } catch (Exception e) {
+            logger.warn("Failed to serialize custom tool ids, fallback to []", e);
+            return "[]";
+        }
+    }
+
+    private List<Long> fromJsonArray(String json) {
+        if (json == null || json.isBlank()) {
+            return List.of();
+        }
+        try {
+            return objectMapper.readValue(json, new TypeReference<List<Long>>() {
+            });
+        } catch (Exception e) {
+            logger.warn("Failed to parse custom tool ids JSON, fallback to empty list: {}", json, e);
+            return List.of();
+        }
+    }
 }
+
+

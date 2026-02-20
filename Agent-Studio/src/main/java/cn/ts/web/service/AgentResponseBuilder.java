@@ -34,6 +34,12 @@ import java.util.Set;
 @Component
 public class AgentResponseBuilder {
 
+    private static final Set<String> REQUIRED_STATE_KEYS = Set.of(
+            "execution_record",
+            StateKeys.TODOS,
+            StateKeys.TODOS_META
+    );
+
     private final MessageConversionService messageConversionService;
 
     /**
@@ -209,6 +215,7 @@ public class AgentResponseBuilder {
         // 再添加节点的状态数据
         if (output.getState() != null && !output.getState().data().isEmpty()) {
             finalStateData.putAll(extractSerializableData(output.getState().data()));
+            mergeRequiredStateData(output.getState().data(), finalStateData);
         }
 
         if (!finalStateData.isEmpty()) {
@@ -351,6 +358,24 @@ public class AgentResponseBuilder {
             }
         }
         return result.isEmpty() ? null : result;
+    }
+
+    /**
+     * Ensure required state keys are forwarded whenever they exist in node state.
+     */
+    private void mergeRequiredStateData(Map<String, Object> source, Map<String, Object> target) {
+        if (source == null || source.isEmpty()) {
+            return;
+        }
+        for (String key : REQUIRED_STATE_KEYS) {
+            if (!source.containsKey(key)) {
+                continue;
+            }
+            Object value = source.get(key);
+            if (value == null || isSerializable(value)) {
+                target.put(key, value);
+            }
+        }
     }
 
     /**

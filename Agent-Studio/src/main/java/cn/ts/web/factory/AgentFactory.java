@@ -1,21 +1,36 @@
 package cn.ts.web.factory;
 
 import cn.ts.agent.core.ReactAgent;
+import cn.ts.agent.extension.interceptor.SubAgentInterceptor;
+import cn.ts.agent.extension.tools.TaskTool;
 import cn.ts.graph.checkpoint.CheckpointManager;
 import cn.ts.web.dto.agent.AgentConfigDTO;
+import cn.ts.web.dto.agent.SubAgentMappingDTO;
+import cn.ts.web.dto.agent.SubAgentToolsPolicy;
 import cn.ts.web.dto.agent.ToolDefinitionDTO;
+import cn.ts.web.entity.AgentConfigEntity;
+import cn.ts.web.entity.SubAgentMappingEntity;
+import cn.ts.web.mapper.AgentConfigMapper;
+import cn.ts.web.mapper.SubAgentMappingMapper;
 import cn.ts.web.service.ModelConfigService;
 import cn.ts.web.service.ToolDefinitionService;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 /**
- * Agent 工厂
- * <p>
- * 根据配置动态创建 ReactAgent 实例
- * </p>
+ * Factory for creating ReactAgent from persisted configuration.
  */
 @Component
 public class AgentFactory {
@@ -24,61 +39,61 @@ public class AgentFactory {
 
     private final ModelConfigService modelConfigService;
     private final ToolDefinitionService toolDefinitionService;
+    private final AgentConfigMapper agentConfigMapper;
+    private final SubAgentMappingMapper subAgentMappingMapper;
     private final CheckpointManager checkpointManager;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public AgentFactory(ModelConfigService modelConfigService,
-                       ToolDefinitionService toolDefinitionService,
-                       CheckpointManager checkpointManager) {
+                        ToolDefinitionService toolDefinitionService,
+                        AgentConfigMapper agentConfigMapper,
+                        SubAgentMappingMapper subAgentMappingMapper,
+                        CheckpointManager checkpointManager) {
         this.modelConfigService = modelConfigService;
         this.toolDefinitionService = toolDefinitionService;
+        this.agentConfigMapper = agentConfigMapper;
+        this.subAgentMappingMapper = subAgentMappingMapper;
         this.checkpointManager = checkpointManager;
     }
 
-    /**
-     * 根据配置创建 ReactAgent
-     *
-     * @param config Agent 配置
-     * @return ReactAgent 实例
-     */
     public ReactAgent createAgent(AgentConfigDTO config) {
+        return createAgentInternal(config, true, null);
+    }
+
+    private ReactAgent createAgentInternal(
+            AgentConfigDTO config,
+            boolean includeSubAgentInterceptor,
+            List<ToolDefinitionDTO> explicitToolDefinitions) {
         logger.info("Creating agent: {}", config.getAgentName());
 
-        // 1. 创建 ChatModel
         ChatModel chatModel = createChatModel(config);
+        Object[] tools = instantiateTools(config, explicitToolDefinitions);
 
-        // 2. 准备工具列表
-        Object[] tools = instantiateTools(config);
-
-        // 3. 使用 Builder 创建 ReactAgent
         ReactAgent.Builder builder = ReactAgent.builder()
                 .name(config.getAgentName())
                 .description(config.getDescription() != null ? config.getDescription() : config.getDisplayName())
                 .chatModel(chatModel)
-                .checkpointManager(checkpointManager);  // 设置检查点管理器
+                .checkpointManager(checkpointManager);
 
-        // 4. 设置流式选项
         if (config.getEnableStreaming() != null) {
             builder.streaming(config.getEnableStreaming());
         }
 
-        // 5. 设置工具
+        if (includeSubAgentInterceptor && Boolean.TRUE.equals(config.getEnableSubAgentInterceptor())) {
+            Map<String, ReactAgent> subAgents = buildSubAgentsFor(config);
+            tools = appendTaskTool(tools, subAgents);
+            builder.modelInterceptors(List.of(new SubAgentInterceptor(null, subAgents)));
+        }
         builder.tools(tools);
 
-        // 6. 构建 Agent
         ReactAgent agent = builder.build();
-
         logger.info("Agent created successfully: {}", config.getAgentName());
         return agent;
     }
 
-    /**
-     * 创建 ChatModel
-     */
     private ChatModel createChatModel(AgentConfigDTO config) {
-        // 从配置获取模型配置
         var modelConfig = config.getModelConfig();
         if (modelConfig == null) {
-            // 如果没有直接提供，则从数据库加载
             modelConfig = modelConfigService.getModelById(config.getModelId());
         }
 
@@ -86,19 +101,210 @@ public class AgentFactory {
             throw new IllegalArgumentException("Model configuration not found for agent: " + config.getAgentName());
         }
 
-        // 使用 ModelConfigService 创建 ChatModel
         return modelConfigService.createChatModel(modelConfig);
     }
 
-    /**
-     * 实例化工具列表
-     */
-    private Object[] instantiateTools(AgentConfigDTO config) {
-        var toolDefs = config.getToolDefinitions();
+    private Object[] instantiateTools(AgentConfigDTO config, List<ToolDefinitionDTO> explicitToolDefinitions) {
+        List<ToolDefinitionDTO> toolDefs = explicitToolDefinitions != null ? explicitToolDefinitions : config.getToolDefinitions();
+        if ((toolDefs == null || toolDefs.isEmpty()) && config.getId() != null) {
+            toolDefs = toolDefinitionService.getToolsByAgentId(config.getId());
+        }
         if (toolDefs == null || toolDefs.isEmpty()) {
             return new Object[0];
         }
-
         return toolDefinitionService.instantiateTools(toolDefs);
+    }
+
+    private Object[] appendTaskTool(Object[] tools, Map<String, ReactAgent> subAgents) {
+        Object[] merged = new Object[tools.length + 1];
+        System.arraycopy(tools, 0, merged, 0, tools.length);
+        merged[tools.length] = new TaskTool(subAgents);
+        return merged;
+    }
+
+    private Map<String, ReactAgent> buildSubAgentsFor(AgentConfigDTO mainConfig) {
+        Map<String, ReactAgent> subAgents = new LinkedHashMap<>();
+        List<SubAgentMappingDTO> mappings = getEffectiveMappings(mainConfig);
+
+        for (SubAgentMappingDTO mapping : mappings) {
+            if (!Boolean.TRUE.equals(mapping.getEnabled())
+                    || mapping.getSubagentType() == null
+                    || mapping.getSubagentType().isBlank()
+                    || mapping.getTargetAgentId() == null) {
+                continue;
+            }
+
+            AgentConfigDTO target = loadAgentConfig(mapping.getTargetAgentId());
+            if (target == null) {
+                logger.warn("Skip subagent mapping '{}' because target agent {} is missing",
+                        mapping.getSubagentType(), mapping.getTargetAgentId());
+                continue;
+            }
+            if ((target.getDescription() == null || target.getDescription().isBlank())
+                    && mapping.getDescription() != null && !mapping.getDescription().isBlank()) {
+                target.setDescription(mapping.getDescription());
+            }
+            if (Boolean.TRUE.equals(target.getEnableSubAgentInterceptor())) {
+                logger.warn(
+                        "Recursion guard enabled: subagent '{}' points to agent '{}' with subagent interceptor enabled; it will be disabled for this subagent instance",
+                        mapping.getSubagentType(), target.getAgentName()
+                );
+            }
+
+            List<ToolDefinitionDTO> toolsForSubAgent = resolveToolsForSubAgent(target, mainConfig, mapping);
+            ReactAgent subAgent = createAgentInternal(target, false, toolsForSubAgent);
+            subAgents.put(mapping.getSubagentType(), subAgent);
+        }
+
+        boolean includeGeneralPurpose = mainConfig.getIncludeGeneralPurpose() == null || mainConfig.getIncludeGeneralPurpose();
+        if (includeGeneralPurpose && !subAgents.containsKey("general-purpose")) {
+            try {
+                List<ToolDefinitionDTO> gpTools = resolveGeneralPurposeTools(mainConfig);
+                ReactAgent generalPurpose = createAgentInternal(mainConfig, false, gpTools);
+                subAgents.put("general-purpose", generalPurpose);
+            } catch (Exception e) {
+                logger.warn("Failed to build general-purpose subagent for '{}': {}", mainConfig.getAgentName(), e.getMessage());
+            }
+        }
+
+        return subAgents;
+    }
+
+    private List<SubAgentMappingDTO> getEffectiveMappings(AgentConfigDTO config) {
+        if (config.getSubAgents() != null) {
+            return config.getSubAgents();
+        }
+        if (config.getId() == null) {
+            return List.of();
+        }
+
+        List<SubAgentMappingEntity> entities = subAgentMappingMapper.selectByAgentId(config.getId());
+        if (entities == null || entities.isEmpty()) {
+            return List.of();
+        }
+
+        List<SubAgentMappingDTO> mappings = new ArrayList<>(entities.size());
+        for (SubAgentMappingEntity entity : entities) {
+            mappings.add(toSubAgentMappingDTO(entity));
+        }
+        return mappings;
+    }
+
+    private SubAgentMappingDTO toSubAgentMappingDTO(SubAgentMappingEntity entity) {
+        SubAgentMappingDTO dto = new SubAgentMappingDTO();
+        dto.setId(entity.getId());
+        dto.setAgentId(entity.getAgentId());
+        dto.setSubagentType(entity.getSubagentType());
+        dto.setTargetAgentId(entity.getTargetAgentId());
+        dto.setDescription(entity.getDescription());
+        dto.setToolsPolicy(parseToolsPolicy(entity.getToolsPolicy()));
+        dto.setCustomToolIds(parseCustomToolIds(entity.getCustomToolIds()));
+        dto.setSortOrder(entity.getSortOrder());
+        dto.setEnabled(entity.getEnabled());
+        dto.setCreatedAt(entity.getCreatedAt());
+        dto.setUpdatedAt(entity.getUpdatedAt());
+        return dto;
+    }
+
+    private AgentConfigDTO loadAgentConfig(Long agentId) {
+        AgentConfigEntity entity = agentConfigMapper.selectById(agentId);
+        if (entity == null) {
+            return null;
+        }
+
+        AgentConfigDTO dto = new AgentConfigDTO();
+        dto.setId(entity.getId());
+        dto.setAgentName(entity.getAgentName());
+        dto.setDisplayName(entity.getDisplayName());
+        dto.setDescription(entity.getDescription());
+        dto.setModelId(entity.getModelId());
+        dto.setSystemPrompt(entity.getSystemPrompt());
+        dto.setMaxIterations(entity.getMaxIterations());
+        dto.setTemperature(entity.getTemperature());
+        dto.setEnableStreaming(entity.getEnableStreaming());
+        dto.setIsActive(entity.getIsActive());
+        dto.setEnableSubAgentInterceptor(entity.getEnableSubAgentInterceptor());
+        dto.setIncludeGeneralPurpose(entity.getIncludeGeneralPurpose());
+        dto.setSubAgentToolsPolicy(parseToolsPolicy(entity.getSubAgentToolsPolicy()));
+        dto.setToolDefinitions(toolDefinitionService.getToolsByAgentId(agentId));
+        return dto;
+    }
+
+    private List<ToolDefinitionDTO> resolveToolsForSubAgent(
+            AgentConfigDTO targetConfig,
+            AgentConfigDTO mainConfig,
+            SubAgentMappingDTO mapping) {
+        SubAgentToolsPolicy policy = resolvePolicy(mainConfig, mapping);
+        if (policy == SubAgentToolsPolicy.CUSTOM) {
+            Set<Long> customIds = mapping.getCustomToolIds() == null
+                    ? Set.of()
+                    : mapping.getCustomToolIds().stream().filter(Objects::nonNull).collect(Collectors.toSet());
+            if (customIds.isEmpty()) {
+                return List.of();
+            }
+            return toolDefinitionService.getActiveTools().stream()
+                    .filter(t -> t.getId() != null && customIds.contains(t.getId()))
+                    .collect(Collectors.toList());
+        }
+
+        List<ToolDefinitionDTO> inherited = targetConfig.getToolDefinitions();
+        if (inherited != null) {
+            return inherited;
+        }
+        if (targetConfig.getId() != null) {
+            return toolDefinitionService.getToolsByAgentId(targetConfig.getId());
+        }
+        return List.of();
+    }
+
+    private List<ToolDefinitionDTO> resolveGeneralPurposeTools(AgentConfigDTO mainConfig) {
+        SubAgentToolsPolicy defaultPolicy = mainConfig.getSubAgentToolsPolicy() != null
+                ? mainConfig.getSubAgentToolsPolicy()
+                : SubAgentToolsPolicy.INHERIT;
+        if (defaultPolicy == SubAgentToolsPolicy.CUSTOM) {
+            return List.of();
+        }
+        if (mainConfig.getToolDefinitions() != null) {
+            return mainConfig.getToolDefinitions();
+        }
+        if (mainConfig.getId() != null) {
+            return toolDefinitionService.getToolsByAgentId(mainConfig.getId());
+        }
+        return List.of();
+    }
+
+    private SubAgentToolsPolicy resolvePolicy(AgentConfigDTO mainConfig, SubAgentMappingDTO mapping) {
+        if (mapping.getToolsPolicy() != null) {
+            return mapping.getToolsPolicy();
+        }
+        if (mainConfig.getSubAgentToolsPolicy() != null) {
+            return mainConfig.getSubAgentToolsPolicy();
+        }
+        return SubAgentToolsPolicy.INHERIT;
+    }
+
+    private SubAgentToolsPolicy parseToolsPolicy(String value) {
+        if (value == null || value.isBlank()) {
+            return SubAgentToolsPolicy.INHERIT;
+        }
+        try {
+            return SubAgentToolsPolicy.valueOf(value);
+        } catch (IllegalArgumentException e) {
+            logger.warn("Unknown tools policy '{}', fallback to INHERIT", value);
+            return SubAgentToolsPolicy.INHERIT;
+        }
+    }
+
+    private List<Long> parseCustomToolIds(String json) {
+        if (json == null || json.isBlank()) {
+            return List.of();
+        }
+        try {
+            return objectMapper.readValue(json, new TypeReference<List<Long>>() {
+            });
+        } catch (Exception e) {
+            logger.warn("Failed to parse custom tool ids JSON, fallback to empty: {}", json, e);
+            return List.of();
+        }
     }
 }

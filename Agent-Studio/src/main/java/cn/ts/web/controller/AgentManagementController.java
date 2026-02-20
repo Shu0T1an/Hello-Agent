@@ -126,6 +126,10 @@ public class AgentManagementController {
         dto.setTemperature(request.getTemperature());
         dto.setEnableStreaming(request.getEnableStreaming());
         dto.setToolIds(request.getToolIds());
+        dto.setEnableSubAgentInterceptor(request.getEnableSubAgentInterceptor());
+        dto.setIncludeGeneralPurpose(request.getIncludeGeneralPurpose());
+        dto.setSubAgentToolsPolicy(request.getSubAgentToolsPolicy());
+        dto.setSubAgents(request.getSubAgents());
         return dto;
     }
 
@@ -143,6 +147,10 @@ public class AgentManagementController {
         dto.setEnableStreaming(request.getEnableStreaming());
         dto.setIsActive(request.getIsActive());
         dto.setToolIds(request.getToolIds());
+        dto.setEnableSubAgentInterceptor(request.getEnableSubAgentInterceptor());
+        dto.setIncludeGeneralPurpose(request.getIncludeGeneralPurpose());
+        dto.setSubAgentToolsPolicy(request.getSubAgentToolsPolicy());
+        dto.setSubAgents(request.getSubAgents());
         return dto;
     }
 }

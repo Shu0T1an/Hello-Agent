@@ -3,6 +3,7 @@
 -- PostgreSQL 版本
 -- =============================================
 DROP TABLE IF EXISTS agent_tool_mapping CASCADE;
+DROP TABLE IF EXISTS agent_subagent_mapping CASCADE;
 DROP TABLE IF EXISTS agent_config CASCADE;
 DROP TABLE IF EXISTS mcp_connection_config CASCADE;
 DROP TABLE IF EXISTS tool_definition CASCADE;
@@ -130,6 +131,9 @@ CREATE TABLE IF NOT EXISTS agent_config (
     max_iterations INT DEFAULT 10,
     temperature NUMERIC(3,2) DEFAULT 0.70,
     enable_streaming BOOLEAN DEFAULT TRUE,
+    enable_subagent_interceptor BOOLEAN DEFAULT FALSE,
+    include_general_purpose BOOLEAN DEFAULT TRUE,
+    subagent_tools_policy VARCHAR(20) DEFAULT 'INHERIT',
     is_active BOOLEAN DEFAULT TRUE,
     created_by VARCHAR(50) DEFAULT 'system',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -153,6 +157,9 @@ COMMENT ON COLUMN agent_config.system_prompt IS '系统提示词';
 COMMENT ON COLUMN agent_config.max_iterations IS '最大迭代次数';
 COMMENT ON COLUMN agent_config.temperature IS '温度参数';
 COMMENT ON COLUMN agent_config.enable_streaming IS '是否启用流式输出';
+COMMENT ON COLUMN agent_config.enable_subagent_interceptor IS '是否启用SubAgentInterceptor';
+COMMENT ON COLUMN agent_config.include_general_purpose IS '是否包含默认general-purpose子代理';
+COMMENT ON COLUMN agent_config.subagent_tools_policy IS '子代理工具策略(INHERIT/CUSTOM)';
 COMMENT ON COLUMN agent_config.is_active IS '是否激活';
 COMMENT ON COLUMN agent_config.created_by IS '创建者';
 COMMENT ON COLUMN agent_config.created_at IS '创建时间';
@@ -179,6 +186,36 @@ COMMENT ON COLUMN agent_tool_mapping.id IS '主键ID';
 COMMENT ON COLUMN agent_tool_mapping.agent_config_id IS 'Agent配置ID';
 COMMENT ON COLUMN agent_tool_mapping.tool_definition_id IS '工具定义ID';
 COMMENT ON COLUMN agent_tool_mapping.created_at IS '创建时间';
+
+-- 6. Agent-SubAgent 关联表
+CREATE TABLE IF NOT EXISTS agent_subagent_mapping (
+    id BIGSERIAL PRIMARY KEY,
+    agent_id BIGINT NOT NULL,
+    subagent_type VARCHAR(100) NOT NULL,
+    target_agent_id BIGINT NOT NULL,
+    description TEXT,
+    tools_policy VARCHAR(20) DEFAULT 'INHERIT',
+    custom_tool_ids JSONB,
+    sort_order INT DEFAULT 0,
+    enabled BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_agent_subagent_type UNIQUE (agent_id, subagent_type),
+    CONSTRAINT fk_agent_subagent_agent FOREIGN KEY (agent_id) REFERENCES agent_config(id) ON DELETE CASCADE,
+    CONSTRAINT fk_agent_subagent_target FOREIGN KEY (target_agent_id) REFERENCES agent_config(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_subagent_agent ON agent_subagent_mapping(agent_id);
+CREATE INDEX IF NOT EXISTS idx_agent_subagent_target ON agent_subagent_mapping(target_agent_id);
+
+COMMENT ON TABLE agent_subagent_mapping IS 'Agent子代理映射表';
+COMMENT ON COLUMN agent_subagent_mapping.agent_id IS '主代理ID';
+COMMENT ON COLUMN agent_subagent_mapping.subagent_type IS '子代理类型标识';
+COMMENT ON COLUMN agent_subagent_mapping.target_agent_id IS '目标子代理ID';
+COMMENT ON COLUMN agent_subagent_mapping.tools_policy IS '工具策略(可覆盖主配置)';
+COMMENT ON COLUMN agent_subagent_mapping.custom_tool_ids IS 'CUSTOM模式下指定工具ID列表';
+COMMENT ON COLUMN agent_subagent_mapping.sort_order IS '排序';
+COMMENT ON COLUMN agent_subagent_mapping.enabled IS '是否启用';
 
 -- 创建自动更新 updated_at 的触发器函数
 CREATE OR REPLACE FUNCTION update_updated_at_column()

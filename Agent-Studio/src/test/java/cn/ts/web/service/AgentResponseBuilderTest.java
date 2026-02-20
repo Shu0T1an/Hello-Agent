@@ -1,10 +1,17 @@
 package cn.ts.web.service;
 
 import cn.ts.agent.constant.EventConstants;
+import cn.ts.agent.constant.StateKeys;
+import cn.ts.graph.GraphResponse;
+import cn.ts.graph.NodeOutput;
+import cn.ts.graph.state.MapState;
 import cn.ts.web.constant.ApiConstants;
 import cn.ts.web.dto.AgentResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
@@ -130,5 +137,28 @@ class AgentResponseBuilderTest {
 
         assertEquals(EventConstants.SERVICE_UNAVAILABLE, response.getEventType());
         assertEquals(ApiConstants.ErrorMessages.SERVICE_UNAVAILABLE_MSG, response.getMessage());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void testBuild_ForwardsTodoStateKeys() {
+        Map<String, Object> stateData = Map.of(
+                "execution_record", Map.of("executions", List.of(Map.of("id", "call-1"))),
+                StateKeys.TODOS, List.of(Map.of("id", "todo-1", "content", "write tests", "status", "pending")),
+                StateKeys.TODOS_META, Map.of("version", 3L, "lastOperation", "upsert_todos")
+        );
+        NodeOutput output = NodeOutput.of("_AGENT_TOOL_", null, new MapState(stateData));
+        GraphResponse<NodeOutput> response = GraphResponse.of("_AGENT_TOOL_", output);
+
+        AgentResponse result = builder.build(response, "exec-1");
+        Map<String, Object> payload = result.getStateData();
+
+        assertNotNull(payload);
+        assertTrue(payload.containsKey("execution_record"));
+        assertTrue(payload.containsKey(StateKeys.TODOS));
+        assertTrue(payload.containsKey(StateKeys.TODOS_META));
+
+        Map<String, Object> meta = (Map<String, Object>) payload.get(StateKeys.TODOS_META);
+        assertEquals(3L, ((Number) meta.get("version")).longValue());
     }
 }

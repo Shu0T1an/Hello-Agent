@@ -5,6 +5,7 @@ import lombok.Data;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 
 /**
  * Agent 配置实体类
@@ -88,4 +89,24 @@ public class AgentConfigEntity implements Serializable {
      * 关联的工具定义列表（非数据库字段）
      */
     private java.util.List<ToolDefinitionEntity> toolDefinitions;
+
+    /**
+     * Enable SubAgentInterceptor for this agent.
+     */
+    private Boolean enableSubAgentInterceptor;
+
+    /**
+     * Include built-in general-purpose subagent.
+     */
+    private Boolean includeGeneralPurpose;
+
+    /**
+     * Default tools policy for subagents (INHERIT/CUSTOM).
+     */
+    private String subAgentToolsPolicy;
+
+    /**
+     * Subagent mappings for this agent.
+     */
+    private List<SubAgentMappingEntity> subAgents;
 }

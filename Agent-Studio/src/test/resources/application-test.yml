@@ -64,3 +64,7 @@ api:
   keys:
     keys:
       amap: ${AMAP_API_KEY:7553ed7c2b3727253b52f522543f77ee}
+
+agent:
+  deep-search:
+    enabled: false

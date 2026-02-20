@@ -94,4 +94,24 @@ public class AgentConfigDTO implements Serializable {
      * 关联的工具定义列表
      */
     private List<ToolDefinitionDTO> toolDefinitions;
+
+    /**
+     * Enable SubAgentInterceptor for this agent.
+     */
+    private Boolean enableSubAgentInterceptor;
+
+    /**
+     * Include built-in general-purpose subagent.
+     */
+    private Boolean includeGeneralPurpose;
+
+    /**
+     * Default tools policy for subagents.
+     */
+    private SubAgentToolsPolicy subAgentToolsPolicy;
+
+    /**
+     * Subagent mappings for this agent.
+     */
+    private List<SubAgentMappingDTO> subAgents;
 }

@@ -9,6 +9,7 @@ import cn.ts.web.entity.AgentConfigEntity;
 import cn.ts.web.factory.AgentFactory;
 import cn.ts.web.mapper.AgentConfigMapper;
 import cn.ts.web.mapper.AgentToolMappingMapper;
+import cn.ts.web.mapper.SubAgentMappingMapper;
 import cn.ts.web.service.impl.AgentConfigServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,6 +51,9 @@ class AgentConfigServiceTest {
 
     @Mock
     private AgentToolMappingMapper agentToolMappingMapper;
+
+    @Mock
+    private SubAgentMappingMapper subAgentMappingMapper;
 
     @Mock
     private ToolDefinitionService toolDefinitionService;

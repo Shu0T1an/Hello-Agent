@@ -164,17 +164,17 @@ public class StreamController {
                 .map(response -> {
                     // 如果有文件内容且执行完成，提取引用信息
                     if ("completed".equals(response.getEventType())) {
-                        logger.info("=== completed 事件处理 ===");
-                        logger.info("fileContents: {}", fileContents != null ? "存在 (" + fileContents.size() + " 个文件)" : "null");
-                        logger.info("nodeId: {}", response.getNodeId());
-                        logger.info("message: {}", response.getMessage() != null ? "存在 (" + response.getMessage().substring(0, Math.min(100, response.getMessage().length())) + "...)" : "null");
+//                        logger.info("=== completed 事件处理 ===");
+//                        logger.info("fileContents: {}", fileContents != null ? "存在 (" + fileContents.size() + " 个文件)" : "null");
+//                        logger.info("nodeId: {}", response.getNodeId());
+//                        logger.info("message: {}", response.getMessage() != null ? "存在 (" + response.getMessage().substring(0, Math.min(100, response.getMessage().length())) + "...)" : "null");
 
                         if (fileContents != null && !fileContents.isEmpty() && response.getMessage() != null) {
                             List<CitationReference> citations = citationService.extractCitations(
                                     response.getMessage(),
                                     fileContents
                             );
-                            logger.info("提取到 {} 个引用", citations.size());
+//                            logger.info("提取到 {} 个引用", citations.size());
 
                             if (!citations.isEmpty()) {
                                 Map<String, Object> metadata = response.getMetadata();
