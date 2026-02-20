@@ -2,6 +2,7 @@ package cn.ts.agent.core;
 
 import cn.ts.agent.api.*;
 import cn.ts.agent.constant.StateKeys;
+import cn.ts.agent.interceptor.ModelInterceptor;
 import cn.ts.agent.node.*;
 import cn.ts.agent.util.MessageUtils;
 import cn.ts.graph.*;
@@ -83,6 +84,7 @@ public class ReactAgent implements Agent {
     private final Object[] tools;
     private final boolean streaming;
     private final List<Hook> hooks;
+    private final List<ModelInterceptor> modelInterceptors;
 
 
     public ReactAgent(Builder builder) {
@@ -94,6 +96,7 @@ public class ReactAgent implements Agent {
         this.tools = builder.tools != null ? builder.tools : new Object[0];
         this.streaming = builder.streaming;
         this.hooks = builder.hooks != null ? new ArrayList<>(builder.hooks) : new ArrayList<>();
+        this.modelInterceptors = builder.modelInterceptors != null ? new ArrayList<>(builder.modelInterceptors) : new ArrayList<>();
     }
 
 
@@ -108,6 +111,7 @@ public class ReactAgent implements Agent {
         private Object[] tools;
         private boolean streaming;
         private List<Hook> hooks;
+        private List<ModelInterceptor> modelInterceptors;
         private CheckpointManager checkpointManager;
         private List<GraphLifecycleListener> lifecycleListeners;
 
@@ -153,6 +157,11 @@ public class ReactAgent implements Agent {
          */
         public Builder hooks(List<Hook> hooks) {
             this.hooks = hooks;
+            return this;
+        }
+
+        public Builder modelInterceptors(List<ModelInterceptor> modelInterceptors) {
+            this.modelInterceptors = modelInterceptors;
             return this;
         }
 
@@ -203,7 +212,16 @@ public class ReactAgent implements Agent {
 
         public ReactAgent build() {
             // 构建 ReAct 图，传递 checkpointManager 和 lifecycleListeners
-            CompiledGraph compiledGraph = buildReActGraph(chatModel, advisors, streaming, tools, hooks, checkpointManager, lifecycleListeners);
+            CompiledGraph compiledGraph = buildReActGraph(
+                    chatModel,
+                    advisors,
+                    streaming,
+                    tools,
+                    hooks,
+                    modelInterceptors,
+                    checkpointManager,
+                    lifecycleListeners
+            );
             this.graph = compiledGraph;
             return new ReactAgent(this);
         }
@@ -315,7 +333,8 @@ public class ReactAgent implements Agent {
      * @return 编译后的图
      */
     private static CompiledGraph buildReActGraph(ChatModel chatModel, List<Advisor> advisors, boolean streaming,
-                                                  Object[] tools, List<Hook> hooks, CheckpointManager checkpointManager,
+                                                  Object[] tools, List<Hook> hooks, List<ModelInterceptor> modelInterceptors,
+                                                  CheckpointManager checkpointManager,
                                                   List<GraphLifecycleListener> lifecycleListeners) {
         StateGraph graph = new StateGraph();
 
@@ -339,6 +358,9 @@ public class ReactAgent implements Agent {
 
         // 处理 null hooks，使用空列表
         List<Hook> safeHooks = hooks != null ? new ArrayList<>(hooks) : new ArrayList<>();
+        List<ModelInterceptor> safeInterceptors = modelInterceptors != null
+                ? new ArrayList<>(modelInterceptors)
+                : new ArrayList<>();
 
         // 创建核心节点
         LLMNode llmNode = LLMNode.builder(chatModel)
@@ -346,6 +368,7 @@ public class ReactAgent implements Agent {
                 .streaming(streaming)
                 .tools(safeTools)
                 .advisors(advisors != null ? advisors : new ArrayList<>())
+                .interceptors(safeInterceptors)
                 .build();
         ToolNode toolNode = new ToolNode(safeTools);
 
