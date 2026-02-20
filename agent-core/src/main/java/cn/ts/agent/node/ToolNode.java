@@ -17,8 +17,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static cn.ts.agent.Tool.ToolContextConstants.TOOL_CALL_ID_CONTEXT_KEY;
+import static cn.ts.agent.Tool.ToolContextConstants.TOOL_CALL_NAME_CONTEXT_KEY;
 import static cn.ts.agent.Tool.ToolContextConstants.TOOL_EXTRA_STATE_KEY;
 import static cn.ts.agent.Tool.ToolContextConstants.TOOL_STATE_CONTEXT_KEY;
+import static cn.ts.agent.Tool.ToolContextConstants.TOOL_TRANSIENT_CONTEXT_KEY;
 import static cn.ts.agent.Tool.ToolUtils.getAllToolCallbacksFromTools;
 
 /**
@@ -195,12 +198,17 @@ public class ToolNode implements NodeAction {
         ToolCallback tool = findTool(toolCall.name());
         String result;
         boolean success;
+        String errorCode = null;
 
         Instant toolStartTime = Instant.now();
 
         Map<String, Object> toolContextMap = new HashMap<>();
         toolContextMap.put(TOOL_STATE_CONTEXT_KEY, state);
         toolContextMap.put(TOOL_EXTRA_STATE_KEY, extraStateFromToolCall);
+        toolContextMap.put(TOOL_CALL_ID_CONTEXT_KEY, toolCall.id());
+        toolContextMap.put(TOOL_CALL_NAME_CONTEXT_KEY, toolCall.name());
+        Map<String, Object> transientContext = new HashMap<>();
+        toolContextMap.put(TOOL_TRANSIENT_CONTEXT_KEY, transientContext);
 
         if (tool != null) {
             try {
@@ -209,13 +217,15 @@ public class ToolNode implements NodeAction {
                 logger.debug("Tool {} executed successfully", toolCall.name());
             } catch (Exception e) {
                 logger.error("Tool {} execution failed: {}", toolCall.name(), e.getMessage());
-                result = "Error: " + e.getMessage();
+                errorCode = extractErrorCode(e);
+                result = "Error: [" + errorCode + "] " + e.getMessage();
                 success = false;
             }
         } else {
             logger.warn("Tool not found: {}", toolCall.name());
             result = "Error: Tool not found: " + toolCall.name();
             success = false;
+            errorCode = "TOOL_NOT_FOUND";
         }
 
         Instant toolEndTime = Instant.now();
@@ -225,7 +235,7 @@ public class ToolNode implements NodeAction {
 
         Map<String, Object> executionInfo = createExecutionInfo(
                 toolCall.id(), toolCall.name(), toolCall.arguments(),
-                result, success, toolStartTime, toolEndTime
+                result, success, errorCode, toolStartTime, toolEndTime, transientContext
         );
 
         return new ToolExecutionResult(response, executionInfo);
@@ -245,18 +255,44 @@ public class ToolNode implements NodeAction {
      */
     private Map<String, Object> createExecutionInfo(
             String id, String name, String arguments, String result,
-            boolean success, Instant startTime, Instant endTime) {
+            boolean success, String errorCode, Instant startTime, Instant endTime,
+            Map<String, Object> transientContext) {
 
         long duration = java.time.Duration.between(startTime, endTime).toMillis();
 
-        return Map.of(
-                "id", id,
-                "name", name,
-                "arguments", arguments,
-                "result", result,
-                "success", success,
-                "duration", duration
-        );
+        Map<String, Object> executionInfo = new HashMap<>();
+        executionInfo.put("id", id);
+        executionInfo.put("name", name);
+        executionInfo.put("arguments", arguments);
+        executionInfo.put("result", result);
+        executionInfo.put("success", success);
+        if (errorCode != null) {
+            executionInfo.put("errorCode", errorCode);
+        }
+        executionInfo.put("duration", duration);
+        if (transientContext != null) {
+            if (transientContext.containsKey("todoVersionBefore")) {
+                executionInfo.put("todoVersionBefore", transientContext.get("todoVersionBefore"));
+            }
+            if (transientContext.containsKey("todoVersionAfter")) {
+                executionInfo.put("todoVersionAfter", transientContext.get("todoVersionAfter"));
+            }
+            if (transientContext.containsKey("changedCount")) {
+                executionInfo.put("changedCount", transientContext.get("changedCount"));
+            }
+        }
+        return executionInfo;
+    }
+
+    private String extractErrorCode(Exception e) {
+        Throwable current = e;
+        while (current != null) {
+            if (current instanceof cn.ts.agent.Tool.TodoToolException todoException) {
+                return todoException.getErrorCode();
+            }
+            current = current.getCause();
+        }
+        return "TOOL_EXECUTION_ERROR";
     }
 
     /**

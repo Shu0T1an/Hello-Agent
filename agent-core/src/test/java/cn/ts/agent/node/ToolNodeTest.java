@@ -1,5 +1,6 @@
 package cn.ts.agent.node;
 
+import cn.ts.agent.Tool.WriteToDoTool;
 import cn.ts.graph.state.MapState;
 import cn.ts.graph.state.State;
 import org.junit.jupiter.api.Test;
@@ -163,5 +164,81 @@ class ToolNodeTest {
         public String anotherMethod(String input) {
             return "Another: " + input;
         }
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void testApplyWithTodoToolFailureMarksExecutionAsFailed() throws Exception {
+        ToolNode node = new ToolNode(new WriteToDoTool());
+
+        AssistantMessage.ToolCall toolCall = new AssistantMessage.ToolCall(
+                "call-1",
+                "function",
+                "upsert_todos",
+                "{}"
+        );
+        AssistantMessage assistantMessage = new AssistantMessage("call upsert_todos", Map.of(), List.of(toolCall));
+        State state = new MapState(Map.of("messages", List.of(assistantMessage)));
+
+        Map<String, Object> result = node.apply(state);
+        Map<String, Object> execInfo = (Map<String, Object>) result.get("__execution_info__");
+        List<Map<String, Object>> executions = (List<Map<String, Object>>) execInfo.get("executions");
+
+        assertEquals(1, executions.size());
+        assertEquals(false, executions.get(0).get("success"));
+        assertEquals("TODO_INVALID_REQUEST", executions.get(0).get("errorCode"));
+        String response = (String) executions.get(0).get("result");
+        assertTrue(response.contains("[TODO_INVALID_REQUEST]"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void testApplyWithRemovedLegacyToolNameReturnsNotFound() throws Exception {
+        ToolNode node = new ToolNode(new WriteToDoTool());
+        String removedToolName = "update" + "_todos";
+
+        AssistantMessage.ToolCall toolCall = new AssistantMessage.ToolCall(
+                "legacy-call",
+                "function",
+                removedToolName,
+                "{}"
+        );
+        AssistantMessage assistantMessage = new AssistantMessage("call removed legacy tool", Map.of(), List.of(toolCall));
+        State state = new MapState(Map.of("messages", List.of(assistantMessage)));
+
+        Map<String, Object> result = node.apply(state);
+        Map<String, Object> execInfo = (Map<String, Object>) result.get("__execution_info__");
+        List<Map<String, Object>> executions = (List<Map<String, Object>>) execInfo.get("executions");
+
+        assertEquals(1, executions.size());
+        assertEquals(false, executions.get(0).get("success"));
+        assertEquals("TOOL_NOT_FOUND", executions.get(0).get("errorCode"));
+        assertTrue(String.valueOf(executions.get(0).get("result")).contains("Tool not found: " + removedToolName));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void testApplyWithTodoToolSuccessIncludesVersionMetrics() throws Exception {
+        ToolNode node = new ToolNode(new WriteToDoTool());
+
+        AssistantMessage.ToolCall toolCall = new AssistantMessage.ToolCall(
+                "call-2",
+                "function",
+                "clear_todos",
+                "{}"
+        );
+        AssistantMessage assistantMessage = new AssistantMessage("call clear_todos", Map.of(), List.of(toolCall));
+        State state = new MapState(Map.of("messages", List.of(assistantMessage)));
+
+        Map<String, Object> result = node.apply(state);
+        Map<String, Object> execInfo = (Map<String, Object>) result.get("__execution_info__");
+        List<Map<String, Object>> executions = (List<Map<String, Object>>) execInfo.get("executions");
+
+        assertEquals(1, executions.size());
+        assertEquals(true, executions.get(0).get("success"));
+        assertEquals(0L, executions.get(0).get("todoVersionBefore"));
+        assertEquals(1L, executions.get(0).get("todoVersionAfter"));
+        assertEquals(0, executions.get(0).get("changedCount"));
+        assertTrue(result.containsKey("todos_meta"));
     }
 }

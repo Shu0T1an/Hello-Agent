@@ -79,6 +79,22 @@ public class ChatModelRequest implements ModelRequest {
         return new ArrayList<>(messages);
     }
 
+    public State getState() {
+        return state;
+    }
+
+    public String getSystemPrompt() {
+        return systemPrompt;
+    }
+
+    public ChatOptions getBaseOptions() {
+        return baseOptions;
+    }
+
+    public List<ToolCallback> getToolCallbacks() {
+        return new ArrayList<>(toolCallbacks);
+    }
+
     /**
      * 构建增强的系统提示词（包含工具使用指南）
      */
@@ -90,17 +106,19 @@ public class ChatModelRequest implements ModelRequest {
         StringBuilder enhancedPrompt = new StringBuilder(systemPrompt);
 
         // 检查是否有 todolist 相关工具
-        if (hasTool("update_todos") || hasTool("get_todos")) {
+        if (hasTool("upsert_todos") || hasTool("list_todos")
+                || hasTool("complete_todo") || hasTool("delete_todo")
+                || hasTool("clear_todos")) {
             enhancedPrompt.append("\n\n## Todo List Management\n");
             enhancedPrompt.append("You have access to todo list management tools. Use them to track complex multi-step tasks:\n\n");
-            enhancedPrompt.append("- **update_todos**: Create or update the todo list. Use this when:\n");
-            enhancedPrompt.append("  - Working on complex tasks (3+ steps)\n");
-            enhancedPrompt.append("  - User provides multiple tasks\n");
-            enhancedPrompt.append("  - User explicitly requests a todo list\n");
-            enhancedPrompt.append("  - Mark task as in_progress BEFORE starting work\n");
-            enhancedPrompt.append("  - Mark task as completed IMMEDIATELY after finishing\n\n");
-            enhancedPrompt.append("- **get_todos**: Retrieve the current todo list to check progress.\n\n");
-            enhancedPrompt.append("**Important**: Always keep at least one task in_progress until all work is done.");
+            enhancedPrompt.append("- **upsert_todos**: Preferred API. Incrementally create/update tasks.\n");
+            enhancedPrompt.append("- **complete_todo**: Mark one task completed immediately when done.\n");
+            enhancedPrompt.append("- **list_todos**: Retrieve current tasks with optional filters.\n");
+            enhancedPrompt.append("- **delete_todo / clear_todos**: destructive operations.\n\n");
+            enhancedPrompt.append("Rules:\n");
+            enhancedPrompt.append("1) Prefer incremental updates over full replacement.\n");
+            enhancedPrompt.append("2) Do not call todo-writing tools multiple times in parallel.\n");
+            enhancedPrompt.append("3) Respect status transitions: pending -> in_progress -> completed (blocked allowed).\n");
         }
 
         return enhancedPrompt.toString();

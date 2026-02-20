@@ -1,10 +1,10 @@
-
+﻿
 spring:
   config:
     name: demo
   profiles:
     active: dev
-  # 强制使用 UTF-8 编码
+  # 寮哄埗浣跨敤 UTF-8 缂栫爜
   web:
     resources:
       encoding: UTF-8
@@ -15,7 +15,7 @@ spring:
 
 server:
   port: 8080
-  # 强制请求和响应使用 UTF-8 编码
+  # 寮哄埗璇锋眰鍜屽搷搴斾娇鐢?UTF-8 缂栫爜
   servlet:
     encoding:
       charset: UTF-8
@@ -24,51 +24,58 @@ server:
       force-request: true
       force-response: true
 
-# Agent 执行配置
+# Agent 鎵ц閰嶇疆
 agent:
   execution:
-    timeout: 300s              # 执行超时时间
-    heartbeat-interval: 30s    # 心跳间隔
-    max-title-length: 15        # 标题最大长度
-    default-max-iterations: 100  # 默认最大迭代次数
-    debug-mode: false           # 调试模式
+    timeout: 300s              # 鎵ц瓒呮椂鏃堕棿
+    heartbeat-interval: 30s    # 蹇冭烦闂撮殧
+    max-title-length: 15        # 鏍囬鏈€澶ч暱搴?
+    default-max-iterations: 100  # 榛樿鏈€澶ц凯浠ｆ鏁?
+    debug-mode: false           # 璋冭瘯妯″紡
     retry:
-      enabled: true             # 是否启用重试
-      max-retries: 3            # 最大重试次数
-      initial-backoff: 1s       # 初始退避时间
-      backoff-multiplier: 2.0   # 退避时间倍数
-      max-backoff: 30s          # 最大退避时间
-
-# MCP 管理器配置
+      enabled: true             # 鏄惁鍚敤閲嶈瘯
+      max-retries: 3            # 鏈€澶ч噸璇曟鏁?
+      initial-backoff: 1s       # 鍒濆閫€閬挎椂闂?
+      backoff-multiplier: 2.0   # 閫€閬挎椂闂村€嶆暟
+      max-backoff: 30s          # 鏈€澶ч€€閬挎椂闂?
+  deep-search:
+    enabled: true
+    agent-name: deep-search
+    display-name: Deep Search
+    description: Built-in deep search agent for multi-step research and synthesis.
+    include-general-purpose-subagent: true
+    max-iterations: 25
+    stream-enabled: true
+# MCP 绠＄悊鍣ㄩ厤缃?
 mcp:
   manager:
-    health-check-interval: 1m    # 健康检查间隔
-    default-timeout: 30s         # 默认连接超时时间
-    auto-connect-on-startup: true # 启动时自动连接
-    max-retries: 3               # 最大重试次数
-    retry-interval: 5s           # 重试间隔
-    enable-health-check: true    # 是否启用健康检查
-    health-check-timeout: 10s    # 健康检查超时时间
+    health-check-interval: 1m    # 鍋ュ悍妫€鏌ラ棿闅?
+    default-timeout: 30s         # 榛樿杩炴帴瓒呮椂鏃堕棿
+    auto-connect-on-startup: true # 鍚姩鏃惰嚜鍔ㄨ繛鎺?
+    max-retries: 3               # 鏈€澶ч噸璇曟鏁?
+    retry-interval: 5s           # 閲嶈瘯闂撮殧
+    enable-health-check: true    # 鏄惁鍚敤鍋ュ悍妫€鏌?
+    health-check-timeout: 10s    # 鍋ュ悍妫€鏌ヨ秴鏃舵椂闂?
   servers:
-    servers: []  # MCP 服务器列表，在 application-dev.yml 中配置
+    servers: []  # MCP 鏈嶅姟鍣ㄥ垪琛紝鍦?application-dev.yml 涓厤缃?
 
-# Node.js/NPX 路径配置
+# Node.js/NPX 璺緞閰嶇疆
 nodejs:
-  npx-path: ${NPX_PATH:}  # NPX 命令路径，默认使用系统 PATH 中的 npx
+  npx-path: ${NPX_PATH:}  # NPX 鍛戒护璺緞锛岄粯璁や娇鐢ㄧ郴缁?PATH 涓殑 npx
 
-# 临时文件上传配置
+# 涓存椂鏂囦欢涓婁紶閰嶇疆
 temporary:
   file:
-    max-size: 10485760          # 最大文件大小（字节），默认 10MB
-    allowed-types: pdf,txt,md,markdown  # 支持的文件类型
-    chunk-strategy: paragraph    # 分块策略：paragraph（按段落）
+    max-size: 10485760          # 鏈€澶ф枃浠跺ぇ灏忥紙瀛楄妭锛夛紝榛樿 10MB
+    allowed-types: pdf,txt,md,markdown  # 鏀寔鐨勬枃浠剁被鍨?
+    chunk-strategy: paragraph    # 鍒嗗潡绛栫暐锛歱aragraph锛堟寜娈佃惤锛?
 
-# API 密钥配置
+# API 瀵嗛挜閰嶇疆
 api:
   keys:
-    keys: {}  # API 密钥映射，在 application-dev.yml 中配置
+    keys: {}  # API 瀵嗛挜鏄犲皠锛屽湪 application-dev.yml 涓厤缃?
 
-# 可观测性配置
+# 鍙娴嬫€ч厤缃?
 management:
   endpoints:
     web:
@@ -85,9 +92,9 @@ management:
     enabled: true
   tracing:
     sampling:
-      probability: 1.0  # 100% 采样（开发环境）
+      probability: 1.0  # 100% 閲囨牱锛堝紑鍙戠幆澧冿級
 
-# 可观测性日志
+# 鍙娴嬫€ф棩蹇?
 logging:
   charset:
     console: UTF-8

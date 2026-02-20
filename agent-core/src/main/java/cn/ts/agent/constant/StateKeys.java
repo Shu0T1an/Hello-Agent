@@ -98,6 +98,16 @@ public final class StateKeys {
      */
     public static final String INTERRUPTED = "interrupted";
 
+    /**
+     * Todo 列表键
+     */
+    public static final String TODOS = "todos";
+
+    /**
+     * Todo 元信息键（version/updatedAt/updatedByToolCallId/lastOperation）
+     */
+    public static final String TODOS_META = "todos_meta";
+
     private StateKeys() {
         // 防止实例化
     }
