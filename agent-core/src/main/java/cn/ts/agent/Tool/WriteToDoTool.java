@@ -3,138 +3,218 @@ package cn.ts.agent.Tool;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonValue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 
 import java.util.List;
-import java.util.Map;
-
-import static cn.ts.agent.Tool.ToolContextConstants.TOOL_EXTRA_STATE_KEY;
-import static cn.ts.agent.Tool.ToolContextConstants.TOOL_STATE_CONTEXT_KEY;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * @author: ts
- * @description
- * @create: 2026/1/31 12:11
+ * High-reliability todo tools. Only new APIs are kept.
  */
 public class WriteToDoTool {
 
+    private static final Logger logger = LoggerFactory.getLogger(WriteToDoTool.class);
 
-    /**
-     * 更新 Todo 列表
-     *
-     * @param request 包含 todos 列表的请求对象
-     * @param toolContext 工具上下文，用于访问和更新状态
-     * @return 操作结果消息
-     */
-    @Tool(name = "update_todos",
+    private static final AtomicLong TODO_TOOL_CALLS_TOTAL = new AtomicLong();
+    private static final AtomicLong TODO_TOOL_FAILURES_TOTAL = new AtomicLong();
+    private static final AtomicLong TODO_STATE_CONFLICT_TOTAL = new AtomicLong();
+    private static final AtomicLong TODO_INVALID_TRANSITION_TOTAL = new AtomicLong();
+
+    private final TodoStateService todoStateService = new TodoStateService();
+
+    @Tool(name = "upsert_todos",
             description = """
-                Use this tool to create and manage a structured task list for your current work session.
-
-                ## When to Use This Tool
-                - Complex multi-step tasks (3 or more steps)
-                - Non-trivial tasks requiring careful planning
-                - User explicitly requests todo list
-                - User provides multiple tasks
-
-                ## How to Use This Tool
-                1. Mark task as in_progress BEFORE starting work
-                2. Mark task as completed IMMEDIATELY after finishing
-                3. Always have at least one task in_progress until all done
-
-                ## Task States
-                - pending: Task not yet started
-                - in_progress: Currently working on
-                - completed: Task finished successfully
-                """)
-    public String updateTodos(
-            @ToolParam(description = "List of todo items with content and status")
-            UpdateTodosRequest request,
+                    Incrementally create/update todos by id.
+                    If id is absent, a new todo is created with a generated id.
+                    Enforces todo status transition rules.
+                    """)
+    public String upsertTodos(
+            @ToolParam(description = "Incremental todo upsert payload")
+            UpsertTodosRequest request,
             ToolContext toolContext) {
+        return executeWithMetrics("upsert_todos", () -> {
+            if (request == null || request.todos() == null) {
+                throw new TodoToolException(TodoStateService.ERROR_INVALID_REQUEST, "request.todos is required");
+            }
+            List<TodoStateService.TodoItem> todos = request.todos().stream()
+                    .map(this::toDomainTodo)
+                    .toList();
 
+            TodoStateService.MutationResult result = todoStateService.upsertTodos(
+                    toolContext,
+                    todos,
+                    request.expectedVersion(),
+                    Boolean.TRUE.equals(request.strictVersionCheck()),
+                    "upsert_todos");
+            return formatMutationSummary("upsert_todos", result);
+        });
+    }
+
+    @Tool(name = "complete_todo",
+            description = "Mark a single todo as completed by id.")
+    public String completeTodo(
+            @ToolParam(description = "Completion request")
+            CompleteTodoRequest request,
+            ToolContext toolContext) {
+        return executeWithMetrics("complete_todo", () -> {
+            if (request == null) {
+                throw new TodoToolException(TodoStateService.ERROR_INVALID_REQUEST, "request is required");
+            }
+            TodoStateService.MutationResult result = todoStateService.completeTodo(
+                    toolContext,
+                    request.id(),
+                    request.expectedVersion(),
+                    Boolean.TRUE.equals(request.strictVersionCheck()));
+            return formatMutationSummary("complete_todo", result);
+        });
+    }
+
+    @Tool(name = "delete_todo",
+            description = "Delete a single todo by id. Usually requires approval.")
+    public String deleteTodo(
+            @ToolParam(description = "Delete request")
+            DeleteTodoRequest request,
+            ToolContext toolContext) {
+        return executeWithMetrics("delete_todo", () -> {
+            if (request == null) {
+                throw new TodoToolException(TodoStateService.ERROR_INVALID_REQUEST, "request is required");
+            }
+            TodoStateService.MutationResult result = todoStateService.deleteTodo(
+                    toolContext,
+                    request.id(),
+                    request.expectedVersion(),
+                    Boolean.TRUE.equals(request.strictVersionCheck()));
+            return formatMutationSummary("delete_todo", result);
+        });
+    }
+
+    @Tool(name = "clear_todos",
+            description = "Clear all todos for current session. Usually requires approval.")
+    public String clearTodos(
+            @ToolParam(description = "Clear request")
+            ClearTodosRequest request,
+            ToolContext toolContext) {
+        return executeWithMetrics("clear_todos", () -> {
+            Long expectedVersion = request == null ? null : request.expectedVersion();
+            Boolean strictCheck = request == null ? null : request.strictVersionCheck();
+            TodoStateService.MutationResult result = todoStateService.clearTodos(
+                    toolContext,
+                    expectedVersion,
+                    Boolean.TRUE.equals(strictCheck));
+            return formatMutationSummary("clear_todos", result);
+        });
+    }
+
+    @Tool(name = "list_todos",
+            description = """
+                    List todos in structured text.
+                    Supports filtering by status and query.
+                    Sorted by status and updatedAt.
+                    """)
+    public String listTodos(
+            @ToolParam(description = "Optional list filters")
+            ListTodosRequest request,
+            ToolContext toolContext) {
+        return executeWithMetrics("list_todos", () -> {
+            TodoStateService.TodoListSnapshot snapshot = todoStateService.resolveCurrentSnapshot(toolContext);
+            TodoStateService.TodoStatus statusFilter = request == null ? null : toDomainStatus(request.status());
+            String query = request == null ? null : request.query();
+
+            List<TodoStateService.TodoItem> listed = todoStateService.filterAndSort(snapshot.items(), statusFilter, query);
+            if (listed.isEmpty()) {
+                return "No todos matched filters (version=" + snapshot.meta().version() + ")";
+            }
+            StringBuilder out = new StringBuilder();
+            out.append("Todos (version=").append(snapshot.meta().version()).append("):\n");
+            for (TodoStateService.TodoItem item : listed) {
+                out.append(String.format("  - [%s] %s (id=%s)%n", item.status().value(), item.content(), item.id()));
+            }
+            return out.toString();
+        });
+    }
+
+    private TodoStateService.TodoItem toDomainTodo(TodoItem item) {
+        if (item == null) {
+            throw new TodoToolException(TodoStateService.ERROR_INVALID_REQUEST, "todo item cannot be null");
+        }
+        return new TodoStateService.TodoItem(
+                item.id(),
+                item.content(),
+                toDomainStatus(item.status()),
+                toDomainPriority(item.priority()),
+                null,
+                null
+        );
+    }
+
+    private TodoStateService.TodoStatus toDomainStatus(TodoStatus status) {
+        if (status == null) {
+            return null;
+        }
+        return TodoStateService.TodoStatus.fromValue(status.getValue());
+    }
+
+    private TodoStateService.TodoPriority toDomainPriority(TodoPriority priority) {
+        if (priority == null) {
+            return null;
+        }
+        return TodoStateService.TodoPriority.fromValue(priority.getValue());
+    }
+
+    private String formatMutationSummary(String operation, TodoStateService.MutationResult result) {
+        return String.format(
+                "%s ok: changed=%d, version=%d->%d, idempotentReplay=%s",
+                operation,
+                result.changedCount(),
+                result.before().meta().version(),
+                result.after().meta().version(),
+                result.idempotentReplay());
+    }
+
+    private String executeWithMetrics(String toolName, ToolAction action) {
+        long calls = TODO_TOOL_CALLS_TOTAL.incrementAndGet();
+        logger.debug("todo_tool_calls_total={} tool={}", calls, toolName);
         try {
-            // 1. 从 ToolContext 获取状态数据
-            Map<String, Object> contextData = toolContext.getContext();
-            if (contextData == null) {
-                return "Error: Tool context is not available";
-            }
-
-            // 2. 获取可更新状态（使用 ToolContextConstants 中定义的键）
-            Object extraStateObj = contextData.get(TOOL_EXTRA_STATE_KEY);
-            if (extraStateObj == null) {
-                return "Error: Extra state is not initialized";
-            }
-
-            if (!(extraStateObj instanceof Map)) {
-                return "Error: Extra state has invalid type";
-            }
-
-            @SuppressWarnings("unchecked")
-            Map<String, Object> extraState = (Map<String, Object>) extraStateObj;
-
-            // 3. 将 Todo 列表写入状态
-            extraState.put("todos", request.todos());
-
-            // 4. 返回成功消息
-            StringBuilder result = new StringBuilder("Todo list updated:\n");
-            for (TodoItem todo : request.todos()) {
-                result.append(String.format("  - [%s] %s\n",
-                        todo.status().getValue(), todo.content()));
-            }
-
-            return result.toString();
-
-        } catch (Exception e) {
-            return "Error: Failed to update todos - " + e.getMessage();
+            return action.run();
+        } catch (TodoToolException e) {
+            countTypedFailure(e);
+            long failures = TODO_TOOL_FAILURES_TOTAL.incrementAndGet();
+            logger.warn("todo_tool_failures_total={} tool={} code={} message={}",
+                    failures, toolName, e.getErrorCode(), e.getMessage());
+            throw e;
+        } catch (RuntimeException e) {
+            long failures = TODO_TOOL_FAILURES_TOTAL.incrementAndGet();
+            logger.warn("todo_tool_failures_total={} tool={} code=TODO_UNEXPECTED_ERROR message={}",
+                    failures, toolName, e.getMessage());
+            throw e;
         }
     }
 
-    /**
-     * 获取当前 Todo 列表（可选，用于调试）
-     */
-    @Tool(name = "get_todos",
-            description = "Get the current todo list from the state. Use this to check current progress.")
-    public String getTodos(ToolContext toolContext) {
-        try {
-            Map<String, Object> contextData = toolContext.getContext();
-            if (contextData == null) {
-                return "No context available";
-            }
-
-            // 从可更新状态中读取 todos（使用 ToolContextConstants 中定义的键）
-            @SuppressWarnings("unchecked")
-            Map<String, Object> state = (Map<String, Object>) contextData.get(TOOL_STATE_CONTEXT_KEY);
-
-            if (state == null || !state.containsKey("todos")) {
-                return "No todos found in state";
-            }
-
-            @SuppressWarnings("unchecked")
-            List<TodoItem> todos = (List<TodoItem>) state.get("todos");
-
-            if (todos == null || todos.isEmpty()) {
-                return "Todo list is empty";
-            }
-
-            StringBuilder result = new StringBuilder("Current todos:\n");
-            for (TodoItem todo : todos) {
-                result.append(String.format("  - [%s] %s\n",
-                        todo.status().getValue(), todo.content()));
-            }
-
-            return result.toString();
-
-        } catch (Exception e) {
-            return "Error: Failed to get todos - " + e.getMessage();
+    private void countTypedFailure(TodoToolException e) {
+        if (TodoStateService.ERROR_STATE_CONFLICT.equals(e.getErrorCode())) {
+            long conflicts = TODO_STATE_CONFLICT_TOTAL.incrementAndGet();
+            logger.debug("todo_state_conflict_total={}", conflicts);
+        }
+        if (TodoStateService.ERROR_INVALID_TRANSITION.equals(e.getErrorCode())) {
+            long invalidTransitions = TODO_INVALID_TRANSITION_TOTAL.incrementAndGet();
+            logger.debug("todo_invalid_transition_total={}", invalidTransitions);
         }
     }
 
+    @FunctionalInterface
+    private interface ToolAction {
+        String run();
+    }
 
     @JsonFormat(shape = JsonFormat.Shape.STRING)
     public enum TodoStatus {
         PENDING("pending"),
         IN_PROGRESS("in_progress"),
+        BLOCKED("blocked"),
         COMPLETED("completed");
 
         private final String value;
@@ -146,25 +226,16 @@ public class WriteToDoTool {
         @JsonCreator
         public static TodoStatus fromValue(String value) {
             if (value == null) {
-                throw new IllegalArgumentException("Status value cannot be null");
+                return null;
             }
-
-            // First try to match against the lowercase values
+            String normalized = value.trim().toLowerCase();
             for (TodoStatus status : values()) {
-                if (status.value.equals(value)) {
+                if (status.value.equals(normalized) || status.name().equalsIgnoreCase(normalized)) {
                     return status;
                 }
             }
-
-            // Fallback: try to match against enum constant names (case-insensitive)
-            try {
-                return TodoStatus.valueOf(value.toUpperCase());
-            }
-            catch (IllegalArgumentException e) {
-                // If that fails too, throw a helpful error
-                throw new IllegalArgumentException(
-                        "Unknown status: " + value + ". Valid values are: pending, in_progress, completed");
-            }
+            throw new IllegalArgumentException(
+                    "Unknown status: " + value + ". Valid values: pending,in_progress,blocked,completed");
         }
 
         @JsonValue
@@ -173,10 +244,53 @@ public class WriteToDoTool {
         }
     }
 
-    public record UpdateTodosRequest(List<TodoItem> todos) {
-    }
-    public record TodoItem(String content, TodoStatus status) {
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
+    public enum TodoPriority {
+        LOW("low"),
+        MEDIUM("medium"),
+        HIGH("high");
+
+        private final String value;
+
+        TodoPriority(String value) {
+            this.value = value;
+        }
+
+        @JsonCreator
+        public static TodoPriority fromValue(String value) {
+            if (value == null) {
+                return null;
+            }
+            String normalized = value.trim().toLowerCase();
+            for (TodoPriority priority : values()) {
+                if (priority.value.equals(normalized) || priority.name().equalsIgnoreCase(normalized)) {
+                    return priority;
+                }
+            }
+            throw new IllegalArgumentException("Unknown priority: " + value + ". Valid values: low,medium,high");
+        }
+
+        @JsonValue
+        public String getValue() {
+            return value;
+        }
     }
 
+    public record TodoItem(String id, String content, TodoStatus status, TodoPriority priority) {
+    }
 
+    public record UpsertTodosRequest(List<TodoItem> todos, Long expectedVersion, Boolean strictVersionCheck) {
+    }
+
+    public record CompleteTodoRequest(String id, Long expectedVersion, Boolean strictVersionCheck) {
+    }
+
+    public record DeleteTodoRequest(String id, Long expectedVersion, Boolean strictVersionCheck) {
+    }
+
+    public record ClearTodosRequest(Long expectedVersion, Boolean strictVersionCheck) {
+    }
+
+    public record ListTodosRequest(TodoStatus status, String query) {
+    }
 }
