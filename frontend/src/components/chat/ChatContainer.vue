@@ -39,6 +39,7 @@
       </div>
       <div class="flex items-center gap-2">
         <BaseButton
+          v-if="todoStore.hasTodoPanel"
           variant="glass"
           size="sm"
           class="md:hidden"
@@ -121,7 +122,7 @@
           <CheckpointViewer :session-id="chatStore.currentSessionId" />
         </div>
 
-        <aside class="hidden md:block w-[320px] flex-shrink-0">
+        <aside v-if="todoStore.hasTodoPanel && activeTab === 'conversation'" class="hidden md:block w-[320px] flex-shrink-0">
           <TodoSidebar />
         </aside>
 
@@ -193,7 +194,7 @@
           leave-to-class="translate-x-full"
         >
           <div
-            v-if="todoVisible && isMobile"
+            v-if="todoVisible && isMobile && todoStore.hasTodoPanel"
             class="fixed inset-y-0 right-0 w-[88vw] max-w-[360px] glass-panel border-l border-l-glass-border shadow-xl z-50 md:hidden"
           >
             <div class="flex items-center justify-between p-4 border-b border-b-glass-border">
@@ -239,6 +240,7 @@ import { Activity, ListTodo, X } from 'lucide-vue-next'
 import { useChatStore } from '@/stores/chat'
 import { useAgentStore } from '@/stores/agent'
 import { useAgentTimelineStore } from '@/stores/agentTimeline'
+import { useTodoStore } from '@/stores/todo'
 import { useBreakpoints } from '@/composables/useBreakpoints'
 import BaseButton from '@/components/base/BaseButton.vue'
 import ChatMessage from './ChatMessage.vue'
@@ -260,6 +262,7 @@ const props = defineProps<{
 const chatStore = useChatStore()
 const agentStore = useAgentStore()
 const agentTimeline = useAgentTimelineStore()
+const todoStore = useTodoStore()
 const { isMobile } = useBreakpoints()
 
 // 当前激活的标签页
@@ -322,6 +325,15 @@ watch(() => chatStore.currentSessionId, () => {
     summaryError.value = null
   }
 })
+
+watch(
+  () => todoStore.hasTodoPanel,
+  (visible) => {
+    if (!visible) {
+      todoVisible.value = false
+    }
+  }
+)
 
 // 加载会话摘要数据
 async function loadSummaryData() {

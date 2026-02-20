@@ -88,6 +88,18 @@ interface BackendMessage {
   }
 }
 
+const TODO_TOOL_NAMES = new Set([
+  'upsert_todos',
+  'list_todos',
+  'complete_todo',
+  'delete_todo',
+  'clear_todos'
+])
+
+function isTodoToolName(name: unknown): boolean {
+  return typeof name === 'string' && TODO_TOOL_NAMES.has(name)
+}
+
 // 后端消息转换为前端消息
 function backendMessageToFrontend(msg: BackendMessage): Message {
   return {
@@ -499,7 +511,10 @@ export const useChatStore = defineStore('chat', () => {
     console.log('收到事件:', data.eventType, data)
 
     // 添加到时间线
-    todoStore.syncFromStateData(data.stateData, `${data.eventType}:${data.nodeId || 'unknown'}`)
+    const syncedTodoState = todoStore.syncFromStateData(data.stateData, `${data.eventType}:${data.nodeId || 'unknown'}`)
+    if (syncedTodoState) {
+      todoStore.markTodoToolSeen('state_data')
+    }
     agentTimelineStore.addEvent({
       eventType: data.eventType as any,
       nodeId: data.nodeId || '',
@@ -575,6 +590,9 @@ export const useChatStore = defineStore('chat', () => {
 
     const toolCalls = data.stateData?.execution_record?.toolCalls
     if (!toolCalls || toolCalls.length === 0) return
+    if (toolCalls.some((tc: any) => isTodoToolName(tc?.name))) {
+      todoStore.markTodoToolSeen('tool_call')
+    }
 
     // 检查是否已经添加过这个工具调用消息
     const existingMsg = currentSession.value?.messages.find(m =>
@@ -611,6 +629,9 @@ export const useChatStore = defineStore('chat', () => {
 
     const executions = data.stateData?.execution_record?.executions
     if (!executions || executions.length === 0) return
+    if (executions.some((exec: any) => isTodoToolName(exec?.name))) {
+      todoStore.markTodoToolSeen('tool_execution')
+    }
 
     // 检查是否已经添加过这个工具执行消息
     const existingMsg = currentSession.value?.messages.find(m =>

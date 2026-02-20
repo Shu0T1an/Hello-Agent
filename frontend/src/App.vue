@@ -5,6 +5,7 @@
       <button @click="currentView = 'main'" :class="{ active: currentView === 'main' }">应用</button>
       <button @click="currentView = 'timeline'" :class="{ active: currentView === 'timeline' }">时间线测试</button>
       <button @click="currentView = 'approval'" :class="{ active: currentView === 'approval' }">审批测试</button>
+      <button @click="currentView = 'api-debug'" :class="{ active: currentView === 'api-debug' }">API 调试</button>
     </div>
 
     <!-- 主应用 -->
@@ -15,6 +16,9 @@
 
     <!-- 审批UI测试页面 -->
     <ApprovalTestView v-else-if="currentView === 'approval'" />
+
+    <!-- API 调试页面 -->
+    <ApiDebugView v-else-if="currentView === 'api-debug'" />
   </div>
 </template>
 
@@ -23,8 +27,9 @@ import { ref } from 'vue'
 import MainLayout from '@/layouts/MainLayout.vue'
 import AgentTimelineTest from '@/views/AgentTimelineTest.vue'
 import ApprovalTestView from '@/views/ApprovalTestView.vue'
+import ApiDebugView from '@/views/ApiDebugView.vue'
 
-const currentView = ref<'main' | 'timeline' | 'approval'>('main')
+const currentView = ref<'main' | 'timeline' | 'approval' | 'api-debug'>('main')
 const showToggle = ref(import.meta.env.DEV) // 仅开发环境显示切换按钮
 </script>
 

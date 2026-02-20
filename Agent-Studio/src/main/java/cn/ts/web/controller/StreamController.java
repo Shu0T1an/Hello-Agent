@@ -200,16 +200,6 @@ public class StreamController {
                         .build());
     }
 
-    /**
-     * 将后端会话消息转换为 Spring AI Message
-     */
-    private Message convertToSpringAIMessage(SessionDetailDTO.SessionMessage msg) {
-        return switch (msg.getRole()) {
-            case "user" -> new UserMessage(msg.getContent());
-            case "assistant" -> new AssistantMessage(msg.getContent());
-            default -> null;
-        };
-    }
 
     /**
      * 心跳端点

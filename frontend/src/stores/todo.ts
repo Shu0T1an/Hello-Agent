@@ -102,8 +102,10 @@ export const useTodoStore = defineStore('todo', () => {
   const meta = ref<TodoMeta>({ version: 0 })
   const lastSyncAt = ref<string | null>(null)
   const syncSource = ref<string>('')
+  const toolSeenInSession = ref(false)
 
   const sortedItems = computed(() => sortTodos(items.value))
+  const hasTodoPanel = computed(() => toolSeenInSession.value)
   const groupedItems = computed(() => {
     const groups: Record<TodoStatus, TodoItem[]> = {
       in_progress: [],
@@ -151,11 +153,16 @@ export const useTodoStore = defineStore('todo', () => {
     return true
   }
 
+  function markTodoToolSeen(_source?: string) {
+    toolSeenInSession.value = true
+  }
+
   function clearOnSessionReset() {
     items.value = []
     meta.value = { version: 0 }
     lastSyncAt.value = null
     syncSource.value = ''
+    toolSeenInSession.value = false
   }
 
   return {
@@ -163,11 +170,13 @@ export const useTodoStore = defineStore('todo', () => {
     meta,
     lastSyncAt,
     syncSource,
+    toolSeenInSession,
     sortedItems,
+    hasTodoPanel,
     groupedItems,
     activeCount,
     syncFromStateData,
+    markTodoToolSeen,
     clearOnSessionReset
   }
 })
-
