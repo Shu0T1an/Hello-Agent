@@ -80,7 +80,7 @@
                 ]"
               >
                 <component :is="getProviderIcon(model.provider)" :size="14" />
-                {{ ProviderDisplayNames[model.provider] || model.provider }}
+                {{ getProviderDisplayName(model.provider) }}
               </span>
             </div>
 
@@ -156,9 +156,10 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import type { Component } from 'vue'
 import { useModelConfigStore } from '@/stores/modelConfig'
 import { useToast } from '@/composables/useToast'
-import { ProviderDisplayNames, type ModelConfig, type CreateModelDTO, type UpdateModelDTO, type ModelProvider } from '@/types/model'
+import { ModelProvider, ProviderDisplayNames, type ModelConfig, type CreateModelDTO, type UpdateModelDTO, type ModelProvider as ModelProviderType } from '@/types/model'
 import ModelForm from '@/components/agent/ModelForm.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
@@ -174,35 +175,32 @@ import {
   Globe,
   Trash2,
   AlertCircle,
-  type Component,
 } from 'lucide-vue-next'
 
+function normalizeProvider(provider: string): ModelProviderType {
+  const upper = provider.toUpperCase()
+  if (upper in ModelProvider) {
+    return upper as ModelProviderType
+  }
+  return ModelProvider.OPENAI_COMPATIBLE
+}
+
 // Provider 图标映射（简化版，实际项目中可以使用品牌图标）
-const providerIcons: Record<ModelProvider, Component> = {
-  openai: Plus, // 可以替换为 OpenAI 图标
-  anthropic: Plus, // 可以替换为 Anthropic 图标
-  azure: Plus, // 可以替换为 Azure 图标
-  ollama: Plus, // 可以替换为 Ollama 图标
-  qwen: Plus, // 可以替换为 Qwen 图标
-  moonshot: Plus, // 可以替换为 Moonshot 图标
-  zhipu: Plus, // 可以替换为智谱图标
-  baichuan: Plus, // 可以替换为百川图标
-  deepseek: Plus, // 可以替换为 DeepSeek 图标
-  other: Plus,
+const providerIcons: Record<ModelProviderType, Component> = {
+  [ModelProvider.OPENAI]: Plus,
+  [ModelProvider.DEEPSEEK]: Plus,
+  [ModelProvider.GROQ]: Plus,
+  [ModelProvider.PERPLEXITY]: Plus,
+  [ModelProvider.OPENAI_COMPATIBLE]: Plus,
 }
 
 // Provider 颜色类
-const providerBadgeClasses: Record<ModelProvider, string> = {
-  openai: 'bg-emerald-100 text-emerald-700',
-  anthropic: 'bg-amber-100 text-amber-700',
-  azure: 'bg-sky-100 text-sky-700',
-  ollama: 'bg-indigo-100 text-indigo-700',
-  qwen: 'bg-orange-100 text-orange-700',
-  moonshot: 'bg-indigo-100 text-indigo-700',
-  zhipu: 'bg-blue-100 text-blue-700',
-  baichuan: 'bg-teal-100 text-teal-700',
-  deepseek: 'bg-rose-100 text-rose-700',
-  other: 'bg-zinc-100 text-zinc-700',
+const providerBadgeClasses: Record<ModelProviderType, string> = {
+  [ModelProvider.OPENAI]: 'bg-emerald-100 text-emerald-700',
+  [ModelProvider.DEEPSEEK]: 'bg-rose-100 text-rose-700',
+  [ModelProvider.GROQ]: 'bg-violet-100 text-violet-700',
+  [ModelProvider.PERPLEXITY]: 'bg-sky-100 text-sky-700',
+  [ModelProvider.OPENAI_COMPATIBLE]: 'bg-zinc-100 text-zinc-700',
 }
 
 const modelStore = useModelConfigStore()
@@ -228,13 +226,18 @@ const filteredModels = computed(() => {
 })
 
 // 获取 Provider 图标
-const getProviderIcon = (provider: ModelProvider) => {
-  return providerIcons[provider] || providerIcons.other
+const getProviderIcon = (provider: string) => {
+  return providerIcons[normalizeProvider(provider)]
 }
 
 // 获取 Provider 徽章类
-const getProviderBadgeClasses = (provider: ModelProvider) => {
-  return providerBadgeClasses[provider] || providerBadgeClasses.other
+const getProviderBadgeClasses = (provider: string) => {
+  return providerBadgeClasses[normalizeProvider(provider)]
+}
+
+const getProviderDisplayName = (provider: string) => {
+  const normalized = normalizeProvider(provider)
+  return ProviderDisplayNames[normalized] || provider
 }
 
 onMounted(() => {

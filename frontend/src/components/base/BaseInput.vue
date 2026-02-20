@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, useSlots } from 'vue'
+import type { ClassValue } from 'clsx'
 import { cn } from '@/lib/utils'
 
 interface Props {
@@ -10,6 +11,7 @@ interface Props {
   error?: string
   size?: 'sm' | 'md' | 'lg'
   variant?: 'default' | 'glass'
+  class?: ClassValue
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -44,7 +46,7 @@ const sizeClasses = computed(() => {
   return sizes[props.size]
 })
 
-const variantClasses = computed(() => {
+const stateClasses = computed(() => {
   const errorPadding = props.error ? 'pr-10' : ''
   if (props.error) {
     return `border-error-300 focus:border-error-500 focus:ring-error-500 ${errorPadding}`
@@ -83,7 +85,7 @@ const handleInput = (e: Event) => {
         sizeClasses,
         stateClasses,
         'text-sm',
-        $attrs.class
+        props.class
       )"
       @input="handleInput"
       @focus="emit('focus', $event)"

@@ -45,13 +45,14 @@ export interface UpdateModelDTO {
 /**
  * 模型提供商枚举
  */
-export enum ModelProvider {
-  OPENAI = 'OPENAI',
-  DEEPSEEK = 'DEEPSEEK',
-  GROQ = 'GROQ',
-  PERPLEXITY = 'PERPLEXITY',
-  OPENAI_COMPATIBLE = 'OPENAI_COMPATIBLE'
-}
+export const ModelProvider = {
+  OPENAI: 'OPENAI',
+  DEEPSEEK: 'DEEPSEEK',
+  GROQ: 'GROQ',
+  PERPLEXITY: 'PERPLEXITY',
+  OPENAI_COMPATIBLE: 'OPENAI_COMPATIBLE'
+} as const
+export type ModelProvider = (typeof ModelProvider)[keyof typeof ModelProvider]
 
 /**
  * 提供商显示名称映射

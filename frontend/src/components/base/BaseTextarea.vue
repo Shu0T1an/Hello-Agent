@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import type { ClassValue } from 'clsx'
 import { cn } from '@/lib/utils'
 
 interface Props {
@@ -10,6 +11,7 @@ interface Props {
   rows?: number
   resize?: 'none' | 'vertical' | 'horizontal' | 'both'
   size?: 'sm' | 'md' | 'lg'
+  class?: ClassValue
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -67,7 +69,7 @@ const handleInput = (e: Event) => {
       :placeholder="placeholder"
       :disabled="disabled"
       :rows="rows"
-      :class="cn(baseClasses, sizeClasses, resizeClasses, stateClasses, $attrs.class)"
+      :class="cn(baseClasses, sizeClasses, resizeClasses, stateClasses, props.class)"
       @input="handleInput"
       @focus="emit('focus', $event)"
       @blur="emit('blur', $event)"

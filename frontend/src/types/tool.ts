@@ -5,10 +5,11 @@
 /**
  * 工具类型枚举
  */
-export enum ToolType {
-  LOCAL = 'LOCAL',
-  MCP = 'MCP'
-}
+export const ToolType = {
+  LOCAL: 'LOCAL',
+  MCP: 'MCP'
+} as const
+export type ToolType = (typeof ToolType)[keyof typeof ToolType]
 
 /**
  * 工具定义接口
@@ -53,7 +54,8 @@ export interface UpdateToolDTO {
 /**
  * MCP 连接类型枚举
  */
-export enum McpConnectionType {
-  STDIO = 'STDIO',
-  SSE = 'SSE'
-}
+export const McpConnectionType = {
+  STDIO: 'STDIO',
+  SSE: 'SSE'
+} as const
+export type McpConnectionType = (typeof McpConnectionType)[keyof typeof McpConnectionType]

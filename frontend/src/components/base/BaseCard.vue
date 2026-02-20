@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { cn } from '@/lib/utils'
 
 interface Props {
-  variant?: 'default' | 'bordered' | 'elevated' | 'flat' | 'glass'
+  variant?: 'default' | 'bordered' | 'elevated' | 'flat' | 'glass' | 'editorial'
   hoverable?: boolean
   padding?: 'none' | 'sm' | 'md' | 'lg' | 'xl'
   clickable?: boolean
@@ -21,15 +21,16 @@ const emit = defineEmits<{
   click: [event: MouseEvent]
 }>()
 
-const baseClasses = 'rounded-xl transition-all duration-500'
+const baseClasses = 'rounded-xl transition-all duration-200'
 
 const variantClasses = computed(() => {
   const variants = {
-    default: 'bg-white border border-zinc-200 shadow-soft',
-    bordered: 'bg-white border-2 border-zinc-200',
-    elevated: 'bg-white shadow-medium border-0',
-    flat: 'bg-zinc-50 border-0 shadow-none',
+    default: 'bg-[var(--surface-1)] border border-[var(--line-subtle)] shadow-sm',
+    bordered: 'bg-[var(--surface-1)] border-2 border-[var(--line-strong)]',
+    elevated: 'bg-[var(--surface-1)] shadow-md border border-[var(--line-subtle)]',
+    flat: 'bg-[var(--surface-2)] border-0 shadow-none',
     glass: 'glass-card',
+    editorial: 'bg-[var(--surface-1)] border border-[var(--line-subtle)] shadow-sm',
   }
   return variants[props.variant]
 })
@@ -37,9 +38,9 @@ const variantClasses = computed(() => {
 const hoverClasses = computed(() => {
   if (!props.hoverable && !props.clickable) return ''
   if (props.variant === 'glass') {
-    return 'hover:shadow-glass-deep hover:scale-[1.02] cursor-pointer'
+    return 'hover:-translate-y-[1px] hover:shadow-lg cursor-pointer'
   }
-  return 'hover:shadow-hover hover:scale-[1.02] cursor-pointer'
+  return 'hover:-translate-y-[1px] hover:shadow-md cursor-pointer'
 })
 
 const paddingClasses = computed(() => {
@@ -71,7 +72,7 @@ const handleClick = (e: MouseEvent) => {
     )"
     :role="clickable ? 'button' : 'region'"
     :tabindex="clickable ? 0 : undefined"
-    :aria-label="$attrs['aria-label']"
+    :aria-label="typeof $attrs['aria-label'] === 'string' ? $attrs['aria-label'] : undefined"
     @click="handleClick"
     @keydown.enter="clickable ? handleClick($event as any) : null"
   >

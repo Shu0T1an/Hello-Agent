@@ -2,7 +2,6 @@
 import { ref, watch, onMounted, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useCheckpointStore } from '@/stores/checkpoint'
-import { useChatStore } from '@/stores/chat'
 import CheckpointCard from './CheckpointCard.vue'
 import CheckpointDetailModal from './CheckpointDetailModal.vue'
 import ConfirmDialog from '@/components/base/ConfirmDialog.vue'
@@ -18,7 +17,6 @@ interface Props {
 const props = defineProps<Props>()
 
 const checkpointStore = useCheckpointStore()
-const chatStore = useChatStore()
 
 const {
   checkpoints,

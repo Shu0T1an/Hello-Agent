@@ -92,7 +92,6 @@
         <!-- 普通 Markdown 内容 -->
         <div
           v-else
-          ref="markdownContainer"
           class="message-text prose prose-sm max-w-none dark:prose-invert"
           v-html="renderedContent"
           @click="handleMarkdownClick"
@@ -206,12 +205,11 @@ const renderedContent = ref('')
 const approvalDialogOpen = ref(false)
 const isToolCollapsed = ref(true)
 const expandedCitations = ref<Set<number>>(new Set())
-const markdownContainer = ref<HTMLElement | null>(null)
 
 // 将测试函数暴露到全局（用于调试）
 if (typeof window !== 'undefined') {
-  (window as any).testCitationRendering = testCitationRendering
-  (window as any).clearMarkdownCache = clearCache
+  (window as any).testCitationRendering = testCitationRendering;
+  (window as any).clearMarkdownCache = clearCache;
   console.log('[ChatMessage] 测试函数已注册到全局:')
   console.log('  - window.testCitationRendering() - 测试引用标记渲染')
   console.log('  - window.clearMarkdownCache() - 清除缓存')

@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import type { Component } from 'vue'
 import {
   FileQuestion,
   SearchX,
   Inbox,
   AlertCircle,
-  type Component,
 } from 'lucide-vue-next'
 import { cn } from '@/lib/utils'
 

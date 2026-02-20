@@ -9,7 +9,7 @@ import type {
 import {
   fetchCheckpoints,
   fetchCheckpointDetail,
-  restoreCheckpoint,
+  restoreCheckpoint as restoreCheckpointApi,
   deleteCheckpoint as deleteCheckpointApi,
 } from '@/api/checkpoint'
 import { useChatStore } from './chat'
@@ -89,17 +89,17 @@ export const useCheckpointStore = defineStore('checkpoint', () => {
 
     try {
       const request: RestoreCheckpointRequest = { checkpointId, stateUpdates }
-      const response = await restoreCheckpoint(request)
+      const response = await restoreCheckpointApi(request)
 
       // 刷新当前会话
       const chatStore = useChatStore()
       if (chatStore.currentSession) {
         await chatStore.loadSessions()
         const updatedSession = chatStore.sessions.find(
-          (s) => s.sessionId === response.sessionId
+          (s) => s.id === response.sessionId
         )
         if (updatedSession) {
-          chatStore.currentSession = updatedSession
+          chatStore.currentSessionId = updatedSession.id
         }
       }
 

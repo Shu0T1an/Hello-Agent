@@ -1,4 +1,4 @@
-import { ref, render } from 'vue'
+import { ref } from 'vue'
 import { createApp, h } from 'vue'
 import BaseToast from '@/components/base/BaseToast.vue'
 import type { ToastProps } from '@/components/base/BaseToast.vue'
@@ -21,7 +21,6 @@ interface ToastInstance extends ToastProps {
 
 const toasts = ref<Map<string, ToastInstance>>(new Map())
 let toastIdCounter = 0
-let containerApp: any = null
 let containerEl: HTMLElement | null = null
 
 const ensureContainer = () => {
@@ -97,12 +96,12 @@ const createToast = (options: ToastOptions): string => {
   })
 
   const toastEl = document.createElement('div')
+  toastEl.setAttribute('data-toast-id', id)
   toastEl.style.pointerEvents = 'auto'
   container.appendChild(toastEl)
   toastApp.mount(toastEl)
 
   const toastInstance: ToastInstance = {
-    id,
     ...toastProps,
     vm: toastApp,
   }

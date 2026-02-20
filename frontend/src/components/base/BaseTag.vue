@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import type { ClassValue } from 'clsx'
 import { cn } from '@/lib/utils'
 import { X } from 'lucide-vue-next'
 
@@ -8,6 +9,7 @@ interface Props {
   size?: 'sm' | 'md'
   closable?: boolean
   disabled?: boolean
+  class?: ClassValue
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -51,7 +53,7 @@ const handleClose = () => {
 </script>
 
 <template>
-  <span :class="cn(baseClasses, variantClasses, sizeClasses, $attrs.class)">
+  <span :class="cn(baseClasses, variantClasses, sizeClasses, props.class)">
     <slot />
     <button
       v-if="closable"

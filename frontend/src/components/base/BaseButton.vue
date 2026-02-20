@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import type { ClassValue } from 'clsx'
 import { cn } from '@/lib/utils'
 
 interface Props {
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'gradient' | 'glass'
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'gradient' | 'glass' | 'editorial'
   size?: 'sm' | 'md' | 'lg'
   disabled?: boolean
   loading?: boolean
   type?: 'button' | 'submit' | 'reset'
+  class?: ClassValue
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -22,16 +24,17 @@ const emit = defineEmits<{
   click: [event: MouseEvent]
 }>()
 
-const baseClasses = 'inline-flex items-center justify-center gap-2 font-medium rounded-xl transition-all duration-500 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100'
+const baseClasses = 'inline-flex items-center justify-center gap-2 font-medium rounded-xl border transition-all duration-200 active:translate-y-[1px] focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:translate-y-0'
 
 const variantClasses = computed(() => {
   const variants = {
-    primary: 'bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500 shadow-sm',
-    secondary: 'bg-white text-zinc-700 border border-zinc-200 hover:bg-zinc-50 focus:ring-zinc-200 shadow-sm',
-    ghost: 'bg-transparent text-zinc-600 hover:bg-zinc-100 focus:ring-zinc-200',
-    danger: 'bg-red-500 text-white hover:bg-red-600 focus:ring-red-500 shadow-sm',
-    gradient: 'bg-gradient-neon-primary text-white hover:shadow-glow-neon focus:ring-indigo-500 shadow-sm',
-    glass: 'btn-glass text-zinc-700 hover:text-indigo-700 focus:ring-indigo-400',
+    primary: 'bg-[var(--color-primary)] text-white border-transparent hover:bg-[var(--color-primary-hover)] focus:ring-[var(--color-primary)] shadow-sm',
+    secondary: 'bg-[var(--surface-1)] text-[var(--color-text-primary)] border-[var(--line-subtle)] hover:bg-[var(--surface-2)] hover:border-[var(--line-strong)] focus:ring-[var(--line-strong)] shadow-sm',
+    ghost: 'bg-transparent text-[var(--color-text-secondary)] border-transparent hover:bg-[var(--surface-2)] hover:text-[var(--color-text-primary)] focus:ring-[var(--line-strong)]',
+    danger: 'bg-red-600 text-white border-transparent hover:bg-red-700 focus:ring-red-500 shadow-sm',
+    gradient: 'btn-gradient-primary focus:ring-[var(--color-primary)]',
+    glass: 'btn-glass focus:ring-[var(--color-primary)]',
+    editorial: 'bg-[var(--surface-1)] text-[var(--color-text-primary)] border-[var(--line-subtle)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] focus:ring-[var(--color-primary)] shadow-xs',
   }
   return variants[props.variant]
 })
@@ -56,7 +59,7 @@ const handleClick = (e: MouseEvent) => {
   <button
     :type="type"
     :disabled="disabled || loading"
-    :class="cn(baseClasses, variantClasses, sizeClasses, $attrs.class)"
+    :class="cn(baseClasses, variantClasses, sizeClasses, props.class)"
     @click="handleClick"
   >
     <slot v-if="!loading" />

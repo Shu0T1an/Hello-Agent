@@ -132,8 +132,8 @@ function addRandomEvent() {
   const eventTypes: AgentEvent['eventType'][] = ['starting', 'running', 'completed', 'failed']
   const nodeTypes: AgentEvent['nodeType'][] = ['llm', 'tool', 'custom']
 
-  const randomEventType = eventTypes[Math.floor(Math.random() * eventTypes.length)]
-  const randomNodeType = nodeTypes[Math.floor(Math.random() * nodeTypes.length)]
+  const randomEventType = eventTypes[Math.floor(Math.random() * eventTypes.length)] ?? 'running'
+  const randomNodeType = nodeTypes[Math.floor(Math.random() * nodeTypes.length)] ?? 'custom'
 
   const newEvent: AgentEvent = {
     eventType: randomEventType,
@@ -151,7 +151,7 @@ function addRandomEvent() {
         toolCalls: [
           {
             id: `call_${Date.now()}`,
-            name: ['search', 'calculate', 'fetch'][Math.floor(Math.random() * 3)],
+            name: ['search', 'calculate', 'fetch'][Math.floor(Math.random() * 3)] ?? 'search',
             arguments: JSON.stringify({ query: 'test data', limit: 10 })
           }
         ]

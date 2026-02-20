@@ -74,7 +74,6 @@ import { ref, computed } from 'vue'
 import { AlertCircle, Check, X, Wrench } from 'lucide-vue-next'
 import BaseModal from '@/components/base/BaseModal.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
-import { API_BASE } from '@/utils/constants'
 
 interface ToolCall {
   id: string

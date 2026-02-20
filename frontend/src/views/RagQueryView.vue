@@ -154,7 +154,7 @@
         <!-- 上传区域 -->
         <div
           class="border-2 border-dashed border-zinc-300 rounded-xl p-8 text-center hover:border-indigo-400 transition-colors cursor-pointer"
-          @click="$refs.fileInput?.click()"
+          @click="openFilePicker"
         >
           <UploadCloud :size="48" class="mx-auto text-zinc-400 mb-3" />
           <p class="text-sm text-zinc-600 mb-1">点击选择文件或拖拽文件到此处</p>
@@ -219,7 +219,6 @@ import { ref, nextTick, onMounted } from 'vue'
 import {
   ragQueryStream,
   batchUploadDocuments,
-  type RagQueryRequest,
   type SourceDocument
 } from '@/api/rag'
 import { renderMarkdownSync } from '@/utils/markdown'
@@ -257,6 +256,10 @@ const isLoading = ref(false)
 const isUploading = ref(false)
 const messagesContainer = ref<HTMLElement>()
 const fileInput = ref<HTMLInputElement>()
+
+const openFilePicker = () => {
+  fileInput.value?.click()
+}
 
 // 初始化
 onMounted(() => {
@@ -340,7 +343,7 @@ const handleUpload = async () => {
     console.log('Upload result:', result.data)
     showUploadModal.value = false
     selectedFiles.value = []
-    toast.success(`成功上传 ${result.data.successful} 个文档`)
+    toast.success(`成功上传 ${result.data.successCount} 个文档`)
   } catch (error) {
     console.error('Upload error:', error)
     toast.error('上传失败，请重试')

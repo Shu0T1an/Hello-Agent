@@ -235,17 +235,20 @@ const getDropdownItems = (agent: AgentConfig) => {
   return [
     {
       label: agent.isActive ? '停用' : '激活',
+      value: agent.isActive ? 'deactivate' : 'activate',
       icon: Power,
       action: () => agent.isActive ? handleDeactivate(agent.id) : handleActivate(agent.id),
       variant: agent.isActive ? 'warning' : 'success',
     },
     {
       label: '重载',
+      value: 'reload',
       icon: RefreshCw,
       action: () => handleReload(agent.id),
     },
     {
       label: '删除',
+      value: 'delete',
       icon: Trash2,
       action: () => handleDelete(agent.id),
       variant: 'danger',

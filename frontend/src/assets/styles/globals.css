@@ -1,4 +1,4 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 
 @layer base {
   * {
@@ -6,202 +6,99 @@
   }
 
   html {
-    /* 默认浅色主题，可以通过 data-theme="dark" 切换 */
     background: var(--bg-primary);
     color: var(--color-text-primary);
   }
 
   body {
-    background: var(--bg-primary);
+    margin: 0;
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at 12% 12%, rgba(15, 118, 110, 0.08), transparent 28%),
+      radial-gradient(circle at 88% 0%, rgba(37, 99, 235, 0.1), transparent 32%),
+      var(--bg-primary);
     color: var(--color-text-primary);
+    font-family: "Manrope", "IBM Plex Sans", "Segoe UI", sans-serif;
+    line-height: 1.5;
+    letter-spacing: 0.01em;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    min-height: 100vh;
-    transition: background-color 0.3s ease, color 0.3s ease;
+    transition: background-color var(--transition-slow), color var(--transition-slow);
   }
 
-  /* 焦点可见性优化 */
+  code,
+  pre,
+  kbd,
+  samp {
+    font-family: "IBM Plex Mono", "JetBrains Mono", Consolas, monospace;
+  }
+
   *:focus-visible {
-    outline: 2px solid #4f46e5;
-    outline-offset: 2px;
+    outline: none;
+    box-shadow: var(--shadow-focus);
+    border-radius: 6px;
   }
 
-  /* 选择文本样式 */
   ::selection {
-    background-color: #eef2ff;
+    background-color: var(--color-primary-light);
     color: var(--color-text-primary);
   }
 
   [data-theme="dark"] ::selection {
-    background-color: rgba(79, 70, 229, 0.3);
+    background-color: rgba(45, 212, 191, 0.26);
     color: #ffffff;
   }
 }
 
 @layer components {
-  /* ========== 滚动条样式 ========== */
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+  .custom-scrollbar::-webkit-scrollbar,
+  .custom-scrollbar-glass::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
   }
 
-  .custom-scrollbar::-webkit-scrollbar-track {
+  .custom-scrollbar::-webkit-scrollbar-track,
+  .custom-scrollbar-glass::-webkit-scrollbar-track {
     background: transparent;
   }
 
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 3px;
+  .custom-scrollbar::-webkit-scrollbar-thumb,
+  .custom-scrollbar-glass::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--line-strong) 70%, transparent);
+    border: 2px solid transparent;
+    background-clip: content-box;
+    border-radius: 999px;
   }
 
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover,
+  .custom-scrollbar-glass::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--text-weak) 76%, transparent);
+    background-clip: content-box;
   }
 
-  /* 深色滚动条（侧边栏） */
-  .dark-scrollbar::-webkit-scrollbar-track {
-    background: #0f172a;
-  }
-
-  .dark-scrollbar::-webkit-scrollbar-thumb {
-    background: #334155;
-    border-radius: 3px;
-  }
-
-  .dark-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #475569;
-  }
-
-  /* ========== Canvas 风格精致滚动条 ========== */
-  .custom-scrollbar-premium::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
-  }
-
-  .custom-scrollbar-premium::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .custom-scrollbar-premium::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 4px;
-    transition: background 500ms ease;
-  }
-
-  .custom-scrollbar-premium::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.2);
-  }
-
-  [data-theme="dark"] .custom-scrollbar-premium::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
-  }
-
-  [data-theme="dark"] .custom-scrollbar-premium::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.2);
-  }
-
-  /* ========== 卡片悬停效果 ========== */
   .card-hover {
-    transition: all 0.2s ease;
+    transition: transform var(--transition-normal), box-shadow var(--transition-normal);
   }
 
   .card-hover:hover {
     transform: translateY(-2px);
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-lg);
   }
 
-  /* ========== 按钮微交互 ========== */
   .btn-hover-lift {
-    transition: all 0.15s ease;
+    transition: transform var(--transition-fast);
   }
 
   .btn-hover-lift:hover {
     transform: translateY(-1px);
   }
 
-  .btn-hover-lift:active {
-    transform: translateY(0);
-  }
-
-  /* ========== 淡入动画 ========== */
   .fade-in {
-    animation: fade-in 0.2s ease-out;
-  }
-
-  .fade-out {
-    animation: fade-out 0.2s ease-in;
-  }
-
-  /* ========== 滑动动画 ========== */
-  .slide-in-top {
-    animation: slide-in-top 0.3s ease-out;
-  }
-
-  .slide-in-bottom {
-    animation: slide-in-bottom 0.3s ease-out;
-  }
-
-  .slide-in-left {
-    animation: slide-in-left 0.3s ease-out;
+    animation: fade-in 220ms ease-out;
   }
 
   .slide-in-right {
-    animation: slide-in-right 0.3s ease-out;
-  }
-
-  /* ========== 缩放动画 ========== */
-  .scale-in {
-    animation: scale-in 0.2s ease-out;
-  }
-
-  .scale-out {
-    animation: scale-out 0.2s ease-in;
-  }
-
-  .bounce-in {
-    animation: bounce-in 0.5s ease-out;
-  }
-
-  /* ========== 骨架屏流光动画 ========== */
-  .shimmer {
-    background: linear-gradient(
-      90deg,
-      #f1f5f9 0%,
-      #e2e8f0 50%,
-      #f1f5f9 100%
-    );
-    background-size: 1000px 100%;
-    animation: shimmer 2s linear infinite;
-  }
-
-  /* ========== 玻璃态效果 ========== */
-  .glass {
-    background: rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-  }
-
-  .glass-dark {
-    background: rgba(15, 23, 42, 0.8);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-  }
-
-  /* ========== 渐变背景 ========== */
-  .gradient-primary {
-    background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
-  }
-
-  .gradient-success {
-    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-  }
-
-  .gradient-warning {
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-  }
-
-  .gradient-error {
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    animation: slide-in-right 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 }
 
@@ -210,24 +107,6 @@
     text-wrap: balance;
   }
 
-  /* ========== 动画延迟工具类 ========== */
-  .delay-100 {
-    animation-delay: 100ms;
-  }
-
-  .delay-200 {
-    animation-delay: 200ms;
-  }
-
-  .delay-300 {
-    animation-delay: 300ms;
-  }
-
-  .delay-500 {
-    animation-delay: 500ms;
-  }
-
-  /* ========== 过渡工具类 ========== */
   .transition-all {
     transition-property: all;
   }
@@ -245,113 +124,24 @@
   }
 }
 
-/* ========== 动画关键帧定义 ========== */
 @keyframes fade-in {
   from {
     opacity: 0;
   }
-  to {
-    opacity: 1;
-  }
-}
 
-@keyframes fade-out {
-  from {
-    opacity: 1;
-  }
   to {
-    opacity: 0;
-  }
-}
-
-@keyframes slide-in-top {
-  from {
-    transform: translateY(-100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-@keyframes slide-in-bottom {
-  from {
-    transform: translateY(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-@keyframes slide-in-left {
-  from {
-    transform: translateX(-100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
     opacity: 1;
   }
 }
 
 @keyframes slide-in-right {
   from {
-    transform: translateX(100%);
+    transform: translateX(20px);
     opacity: 0;
   }
+
   to {
     transform: translateX(0);
     opacity: 1;
-  }
-}
-
-@keyframes scale-in {
-  from {
-    transform: scale(0.9);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-@keyframes scale-out {
-  from {
-    transform: scale(1);
-    opacity: 1;
-  }
-  to {
-    transform: scale(0.9);
-    opacity: 0;
-  }
-}
-
-@keyframes bounce-in {
-  0% {
-    transform: scale(0.3);
-    opacity: 0;
-  }
-  50% {
-    transform: scale(1.05);
-  }
-  70% {
-    transform: scale(0.9);
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -1000px 0;
-  }
-  100% {
-    background-position: 1000px 0;
   }
 }

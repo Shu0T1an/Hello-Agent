@@ -13,7 +13,7 @@ interface DropdownItem {
 
 interface Props {
   items: DropdownItem[]
-  modelValue: string
+  modelValue?: string
   placeholder?: string
   disabled?: boolean
   size?: 'sm' | 'md' | 'lg'
@@ -22,6 +22,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  modelValue: '',
   placeholder: '请选择',
   disabled: false,
   size: 'md',

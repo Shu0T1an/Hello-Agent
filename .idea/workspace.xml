@@ -5,12 +5,21 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0e294f23-af53-4e42-af50-c9a578c991d4" name="Changes" comment="fix 会话Input">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/controller/StreamController.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/controller/StreamController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/App.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/App.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/assets/styles/glassmorphism.css" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/assets/styles/glassmorphism.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/assets/styles/globals.css" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/assets/styles/globals.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/assets/styles/variables.css" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/assets/styles/variables.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/base/BaseButton.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/base/BaseButton.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/base/BaseCard.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/base/BaseCard.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/base/BaseEmpty.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/base/BaseEmpty.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/base/BaseInput.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/base/BaseInput.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/base/BaseTag.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/base/BaseTag.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/base/BaseTextarea.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/base/BaseTextarea.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/base/BaseToast.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/base/BaseToast.vue" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/components/chat/ChatContainer.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/chat/ChatContainer.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/stores/chat.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/stores/chat.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/stores/todo.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/stores/todo.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/chat/WelcomeScreen.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/chat/WelcomeScreen.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/composables/useTheme.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/composables/useTheme.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/composables/useToast.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/composables/useToast.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/layouts/MainLayout.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/layouts/MainLayout.vue" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -266,7 +275,7 @@
       <workItem from="1771035899846" duration="6342000" />
       <workItem from="1771470150972" duration="4886000" />
       <workItem from="1771553563950" duration="19694000" />
-      <workItem from="1771599162046" duration="1954000" />
+      <workItem from="1771599162046" duration="2550000" />
     </task>
     <task id="LOCAL-00001" summary="fix 会话Input">
       <option name="closed" value="true" />

@@ -29,15 +29,6 @@ function getType(value: unknown): string {
   return typeof value
 }
 
-function formatValue(value: unknown): string {
-  const type = getType(value)
-  if (type === 'null') return 'null'
-  if (type === 'undefined') return 'undefined'
-  if (type === 'string') return `"${value}"`
-  if (type === 'array' || type === 'object') return ''
-  return String(value)
-}
-
 function isExpandable(value: unknown): boolean {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }

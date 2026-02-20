@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import {
   CheckCircle,
   AlertTriangle,
@@ -93,6 +93,15 @@ onMounted(() => {
         progressTimer && clearInterval(progressTimer)
       }
     }, interval)
+  }
+})
+
+onUnmounted(() => {
+  if (timer) {
+    clearTimeout(timer)
+  }
+  if (progressTimer) {
+    clearInterval(progressTimer)
   }
 })
 
