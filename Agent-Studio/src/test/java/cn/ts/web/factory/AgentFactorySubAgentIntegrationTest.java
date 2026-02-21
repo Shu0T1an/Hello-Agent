@@ -35,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
@@ -136,7 +137,49 @@ class AgentFactorySubAgentIntegrationTest {
         ReactAgent sub = subAgents.get("research");
         assertNotNull(sub);
         List<ModelInterceptor> subInterceptors = getLlmInterceptors(sub);
-        assertEquals(0, subInterceptors.size());
+        assertNotEquals(0, subInterceptors.size());
+        assertTrue(subInterceptors.stream().noneMatch(i -> "SubAgent".equals(i.getName())));
+    }
+
+    @Test
+    void mainAgentKeepsCheckpointManagerWhileSubAgentsDisableIt() throws Exception {
+        AgentConfigDTO main = mainConfig();
+        main.setEnableSubAgentInterceptor(true);
+        main.setIncludeGeneralPurpose(false);
+
+        SubAgentMappingDTO mapping = new SubAgentMappingDTO();
+        mapping.setSubagentType("research");
+        mapping.setTargetAgentId(200L);
+        mapping.setEnabled(true);
+        mapping.setToolsPolicy(SubAgentToolsPolicy.INHERIT);
+        main.setSubAgents(List.of(mapping));
+
+        AgentConfigEntity target = new AgentConfigEntity();
+        target.setId(200L);
+        target.setAgentName("target-agent");
+        target.setDisplayName("Target Agent");
+        target.setDescription("Target");
+        target.setModelId(1L);
+        target.setEnableStreaming(false);
+        target.setEnableSubAgentInterceptor(false);
+        when(agentConfigMapper.selectById(200L)).thenReturn(target);
+
+        ReactAgent agent = agentFactory.createAgent(main);
+        assertTrue(agent.getGraph().hasCheckpointManager());
+
+        List<ModelInterceptor> mainInterceptors = getLlmInterceptors(agent);
+        ModelInterceptor subAgentInterceptor = mainInterceptors.stream()
+                .filter(i -> "SubAgent".equals(i.getName()))
+                .findFirst()
+                .orElseThrow();
+        @SuppressWarnings("unchecked")
+        Map<String, ReactAgent> subAgents =
+                (Map<String, ReactAgent>) readPrivateField(subAgentInterceptor, "subAgents");
+
+        assertFalse(subAgents.isEmpty());
+        for (ReactAgent subAgent : subAgents.values()) {
+            assertFalse(subAgent.getGraph().hasCheckpointManager());
+        }
     }
 
     private AgentConfigDTO mainConfig() {
@@ -179,5 +222,11 @@ class AgentFactorySubAgentIntegrationTest {
         List<org.springframework.ai.tool.ToolCallback> callbacks =
                 (List<org.springframework.ai.tool.ToolCallback>) callbacksField.get(node);
         return callbacks;
+    }
+
+    private Object readPrivateField(Object target, String fieldName) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.get(target);
     }
 }

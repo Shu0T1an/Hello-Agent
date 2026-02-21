@@ -91,6 +91,25 @@ class DeepSearchAgentBuilderTest {
     }
 
     @Test
+    void mainAgentKeepsCheckpointManagerWhileBuiltInSubAgentsDisableIt() throws Exception {
+        ReactAgent agent = builder.build(chatModel, new Object[0]);
+        assertTrue(agent.getGraph().hasCheckpointManager());
+
+        List<ModelInterceptor> interceptors = getLlmInterceptors(agent);
+        ModelInterceptor subAgentInterceptor = interceptors.stream()
+                .filter(i -> "SubAgent".equals(i.getName()))
+                .findFirst()
+                .orElseThrow();
+
+        @SuppressWarnings("unchecked")
+        Map<String, ReactAgent> subAgents = (Map<String, ReactAgent>) readPrivateField(subAgentInterceptor, "subAgents");
+        assertFalse(subAgents.isEmpty());
+        for (ReactAgent subAgent : subAgents.values()) {
+            assertFalse(subAgent.getGraph().hasCheckpointManager());
+        }
+    }
+
+    @Test
     void throwsWhenChatModelMissing() {
         assertThrows(IllegalArgumentException.class, () -> builder.build(null, new Object[0]));
     }

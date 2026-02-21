@@ -100,7 +100,6 @@ public class DeepSearchAgentBuilder {
                         "DeepSearchResearchPrompt",
                         DeepSearchPrompts.RESEARCH_SUBAGENT_PROMPT
                 ), toolPolicyResolver.forResearchAgent()))
-                .checkpointManager(checkpointManager)
                 .build();
         subAgents.put("research-agent", researchAgent);
 
@@ -114,7 +113,6 @@ public class DeepSearchAgentBuilder {
                         "DeepSearchCritiquePrompt",
                         DeepSearchPrompts.CRITIQUE_SUBAGENT_PROMPT
                 ), toolPolicyResolver.forCritiqueAgent()))
-                .checkpointManager(checkpointManager)
                 .build();
         subAgents.put("critique-agent", critiqueAgent);
 
@@ -129,7 +127,6 @@ public class DeepSearchAgentBuilder {
                             "DeepSearchGeneralPrompt",
                             DeepSearchPrompts.GENERAL_PURPOSE_SUBAGENT_PROMPT
                     ), toolPolicyResolver.forGeneralAgent()))
-                    .checkpointManager(checkpointManager)
                     .build();
             subAgents.put("general-purpose", generalPurposeAgent);
         }

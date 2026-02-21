@@ -69,12 +69,13 @@ public class AgentFactory {
     }
 
     public ReactAgent createAgent(AgentConfigDTO config) {
-        return createAgentInternal(config, true, null);
+        return createAgentInternal(config, true, true, null);
     }
 
     private ReactAgent createAgentInternal(
             AgentConfigDTO config,
             boolean includeSubAgentInterceptor,
+            boolean attachCheckpointManager,
             List<ToolDefinitionDTO> explicitToolDefinitions) {
         logger.info("Creating agent: {}", config.getAgentName());
 
@@ -84,8 +85,11 @@ public class AgentFactory {
         ReactAgent.Builder builder = ReactAgent.builder()
                 .name(config.getAgentName())
                 .description(config.getDescription() != null ? config.getDescription() : config.getDisplayName())
-                .chatModel(chatModel)
-                .checkpointManager(checkpointManager);
+                .chatModel(chatModel);
+
+        if (attachCheckpointManager) {
+            builder.checkpointManager(checkpointManager);
+        }
 
         if (config.getEnableStreaming() != null) {
             builder.streaming(config.getEnableStreaming());
@@ -175,7 +179,7 @@ public class AgentFactory {
             }
 
             List<ToolDefinitionDTO> toolsForSubAgent = resolveToolsForSubAgent(target, mainConfig, mapping);
-            ReactAgent subAgent = createAgentInternal(target, false, toolsForSubAgent);
+            ReactAgent subAgent = createAgentInternal(target, false, false, toolsForSubAgent);
             subAgents.put(mapping.getSubagentType(), subAgent);
         }
 
@@ -183,7 +187,7 @@ public class AgentFactory {
         if (includeGeneralPurpose && !subAgents.containsKey("general-purpose")) {
             try {
                 List<ToolDefinitionDTO> gpTools = resolveGeneralPurposeTools(mainConfig);
-                ReactAgent generalPurpose = createAgentInternal(mainConfig, false, gpTools);
+                ReactAgent generalPurpose = createAgentInternal(mainConfig, false, false, gpTools);
                 subAgents.put("general-purpose", generalPurpose);
             } catch (Exception e) {
                 logger.warn("Failed to build general-purpose subagent for '{}': {}", mainConfig.getAgentName(), e.getMessage());
