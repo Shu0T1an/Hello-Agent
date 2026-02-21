@@ -13,6 +13,8 @@ import org.springframework.ai.chat.messages.ToolResponseMessage;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.definition.ToolDefinition;
+import org.mockito.ArgumentCaptor;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -22,6 +24,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import static cn.ts.agent.Tool.ToolContextConstants.TOOL_STATE_CONTEXT_KEY;
 
 /**
  * ToolNode 单元测试
@@ -142,6 +145,36 @@ class ToolNodeTest {
 
         // 尝试修改返回的列表应该抛出异常
         assertThrows(UnsupportedOperationException.class, () -> callbacks.add(mockTool1));
+    }
+
+    @Test
+    void testToolContextStoresSerializableStateSnapshot() throws Exception {
+        ToolCallback callback = mock(ToolCallback.class);
+        ToolDefinition definition = mock(ToolDefinition.class);
+        when(definition.name()).thenReturn("mock_tool");
+        when(callback.getToolDefinition()).thenReturn(definition);
+        when(callback.call(any(), any(ToolContext.class))).thenReturn("ok");
+
+        ToolNode node = new ToolNode(List.of(callback));
+        AssistantMessage.ToolCall toolCall = new AssistantMessage.ToolCall(
+                "call-ctx",
+                "function",
+                "mock_tool",
+                "{}"
+        );
+        AssistantMessage assistantMessage = AssistantMessage.builder()
+                .content("call mock tool")
+                .toolCalls(List.of(toolCall))
+                .build();
+        State state = new MapState(Map.of("messages", List.of(assistantMessage), "executionId", "exec-1"));
+
+        node.apply(state);
+
+        ArgumentCaptor<ToolContext> toolContextCaptor = ArgumentCaptor.forClass(ToolContext.class);
+        verify(callback).call(any(), toolContextCaptor.capture());
+        Object stateContext = toolContextCaptor.getValue().getContext().get(TOOL_STATE_CONTEXT_KEY);
+        assertInstanceOf(Map.class, stateContext);
+        assertFalse(stateContext instanceof State);
     }
 
     // ==================== 辅助方法 ====================

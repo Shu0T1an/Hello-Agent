@@ -206,7 +206,8 @@ public class ToolNode implements NodeAction {
         Instant toolStartTime = Instant.now();
 
         Map<String, Object> toolContextMap = new HashMap<>();
-        toolContextMap.put(TOOL_STATE_CONTEXT_KEY, state);
+        // Store a plain map snapshot to keep ToolContext metadata JSON-serializable for MCP transport.
+        toolContextMap.put(TOOL_STATE_CONTEXT_KEY, state.data());
         toolContextMap.put(TOOL_EXTRA_STATE_KEY, extraStateFromToolCall);
         toolContextMap.put(TOOL_CALL_ID_CONTEXT_KEY, toolCall.id());
         toolContextMap.put(TOOL_CALL_NAME_CONTEXT_KEY, toolCall.name());
