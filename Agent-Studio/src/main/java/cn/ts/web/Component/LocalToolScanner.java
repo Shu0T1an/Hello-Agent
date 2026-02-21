@@ -1,4 +1,4 @@
-package cn.ts.web.component;
+package cn.ts.web.Component;
 
 import cn.ts.web.dto.agent.ToolDefinitionDTO;
 import cn.ts.web.dto.agent.ToolType;

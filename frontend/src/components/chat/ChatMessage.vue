@@ -97,6 +97,22 @@
           @click="handleMarkdownClick"
         ></div>
 
+        <div
+          v-if="shouldShowThinking"
+          class="thinking-block"
+        >
+          <button type="button" class="thinking-header" @click="toggleThinkingCollapse">
+            <div class="thinking-title">
+              <Brain :size="14" />
+              <span>Think</span>
+            </div>
+            <component :is="isThinkingCollapsed ? ChevronDown : ChevronUp" :size="14" class="collapse-icon" />
+          </button>
+          <Transition name="collapse">
+            <pre v-if="!isThinkingCollapsed" class="thinking-content">{{ message.thinkingContent }}</pre>
+          </Transition>
+        </div>
+
         <!-- 用户消息附件列表 -->
         <div v-if="message.attachments?.length && message.role === 'user'" class="message-attachments">
           <div v-for="attach in message.attachments" :key="attach.id" class="attachment-item">
@@ -182,7 +198,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
-import { Bot, User, CheckCircle, Sparkles, Terminal, ChevronDown, ChevronUp, FileText } from 'lucide-vue-next'
+import { Bot, User, CheckCircle, Sparkles, Terminal, ChevronDown, ChevronUp, FileText, Brain } from 'lucide-vue-next'
 import BaseTag from '@/components/base/BaseTag.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import ApprovalDialog from '@/components/chat/ApprovalDialog.vue'
@@ -204,6 +220,7 @@ const emit = defineEmits<{
 const renderedContent = ref('')
 const approvalDialogOpen = ref(false)
 const isToolCollapsed = ref(true)
+const isThinkingCollapsed = ref(false)
 const expandedCitations = ref<Set<number>>(new Set())
 
 // 将测试函数暴露到全局（用于调试）
@@ -218,6 +235,27 @@ if (typeof window !== 'undefined') {
 function toggleCollapse() {
   isToolCollapsed.value = !isToolCollapsed.value
 }
+
+function toggleThinkingCollapse() {
+  isThinkingCollapsed.value = !isThinkingCollapsed.value
+}
+
+const hasThinkingContent = computed(() => {
+  return !!props.message.thinkingContent && props.message.thinkingContent.trim().length > 0
+})
+
+const shouldShowThinking = computed(() => {
+  if (!hasThinkingContent.value) {
+    return false
+  }
+  if (props.message.role === 'tool_call') {
+    return true
+  }
+  if (props.message.role !== 'assistant') {
+    return false
+  }
+  return props.message.metadata?.hide_thinking !== true
+})
 
 function toggleCitation(index: number) {
   if (expandedCitations.value.has(index)) {
@@ -357,7 +395,9 @@ function handleMarkdownClick(event: MouseEvent) {
 .chat-message {
   display: flex;
   gap: 12px;
+  width: fit-content;
   max-width: 80%;
+  min-width: 0;
   animation: message-in 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
@@ -536,17 +576,51 @@ function handleMarkdownClick(event: MouseEvent) {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+  flex: 0 1 auto;
 }
 
 .message-content {
   padding: 12px 16px;
   word-wrap: break-word;
-  overflow-wrap: break-word;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .message-text {
   font-size: 14px;
   line-height: 1.6;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.message-text :deep(p),
+.message-text :deep(li),
+.message-text :deep(a),
+.message-text :deep(code),
+.message-text :deep(strong),
+.message-text :deep(em) {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.message-text :deep(pre) {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.message-text :deep(pre code) {
+  white-space: pre;
+  word-break: normal;
+  overflow-wrap: normal;
 }
 
 .message-text :deep(code) {
@@ -568,6 +642,54 @@ function handleMarkdownClick(event: MouseEvent) {
   font-size: 12px;
   color: var(--color-text-muted);
   padding: 0 4px;
+}
+
+.thinking-block {
+  margin-top: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.04);
+}
+
+[data-theme="dark"] .thinking-block {
+  border-color: rgba(148, 163, 184, 0.28);
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.thinking-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.thinking-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.thinking-content {
+  margin: 0;
+  padding: 0 10px 10px;
+  max-height: 220px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--color-text-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
 /* 工具消息折叠样式 */

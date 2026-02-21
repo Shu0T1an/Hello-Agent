@@ -257,6 +257,18 @@ watch(() => chatStore.currentSessionId, (newSessionId) => {
   }
 }, { immediate: true })
 
+watch(
+  () => agentStore.currentAgent,
+  (agentName) => {
+    const isDeepSearch = typeof agentName === 'string' && agentName.includes('deep-search')
+    if (isDeepSearch) {
+      timelineVisible.value = true
+      agentTimeline.startCollecting(chatStore.currentSessionId)
+    }
+  },
+  { immediate: true }
+)
+
 watch(activeTab, async (newTab) => {
   if (newTab === 'summary' && chatStore.currentSessionId) {
     await loadSummaryData()

@@ -1,54 +1,39 @@
-/**
- * Agent Timeline 事件处理辅助函数
- */
-
 import type { AgentEvent } from '@/types/agent'
-import { Play, Bot, MessageSquare, Terminal, Cog } from 'lucide-vue-next'
+import { Play, Bot, MessageSquare, Terminal, Cog, GitBranch } from 'lucide-vue-next'
 
-/**
- * 判断是否为 Tool 节点
- */
 export function isToolNode(event: AgentEvent): boolean {
   return event.nodeType === 'tool'
 }
 
-/**
- * 判断是否为 LLM 节点的工具调用
- */
+export function isSubAgentEvent(event: AgentEvent): boolean {
+  return event.nodeType === 'subagent' || event.eventType.startsWith('SUBAGENT_')
+}
+
 export function isLLMToolCall(event: AgentEvent): boolean {
   if (event.nodeType !== 'llm') return false
   const toolCalls = event.stateData?.execution_record?.toolCalls
   return toolCalls !== undefined && toolCalls.length > 0
 }
 
-/**
- * 判断是否为 LLM 节点的响应
- */
 export function isLLMResponse(event: AgentEvent): boolean {
   if (event.nodeType !== 'llm') return false
   const toolCalls = event.stateData?.execution_record?.toolCalls
   return !toolCalls || toolCalls.length === 0
 }
 
-/**
- * 节点颜色主题配置
- */
 export interface NodeThemeConfig {
-  icon: typeof Play | typeof Bot | typeof MessageSquare | typeof Terminal | typeof Cog
+  icon: typeof Play | typeof Bot | typeof MessageSquare | typeof Terminal | typeof Cog | typeof GitBranch
   label: string
   dotBg: string
   borderClass: string
   labelClass: string
 }
 
-/**
- * 获取节点配置
- */
 export function getNodeConfig(event: AgentEvent): NodeThemeConfig {
   if (event.eventType === 'starting') {
     return {
       icon: Play,
-      label: '已启动',
+      label: 'Started',
       dotBg: 'bg-zinc-400',
       borderClass: 'border-zinc-200',
       labelClass: 'text-zinc-600'
@@ -85,6 +70,18 @@ export function getNodeConfig(event: AgentEvent): NodeThemeConfig {
     }
   }
 
+  if (isSubAgentEvent(event)) {
+    const failed = event.eventType === 'SUBAGENT_FAILED'
+    const completed = event.eventType === 'SUBAGENT_COMPLETED'
+    return {
+      icon: GitBranch,
+      label: failed ? 'SubAgent Failed' : completed ? 'SubAgent Done' : 'SubAgent',
+      dotBg: failed ? 'bg-rose-500' : completed ? 'bg-sky-500' : 'bg-cyan-500',
+      borderClass: failed ? 'border-rose-200' : 'border-cyan-200',
+      labelClass: failed ? 'text-rose-700' : 'text-cyan-700'
+    }
+  }
+
   return {
     icon: Cog,
     label: 'System Node',
@@ -94,9 +91,6 @@ export function getNodeConfig(event: AgentEvent): NodeThemeConfig {
   }
 }
 
-/**
- * 生成事件唯一 ID
- */
 export function getEventId(event: AgentEvent, index: number): string {
   return `${event.nodeId}-${event.timestamp}-${index}`
 }

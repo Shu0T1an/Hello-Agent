@@ -13,6 +13,7 @@ import cn.ts.web.entity.SubAgentMappingEntity;
 import cn.ts.web.mapper.AgentConfigMapper;
 import cn.ts.web.mapper.SubAgentMappingMapper;
 import cn.ts.web.service.ModelConfigService;
+import cn.ts.web.service.SubAgentProgressBus;
 import cn.ts.web.service.ToolDefinitionService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -36,24 +37,28 @@ import java.util.stream.Collectors;
 public class AgentFactory {
 
     private static final Logger logger = LoggerFactory.getLogger(AgentFactory.class);
+    private static final int DEFAULT_MAX_PARALLEL_SUBAGENTS = 3;
 
     private final ModelConfigService modelConfigService;
     private final ToolDefinitionService toolDefinitionService;
     private final AgentConfigMapper agentConfigMapper;
     private final SubAgentMappingMapper subAgentMappingMapper;
     private final CheckpointManager checkpointManager;
+    private final SubAgentProgressBus subAgentProgressBus;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public AgentFactory(ModelConfigService modelConfigService,
                         ToolDefinitionService toolDefinitionService,
                         AgentConfigMapper agentConfigMapper,
                         SubAgentMappingMapper subAgentMappingMapper,
-                        CheckpointManager checkpointManager) {
+                        CheckpointManager checkpointManager,
+                        SubAgentProgressBus subAgentProgressBus) {
         this.modelConfigService = modelConfigService;
         this.toolDefinitionService = toolDefinitionService;
         this.agentConfigMapper = agentConfigMapper;
         this.subAgentMappingMapper = subAgentMappingMapper;
         this.checkpointManager = checkpointManager;
+        this.subAgentProgressBus = subAgentProgressBus;
     }
 
     public ReactAgent createAgent(AgentConfigDTO config) {
@@ -82,7 +87,7 @@ public class AgentFactory {
         if (includeSubAgentInterceptor && Boolean.TRUE.equals(config.getEnableSubAgentInterceptor())) {
             Map<String, ReactAgent> subAgents = buildSubAgentsFor(config);
             tools = appendTaskTool(tools, subAgents);
-            builder.modelInterceptors(List.of(new SubAgentInterceptor(null, subAgents)));
+            builder.modelInterceptors(List.of(new SubAgentInterceptor(null, subAgents, subAgentProgressBus)));
         }
         builder.tools(tools);
 
@@ -118,7 +123,7 @@ public class AgentFactory {
     private Object[] appendTaskTool(Object[] tools, Map<String, ReactAgent> subAgents) {
         Object[] merged = new Object[tools.length + 1];
         System.arraycopy(tools, 0, merged, 0, tools.length);
-        merged[tools.length] = new TaskTool(subAgents);
+        merged[tools.length] = new TaskTool(subAgents, subAgentProgressBus, DEFAULT_MAX_PARALLEL_SUBAGENTS);
         return merged;
     }
 

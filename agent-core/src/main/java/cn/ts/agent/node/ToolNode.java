@@ -101,7 +101,10 @@ public class ToolNode implements NodeAction {
         }
 
         // 3. 创建 ToolResponseMessage
-        ToolResponseMessage toolResponseMessage = new ToolResponseMessage(responses);
+
+        ToolResponseMessage toolResponseMessage =  ToolResponseMessage.builder()
+                                                    .responses(responses)
+                                                    .build();
 
         // 4. 递增 iteration
         int nextIteration = state.<Integer>value("iteration").orElse(0) + 1;

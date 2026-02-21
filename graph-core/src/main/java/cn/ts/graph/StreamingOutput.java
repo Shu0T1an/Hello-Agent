@@ -23,6 +23,9 @@ import java.util.Optional;
 public class StreamingOutput<T> extends NodeOutput {
 
     private static final Logger logger = LoggerFactory.getLogger(StreamingOutput.class);
+    private static final String REASONING_CONTENT = "reasoningContent";
+    private static final String REASONING_CONTENT_SNAKE = "reasoning_content";
+    private static final String THINK = "think";
 
     private final T originData;        // 原始数据（如完整 ChatResponse）
     private final String chunk;         // 提取的文本片段
@@ -306,6 +309,39 @@ public class StreamingOutput<T> extends NodeOutput {
      */
     public Optional<ChatResponse> getChatResponse() {
         return getOriginDataAs(ChatResponse.class);
+    }
+
+    /**
+     * Convenience method for retrieving reasoning content from stream chunk metadata.
+     */
+    public Optional<String> getReasoningContent() {
+        if (!(originData instanceof ChatResponse chatResponse)) {
+            return Optional.empty();
+        }
+        return extractReasoning(chatResponse);
+    }
+
+    private static Optional<String> extractReasoning(ChatResponse chatResponse) {
+        if (chatResponse == null || chatResponse.getResult() == null || chatResponse.getResult().getOutput() == null) {
+            return Optional.empty();
+        }
+
+        Map<String, Object> outputMetadata = chatResponse.getResult().getOutput().getMetadata();
+        if (outputMetadata == null || outputMetadata.isEmpty()) {
+            return Optional.empty();
+        }
+
+        return normalizeText(outputMetadata.get(THINK))
+                .or(() -> normalizeText(outputMetadata.get(REASONING_CONTENT)))
+                .or(() -> normalizeText(outputMetadata.get(REASONING_CONTENT_SNAKE)));
+    }
+
+    private static Optional<String> normalizeText(Object value) {
+        if (value == null) {
+            return Optional.empty();
+        }
+        String text = value.toString();
+        return text.isEmpty() ? Optional.empty() : Optional.of(text);
     }
 
     @Override

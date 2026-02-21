@@ -9,6 +9,7 @@ import cn.ts.agent.interceptor.ModelInvocationResult;
 import cn.ts.agent.interceptor.ModelInvoker;
 import cn.ts.agent.model.ChatModelRequest;
 import cn.ts.graph.checkpoint.CheckpointManager;
+import cn.ts.web.service.SubAgentProgressBus;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.stereotype.Component;
 
@@ -25,11 +26,14 @@ public class DeepSearchAgentBuilder {
 
     private final DeepSearchProperties properties;
     private final CheckpointManager checkpointManager;
+    private final SubAgentProgressBus subAgentProgressBus;
 
     public DeepSearchAgentBuilder(DeepSearchProperties properties,
-                                  CheckpointManager checkpointManager) {
+                                  CheckpointManager checkpointManager,
+                                  SubAgentProgressBus subAgentProgressBus) {
         this.properties = properties;
         this.checkpointManager = checkpointManager;
+        this.subAgentProgressBus = subAgentProgressBus;
     }
 
     public ReactAgent build(ChatModel chatModel, Object[] tools) {
@@ -46,7 +50,7 @@ public class DeepSearchAgentBuilder {
         Map<String, ReactAgent> subAgents = buildSubAgents(chatModel, safeTools);
         Object[] toolsWithTask = appendTaskTool(safeTools, subAgents);
         String mainPrompt = DeepSearchPrompts.mainPrompt(properties.getMaxIterations());
-        SubAgentInterceptor subAgentInterceptor = new SubAgentInterceptor(mainPrompt, subAgents);
+        SubAgentInterceptor subAgentInterceptor = new SubAgentInterceptor(mainPrompt, subAgents, subAgentProgressBus);
 
         return ReactAgent.builder()
                 .name(agentName)
@@ -62,7 +66,7 @@ public class DeepSearchAgentBuilder {
     private Object[] appendTaskTool(Object[] tools, Map<String, ReactAgent> subAgents) {
         Object[] merged = new Object[tools.length + 1];
         System.arraycopy(tools, 0, merged, 0, tools.length);
-        merged[tools.length] = new TaskTool(subAgents);
+        merged[tools.length] = new TaskTool(subAgents, subAgentProgressBus, properties.getMaxParallelSubagents());
         return merged;
     }
 

@@ -38,7 +38,11 @@ public class ToolResponseMessageStrategy implements MessageDeserializationStrate
         List<ToolResponseMessage.ToolResponse> responses = extractResponses(map);
 
         log.debug("Deserialized ToolResponseMessage with {} responses", responses.size());
-        return new ToolResponseMessage(responses);
+
+
+        return  ToolResponseMessage.builder()
+                    .responses(responses)
+                    .build();
     }
 
     @Override

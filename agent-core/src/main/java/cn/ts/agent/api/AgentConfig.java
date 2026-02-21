@@ -60,7 +60,7 @@ public class AgentConfig {
      * Builder 模式
      */
     public static class Builder {
-        private int maxIterations = 10;
+        private int maxIterations = 50;
         private double temperature = 0.7;
         private String systemPrompt = "You are a helpful assistant.";
 

@@ -39,13 +39,15 @@ public class AgentExecutionService {
     private final ObjectMapper objectMapper;
     private final MessageConversionService messageConversionService;
     private final AgentResponseBuilder responseBuilder;
+    private final SubAgentProgressBus subAgentProgressBus;
 
     public AgentExecutionService(AgentRegistry agentRegistry,
                                  SessionService sessionService,
                                  CheckpointManager checkpointManager,
                                  AgentExecutionConfig config,
                                  MessageConversionService messageConversionService,
-                                 AgentResponseBuilder responseBuilder) {
+                                 AgentResponseBuilder responseBuilder,
+                                 SubAgentProgressBus subAgentProgressBus) {
         this.agentRegistry = agentRegistry;
         this.checkpointManager = checkpointManager;
         this.sessionService = sessionService;
@@ -53,6 +55,7 @@ public class AgentExecutionService {
         this.objectMapper = new ObjectMapper();
         this.messageConversionService = messageConversionService;
         this.responseBuilder = responseBuilder;
+        this.subAgentProgressBus = subAgentProgressBus;
     }
 
     /**
@@ -116,9 +119,13 @@ public class AgentExecutionService {
             }
         }
 
-        return graph.stream(stateWithExecutionId, configBuilder.timeout(timeout).build())
+        Flux<AgentResponse> subAgentStream = subAgentProgressBus.stream(executionId);
+        Flux<AgentResponse> graphStream = graph.stream(stateWithExecutionId, configBuilder.timeout(timeout).build())
                 .map(response -> responseBuilder.build(response, executionId))
-                .onErrorResume(throwable -> Flux.just(responseBuilder.buildErrorResponse(throwable.getMessage(), executionId)));
+                .onErrorResume(throwable -> Flux.just(responseBuilder.buildErrorResponse(throwable.getMessage(), executionId)))
+                .doFinally(signalType -> subAgentProgressBus.complete(executionId));
+
+        return Flux.merge(graphStream, subAgentStream);
     }
 
     /**
@@ -177,13 +184,17 @@ public class AgentExecutionService {
         Map<String, Object> stateWithExecutionId = new HashMap<>(initialState);
         stateWithExecutionId.put("executionId", executionId);
 
-        return graph.stream(stateWithExecutionId,
+        Flux<AgentResponse> subAgentStream = subAgentProgressBus.stream(executionId);
+        Flux<AgentResponse> graphStream = graph.stream(stateWithExecutionId,
                         cn.ts.graph.config.RunnableConfig.builder()
                                 .executionId(executionId)
                                 .timeout(timeout)
                                 .build())
                 .map(response -> responseBuilder.build(response, executionId))
-                .onErrorResume(throwable -> Flux.just(responseBuilder.buildErrorResponse(throwable.getMessage(), executionId)));
+                .onErrorResume(throwable -> Flux.just(responseBuilder.buildErrorResponse(throwable.getMessage(), executionId)))
+                .doFinally(signalType -> subAgentProgressBus.complete(executionId));
+
+        return Flux.merge(graphStream, subAgentStream);
     }
 
     /**
@@ -271,9 +282,13 @@ public class AgentExecutionService {
             initState.put(StateKeys.MESSAGES, deserializedMessages);
         }
 
-        return graph.stream(initState, configBuilder.build())
+        Flux<AgentResponse> subAgentStream = subAgentProgressBus.stream(executionId);
+        Flux<AgentResponse> graphStream = graph.stream(initState, configBuilder.build())
                 .map(response -> responseBuilder.build(response, executionId))
-                .onErrorResume(throwable -> Flux.just(responseBuilder.buildErrorResponse(throwable.getMessage(), executionId)));
+                .onErrorResume(throwable -> Flux.just(responseBuilder.buildErrorResponse(throwable.getMessage(), executionId)))
+                .doFinally(signalType -> subAgentProgressBus.complete(executionId));
+
+        return Flux.merge(graphStream, subAgentStream);
     }
 
     /**

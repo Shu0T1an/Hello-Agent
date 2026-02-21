@@ -202,11 +202,12 @@ public class HumanInTheLoopHook extends ModelHook implements InterruptableAction
                 if (!modifiedToolCalls.equals(assistantMessage.getToolCalls())) {
                     // 创建新的 AssistantMessage
                     List<Message> newMessages = new ArrayList<>(messages.subList(0, messages.size() - 1));
-                    AssistantMessage newMessage = new AssistantMessage(
-                            assistantMessage.getText(),
-                            assistantMessage.getMetadata(),
-                            modifiedToolCalls
-                    );
+                    AssistantMessage newMessage = AssistantMessage.builder()
+                            .content(assistantMessage.getText())
+                            .toolCalls(modifiedToolCalls)
+                            .properties(assistantMessage.getMetadata())
+                            .build();
+
                     newMessages.add(newMessage);
 
                     Map<String, Object> updates = new HashMap<>();

@@ -128,7 +128,7 @@ CREATE TABLE IF NOT EXISTS agent_config (
     description TEXT,
     model_id BIGINT NOT NULL,
     system_prompt TEXT,
-    max_iterations INT DEFAULT 10,
+    max_iterations INT DEFAULT 100,
     temperature NUMERIC(3,2) DEFAULT 0.70,
     enable_streaming BOOLEAN DEFAULT TRUE,
     enable_subagent_interceptor BOOLEAN DEFAULT FALSE,

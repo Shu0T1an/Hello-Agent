@@ -1,6 +1,7 @@
 package cn.ts.agent.extension.interceptor;
 
 import cn.ts.agent.core.ReactAgent;
+import cn.ts.agent.extension.progress.SubAgentProgressReporter;
 import cn.ts.agent.extension.tools.TaskTool;
 import cn.ts.agent.interceptor.ModelInterceptor;
 import cn.ts.agent.interceptor.ModelInvocationContext;
@@ -42,9 +43,16 @@ public class SubAgentInterceptor implements ModelInterceptor {
     private final TaskTool taskTool;
 
     public SubAgentInterceptor(String systemPrompt, Map<String, ReactAgent> subAgents) {
+        this(systemPrompt, subAgents, SubAgentProgressReporter.noop());
+    }
+
+    public SubAgentInterceptor(
+            String systemPrompt,
+            Map<String, ReactAgent> subAgents,
+            SubAgentProgressReporter progressReporter) {
         this.systemPrompt = (systemPrompt == null || systemPrompt.isBlank()) ? DEFAULT_SYSTEM_PROMPT : systemPrompt;
         this.subAgents = new LinkedHashMap<>(subAgents != null ? subAgents : Map.of());
-        this.taskTool = new TaskTool(this.subAgents);
+        this.taskTool = new TaskTool(this.subAgents, progressReporter);
     }
 
     @Override

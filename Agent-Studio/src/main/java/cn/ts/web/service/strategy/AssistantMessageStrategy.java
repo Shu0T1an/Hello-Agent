@@ -29,7 +29,6 @@ public class AssistantMessageStrategy implements MessageDeserializationStrategy 
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public AssistantMessage deserialize(Map<String, Object> map) {
         if (map == null) {
             throw new IllegalArgumentException("Message data map cannot be null");
@@ -40,7 +39,12 @@ public class AssistantMessageStrategy implements MessageDeserializationStrategy 
         List<AssistantMessage.ToolCall> toolCalls = extractToolCalls(map);
 
         log.debug("Deserialized AssistantMessage with {} tool calls", toolCalls.size());
-        return new AssistantMessage(text, metadata, toolCalls);
+
+        return AssistantMessage.builder()
+                    .content(text)
+                    .properties(metadata)
+                    .toolCalls(toolCalls)
+                    .build();
     }
 
     @Override

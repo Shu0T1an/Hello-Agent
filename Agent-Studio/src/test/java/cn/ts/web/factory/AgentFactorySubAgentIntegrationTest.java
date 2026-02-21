@@ -15,6 +15,7 @@ import cn.ts.web.entity.AgentConfigEntity;
 import cn.ts.web.mapper.AgentConfigMapper;
 import cn.ts.web.mapper.SubAgentMappingMapper;
 import cn.ts.web.service.ModelConfigService;
+import cn.ts.web.service.SubAgentProgressBus;
 import cn.ts.web.service.ToolDefinitionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -60,6 +61,9 @@ class AgentFactorySubAgentIntegrationTest {
     @Mock
     private ChatModel chatModel;
 
+    @Mock
+    private SubAgentProgressBus subAgentProgressBus;
+
     private AgentFactory agentFactory;
 
     @BeforeEach
@@ -69,7 +73,8 @@ class AgentFactorySubAgentIntegrationTest {
                 toolDefinitionService,
                 agentConfigMapper,
                 subAgentMappingMapper,
-                checkpointManager
+                checkpointManager,
+                subAgentProgressBus
         );
         when(modelConfigService.createChatModel(any())).thenReturn(chatModel);
         ModelConfigDTO fallbackModelConfig = new ModelConfigDTO();

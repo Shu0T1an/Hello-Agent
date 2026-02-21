@@ -43,6 +43,7 @@ class SessionManagementTest {
         MessageConversionService mockMessageConversionService = mock(MessageConversionService.class);
         AgentRegistry mockAgentRegistry = mock(AgentRegistry.class);
         AgentResponseBuilder mockResponseBuilder = mock(AgentResponseBuilder.class);
+        SubAgentProgressBus mockSubAgentProgressBus = mock(SubAgentProgressBus.class);
 
         // 设置 mock 配置行为
         when(mockConfig.getTimeout()).thenReturn(java.time.Duration.ofSeconds(300));
@@ -52,7 +53,7 @@ class SessionManagementTest {
         when(mockConfig.isDebugMode()).thenReturn(false);
 
         service = new AgentExecutionService(mockAgentRegistry, mockSessionService, mockCheckpointManager,
-                mockConfig, mockMessageConversionService, mockResponseBuilder);
+                mockConfig, mockMessageConversionService, mockResponseBuilder, mockSubAgentProgressBus);
         mockGraph = mock(CompiledGraph.class);
 
         // 设置 AgentRegistry mock 行为

@@ -46,6 +46,7 @@ agent:
     include-general-purpose-subagent: true
     max-iterations: 25
     stream-enabled: true
+    max-parallel-subagents: 3
 # MCP 绠＄悊鍣ㄩ厤缃?
 mcp:
   manager:

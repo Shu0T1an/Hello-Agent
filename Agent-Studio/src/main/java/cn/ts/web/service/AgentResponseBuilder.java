@@ -4,15 +4,19 @@ import cn.ts.agent.constant.EventConstants;
 import cn.ts.agent.constant.StateKeys;
 import cn.ts.graph.*;
 import cn.ts.graph.constant.GraphConstants;
+import cn.ts.graph.state.State;
 import cn.ts.web.constant.ApiConstants;
 import cn.ts.web.dto.AgentResponse;
+import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.metadata.Usage;
+import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -39,6 +43,10 @@ public class AgentResponseBuilder {
             StateKeys.TODOS,
             StateKeys.TODOS_META
     );
+    private static final String THINK = "think";
+    private static final String THINK_DELTA = "think_delta";
+    private static final String REASONING_CONTENT = "reasoningContent";
+    private static final String REASONING_CONTENT_SNAKE = "reasoning_content";
 
     private final MessageConversionService messageConversionService;
 
@@ -245,17 +253,31 @@ public class AgentResponseBuilder {
             StreamingOutput<?> streamingOutput,
             Map<String, Object> metadata) {
 
+        metadata.put("outputType", streamingOutput.getOutputType().toString());
         String chunk = streamingOutput.getChunk();
         if (chunk != null && !chunk.isEmpty()) {
             builder.message(chunk);
             metadata.put("chunk", chunk);
-            metadata.put("outputType", streamingOutput.getOutputType().toString());
+        }
 
-            // 如果有完整的原始数据且可序列化，也保存
-            Object originData = streamingOutput.getOriginData();
-            if (originData != null && isSerializable(originData)) {
-                metadata.put("originData", originData);
-            }
+        // 如果有完整的原始数据且可序列化，也保存
+        Object originData = streamingOutput.getOriginData();
+        if (originData != null && isSerializable(originData)) {
+            metadata.put("originData", originData);
+        }
+
+        Optional<String> thinkingDelta = extractThinkingFromOriginData(originData);
+        thinkingDelta.ifPresent(value -> {
+            metadata.put(THINK_DELTA, value);
+            putThinkingAliases(metadata, value);
+        });
+
+        if (streamingOutput.getOutputType() == OutputType.COMPLETE) {
+            extractThinkingFromState(streamingOutput.getState())
+                    .ifPresent(value -> {
+                        metadata.put(THINK, value);
+                        putThinkingAliases(metadata, value);
+                    });
         }
     }
 
@@ -405,5 +427,54 @@ public class AgentResponseBuilder {
             return true;
         }
         return false;
+    }
+
+    private Optional<String> extractThinkingFromOriginData(Object originData) {
+        if (!(originData instanceof ChatResponse chatResponse)) {
+            return Optional.empty();
+        }
+        if (chatResponse.getResult() == null || chatResponse.getResult().getOutput() == null) {
+            return Optional.empty();
+        }
+        Map<String, Object> metadata = chatResponse.getResult().getOutput().getMetadata();
+        return extractThinkingFromMetadata(metadata);
+    }
+
+    private Optional<String> extractThinkingFromState(State state) {
+        if (state == null) {
+            return Optional.empty();
+        }
+        List<?> messages = state.<List<?>>value(StateKeys.MESSAGES).orElse(List.of());
+        if (messages.isEmpty()) {
+            return Optional.empty();
+        }
+        Object last = messages.get(messages.size() - 1);
+        if (!(last instanceof AssistantMessage assistantMessage)) {
+            return Optional.empty();
+        }
+        return extractThinkingFromMetadata(assistantMessage.getMetadata());
+    }
+
+    private Optional<String> extractThinkingFromMetadata(Map<String, Object> metadata) {
+        if (metadata == null || metadata.isEmpty()) {
+            return Optional.empty();
+        }
+        return normalizeText(metadata.get(THINK))
+                .or(() -> normalizeText(metadata.get(REASONING_CONTENT)))
+                .or(() -> normalizeText(metadata.get(REASONING_CONTENT_SNAKE)));
+    }
+
+    private Optional<String> normalizeText(Object value) {
+        if (value == null) {
+            return Optional.empty();
+        }
+        String text = value.toString();
+        return text.isEmpty() ? Optional.empty() : Optional.of(text);
+    }
+
+    private void putThinkingAliases(Map<String, Object> metadata, String value) {
+        metadata.put(THINK, value);
+        metadata.put(REASONING_CONTENT, value);
+        metadata.put(REASONING_CONTENT_SNAKE, value);
     }
 }

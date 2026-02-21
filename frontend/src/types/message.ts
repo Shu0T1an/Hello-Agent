@@ -38,6 +38,7 @@ export interface Message {
   id: string
   role: MessageRole
   content: string
+  thinkingContent?: string
   timestamp: string
   status?: MessageStatus
   avatar?: string
@@ -46,6 +47,7 @@ export interface Message {
     tool_calls?: ToolCall[]
     tool_responses?: ToolResponse[]
     citations?: CitationReference[]
+    hide_thinking?: boolean
   }
   interruptionData?: {
     message: string

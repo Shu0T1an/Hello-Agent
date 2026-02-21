@@ -3,6 +3,8 @@
 /* Markdown 内容基础样式 */
 .prose {
   line-height: 1.7;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* 内联代码样式 */
@@ -10,6 +12,8 @@
   @apply bg-gray-100 dark:bg-gray-800;
   @apply text-pink-600 dark:text-pink-400;
   @apply px-1.5 py-0.5 rounded text-sm font-mono;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* 列表样式 */
@@ -23,6 +27,19 @@
 
 .prose li {
   @apply my-1;
+}
+
+.prose p,
+.prose li,
+.prose a {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.prose pre {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 /* 引用样式 */

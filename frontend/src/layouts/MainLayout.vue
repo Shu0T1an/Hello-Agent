@@ -19,7 +19,7 @@
     </Transition>
 
     <main class="shell-main">
-      <div class="mobile-header lg:hidden">
+      <div class="mobile-header">
         <button
           @click="toggleMobileMenu"
           class="mobile-header-btn"
@@ -207,7 +207,7 @@ onMounted(async () => {
 }
 
 .mobile-header {
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid var(--line-subtle);
@@ -304,6 +304,10 @@ onMounted(async () => {
 }
 
 @media (max-width: 1024px) {
+  .mobile-header {
+    display: flex;
+  }
+
   .editorial-nav {
     grid-template-columns: 1fr;
     gap: 0.8rem;

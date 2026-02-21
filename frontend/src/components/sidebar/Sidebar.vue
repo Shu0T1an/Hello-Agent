@@ -1,5 +1,5 @@
 <template>
-  <div class="sidebar-container">
+  <div class="sidebar-container" :class="{ collapsed }">
     <!-- 折叠按钮 -->
     <button
       v-if="!collapsed"
@@ -83,6 +83,10 @@ function handleToggle() {
   position: relative;
 }
 
+.sidebar-container.collapsed {
+  padding: 12px 8px;
+}
+
 [data-theme="dark"] .sidebar-container {
   background: transparent;
 }
@@ -121,6 +125,10 @@ function handleToggle() {
 .sidebar-sessions {
   flex: 1;
   overflow: hidden;
+}
+
+.sidebar-container.collapsed .sidebar-sessions {
+  margin-top: 40px;
 }
 
 .collapse-btn {

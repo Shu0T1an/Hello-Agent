@@ -199,6 +199,7 @@ public final class ApiConstants {
          * 自定义节点类型
          */
         public static final String CUSTOM = "custom";
+        public static final String SUBAGENT = "subagent";
 
         private NodeTypes() {
             // 防止实例化

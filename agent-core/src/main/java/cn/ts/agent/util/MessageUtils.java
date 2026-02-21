@@ -22,37 +22,27 @@ import java.util.Map;
  */
 public final class MessageUtils {
 
+    private static final String THINK = "think";
+    private static final String THINK_DELTA = "think_delta";
+    private static final String REASONING_CONTENT = "reasoningContent";
+    private static final String REASONING_CONTENT_SNAKE = "reasoning_content";
+
     private MessageUtils() {
         // 防止实例化
     }
 
     /**
      * Message 路由器
-     * <p>
-     * 用于判断 Message 的类型并返回对应的路由目标
-     * </p>
      */
     public static final class MessageRouter {
 
         /**
          * 从 LLM 节点路由
-         * <p>
-         * 根据最后一条消息决定下一个节点：
-         * - 有 toolCalls → 工具节点
-         * - 是 ToolResponseMessage → LLM 节点（继续循环）
-         * - 其他 → 结束节点
-         * </p>
-         *
-         * @param messages 消息列表
-         * @param toolNodeName 工具节点名称
-         * @param modelNodeName 模型节点名称
-         * @param endNodeName 结束节点名称
-         * @return 下一个节点名称
          */
         public static String routeFromModel(List<Message> messages,
-                                           String toolNodeName,
-                                           String modelNodeName,
-                                           String endNodeName) {
+                                            String toolNodeName,
+                                            String modelNodeName,
+                                            String endNodeName) {
             if (messages == null || messages.isEmpty()) {
                 return endNodeName;
             }
@@ -60,7 +50,8 @@ public final class MessageUtils {
             Message last = messages.get(messages.size() - 1);
             if (isAssistantWithToolCalls(last)) {
                 return toolNodeName;
-            } else if (isToolResponse(last)) {
+            }
+            if (isToolResponse(last)) {
                 return modelNodeName;
             }
             return endNodeName;
@@ -87,17 +78,11 @@ public final class MessageUtils {
 
     /**
      * Message 类型提取器
-     * <p>
-     * 从 Message 对象提取角色、内容和元数据
-     * </p>
      */
     public static final class MessageExtractor {
 
         /**
          * 从 Message 对象提取角色
-         *
-         * @param message 消息对象
-         * @return 角色字符串
          */
         public static String extractRole(Message message) {
             if (message instanceof UserMessage) {
@@ -115,14 +100,11 @@ public final class MessageUtils {
             if (message instanceof SystemMessage) {
                 return AgentConstants.MessageRoles.SYSTEM;
             }
-            return AgentConstants.MessageRoles.USER; // 默认
+            return AgentConstants.MessageRoles.USER;
         }
 
         /**
          * 从 Message 对象提取内容
-         *
-         * @param message 消息对象
-         * @return 内容字符串
          */
         public static String extractContent(Message message) {
             if (message instanceof UserMessage userMessage) {
@@ -145,12 +127,6 @@ public final class MessageUtils {
 
         /**
          * 从 Message 对象提取元数据
-         * <p>
-         * 为前端提供结构化的工具调用和响应数据
-         * </p>
-         *
-         * @param message 消息对象
-         * @return 元数据 Map
          */
         public static Map<String, Object> extractMetadata(Message message) {
             Map<String, Object> metadata = new HashMap<>();
@@ -160,6 +136,8 @@ public final class MessageUtils {
             }
 
             if (message instanceof AssistantMessage assistantMessage) {
+                mergeThinkingMetadata(assistantMessage.getMetadata(), metadata);
+
                 if (assistantMessage.hasToolCalls()) {
                     List<Map<String, Object>> toolCallsList = new ArrayList<>();
                     for (AssistantMessage.ToolCall toolCall : assistantMessage.getToolCalls()) {
@@ -191,30 +169,45 @@ public final class MessageUtils {
             return metadata;
         }
 
-        /**
-         * 格式化工具调用信息
-         */
+        private static void mergeThinkingMetadata(Map<String, Object> source, Map<String, Object> target) {
+            if (source == null || source.isEmpty()) {
+                return;
+            }
+            copyIfPresent(source, target, THINK);
+            copyIfPresent(source, target, THINK_DELTA);
+            copyIfPresent(source, target, REASONING_CONTENT);
+            copyIfPresent(source, target, REASONING_CONTENT_SNAKE);
+        }
+
+        private static void copyIfPresent(Map<String, Object> source, Map<String, Object> target, String key) {
+            Object value = source.get(key);
+            if (value != null) {
+                target.put(key, value.toString());
+            }
+        }
+
         private static String formatToolCalls(List<AssistantMessage.ToolCall> toolCalls) {
             StringBuilder sb = new StringBuilder();
             for (AssistantMessage.ToolCall toolCall : toolCalls) {
-                String name = toolCall.name();
-                String arguments = toolCall.arguments();
-                sb.append("**调用工具**: `").append(name).append("`\n\n");
-                sb.append("**参数**: ```json\n").append(arguments).append("\n```\n");
+                sb.append("**调用工具**: `")
+                        .append(toolCall.name())
+                        .append("`\n\n");
+                sb.append("**参数**: ```json\n")
+                        .append(toolCall.arguments())
+                        .append("\n```\n");
             }
             return sb.toString();
         }
 
-        /**
-         * 格式化工具响应信息
-         */
         private static String formatToolResponses(List<ToolResponseMessage.ToolResponse> responses) {
             StringBuilder sb = new StringBuilder();
             for (ToolResponseMessage.ToolResponse response : responses) {
-                String name = response.name();
-                String result = response.responseData();
-                sb.append("**工具结果**: `").append(name).append("` \n\n");
-                sb.append("**返回值**: ```\n").append(result).append("\n```\n");
+                sb.append("**工具结果**: `")
+                        .append(response.name())
+                        .append("` \n\n");
+                sb.append("**返回值**: ```\n")
+                        .append(response.responseData())
+                        .append("\n```\n");
             }
             return sb.toString();
         }
@@ -226,49 +219,34 @@ public final class MessageUtils {
 
     /**
      * Message 构建器
-     * <p>
-     * 用于构建各种类型的 Message
-     * </p>
      */
     public static final class MessageBuilder {
 
-        /**
-         * 创建用户消息
-         */
         public static UserMessage createUserMessage(String content) {
             return new UserMessage(content);
         }
 
-        /**
-         * 创建系统消息
-         */
         public static SystemMessage createSystemMessage(String content) {
             return new SystemMessage(content);
         }
 
-        /**
-         * 创建助手消息
-         */
         public static AssistantMessage createAssistantMessage(String content) {
             return new AssistantMessage(content);
         }
 
-        /**
-         * 创建带有工具调用的助手消息
-         */
         public static AssistantMessage createAssistantMessage(String content,
-                                                               List<AssistantMessage.ToolCall> toolCalls) {
-            // Spring AI 的 AssistantMessage 构造函数可能不同，这里提供一个简单的实现
-            // 如果需要支持工具调用，请使用其他方式创建消息
-            return new AssistantMessage(content, null, toolCalls);
+                                                              List<AssistantMessage.ToolCall> toolCalls) {
+            return AssistantMessage.builder()
+                    .content(content)
+                    .toolCalls(toolCalls != null ? toolCalls : List.of())
+                    .build();
         }
 
-        /**
-         * 创建工具响应消息
-         */
         public static ToolResponseMessage createToolResponseMessage(
                 List<ToolResponseMessage.ToolResponse> responses) {
-            return new ToolResponseMessage(responses);
+            return ToolResponseMessage.builder()
+                    .responses(responses != null ? responses : List.of())
+                    .build();
         }
 
         private MessageBuilder() {
@@ -276,3 +254,4 @@ public final class MessageUtils {
         }
     }
 }
+

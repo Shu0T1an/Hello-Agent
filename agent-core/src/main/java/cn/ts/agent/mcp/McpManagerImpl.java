@@ -13,6 +13,7 @@ import io.modelcontextprotocol.client.McpSyncClient;
 import io.modelcontextprotocol.client.transport.HttpClientSseClientTransport;
 import io.modelcontextprotocol.client.transport.ServerParameters;
 import io.modelcontextprotocol.client.transport.StdioClientTransport;
+import io.modelcontextprotocol.json.jackson.JacksonMcpJsonMapper;
 import io.modelcontextprotocol.spec.McpClientTransport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -384,7 +385,7 @@ public class McpManagerImpl implements McpManager {
                         .args(config.getStdioConfig().getArgs())
                         .env(config.getStdioConfig().getEnv())
                         .build();
-                McpClientTransport transport = new StdioClientTransport(params, objectMapper);
+                McpClientTransport transport = new StdioClientTransport(params, new JacksonMcpJsonMapper(objectMapper));
                 yield McpClient.sync(transport).build();
             }
 
@@ -400,7 +401,7 @@ public class McpManagerImpl implements McpManager {
                     logger.info("创建 SSE 客户端，URL: {}", url);
                     // 使用 Builder 方式创建 SSE 传输层
                     McpClientTransport transport = HttpClientSseClientTransport.builder(url)
-                            .objectMapper(objectMapper)
+                            .jsonMapper(new JacksonMcpJsonMapper(objectMapper))
                             .build();
                     McpSyncClient client = McpClient.sync(transport).build();
                     logger.info("SSE 客户端创建成功");

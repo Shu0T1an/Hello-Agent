@@ -195,7 +195,11 @@ public class MessageJsonModule extends SimpleModule {
                 }
             }
 
-            return new AssistantMessage(content, metadata, toolCalls);
+            return  AssistantMessage.builder()
+                        .content(content)
+                        .properties(metadata)
+                        .toolCalls(toolCalls)
+                        .build();
         }
 
         /**
@@ -239,7 +243,10 @@ public class MessageJsonModule extends SimpleModule {
                 }
             }
 
-            return new ToolResponseMessage(responses, metadata);
+            return   ToolResponseMessage.builder()
+                        .responses(responses)
+                        .metadata(metadata)
+                        .build();
         }
 
         /**

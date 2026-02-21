@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+﻿import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import type { Message, ChatSession, Strategy, MessageAttachment, CitationReference, MessageRole } from '@/types/message'
 import { useAgentStore } from './agent'
@@ -8,11 +8,11 @@ import { API_BASE, DEFAULT_SESSION_TITLE } from '@/utils/constants'
 import { formatTimestamp, generateSessionId } from '@/utils/helpers'
 import { uploadTemporaryFiles, type TemporaryFileContent } from '@/api/file'
 
-// SSE 事件数据类型（与后端 AgentResponse 一致）
+// SSE 浜嬩欢鏁版嵁绫诲瀷锛堜笌鍚庣 AgentResponse 涓€鑷达級
 interface AgentEvent {
   eventType: string
   nodeId?: string
-  nodeType?: string  // 'llm' | 'tool' | 'custom'
+  nodeType?: string  // 'llm' | 'tool' | 'custom' | 'subagent'
   stateData?: Record<string, unknown> & {
     todos?: unknown
     todos_meta?: unknown
@@ -45,16 +45,16 @@ interface AgentEvent {
   executionId?: string
   error?: string
   metadata?: Record<string, unknown>
-  // 节点状态相关字段
+  // 鑺傜偣鐘舵€佺浉鍏冲瓧娈?
   nodeStatus?: string           // 'starting' | 'running' | 'completed' | 'failed'
-  title?: string                // 节点标题
-  startTime?: string             // 开始时间 (ISO 8601)
-  endTime?: string               // 结束时间 (ISO 8601)
-  logs?: string[]                // 日志列表
-  nodeErrorMessage?: string      // 节点错误信息
+  title?: string                // 鑺傜偣鏍囬
+  startTime?: string             // 寮€濮嬫椂闂?(ISO 8601)
+  endTime?: string               // 缁撴潫鏃堕棿 (ISO 8601)
+  logs?: string[]                // 鏃ュ織鍒楄〃
+  nodeErrorMessage?: string      // 鑺傜偣閿欒淇℃伅
 }
 
-// Agent 执行请求 DTO（与后端 AgentExecuteRequest 一致）
+// Agent 鎵ц璇锋眰 DTO锛堜笌鍚庣 AgentExecuteRequest 涓€鑷达級
 export interface AgentExecuteRequest {
   input?: string
   sessionId?: string
@@ -63,7 +63,7 @@ export interface AgentExecuteRequest {
   fileContents?: TemporaryFileContent[]
 }
 
-// 后端会话数据类型
+// 鍚庣浼氳瘽鏁版嵁绫诲瀷
 interface BackendSession {
   id: string
   title: string
@@ -85,6 +85,10 @@ interface BackendMessage {
   metadata?: {
     tool_calls?: Array<{ id: string; name: string; type: string; arguments: string }>
     tool_responses?: Array<{ id: string; name: string; response: string }>
+    think?: string
+    think_delta?: string
+    reasoningContent?: string
+    reasoning_content?: string
   }
 }
 
@@ -100,13 +104,38 @@ function isTodoToolName(name: unknown): boolean {
   return typeof name === 'string' && TODO_TOOL_NAMES.has(name)
 }
 
+function toNonEmptyString(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? value : undefined
+}
+
+function extractThinkingDelta(metadata?: Record<string, unknown>): string | undefined {
+  if (!metadata) return undefined
+  return toNonEmptyString(metadata.think_delta)
+    ?? toNonEmptyString(metadata.reasoningContent)
+    ?? toNonEmptyString(metadata.reasoning_content)
+}
+
+function extractFinalThinking(metadata?: Record<string, unknown>): string | undefined {
+  if (!metadata) return undefined
+  return toNonEmptyString(metadata.think)
+    ?? toNonEmptyString(metadata.reasoningContent)
+    ?? toNonEmptyString(metadata.reasoning_content)
+}
+
 // 后端消息转换为前端消息
 function backendMessageToFrontend(msg: BackendMessage): Message {
+  const thinkingContent = msg.metadata
+    ? extractFinalThinking(msg.metadata as Record<string, unknown>)
+    : undefined
+
   return {
     id: msg.id,
     role: msg.role as MessageRole,
     content: msg.content,
     timestamp: formatTimestamp(msg.timestamp),
+    thinkingContent,
     metadata: msg.metadata ? {
       tool_calls: msg.metadata.tool_calls,
       tool_responses: msg.metadata.tool_responses
@@ -114,7 +143,7 @@ function backendMessageToFrontend(msg: BackendMessage): Message {
   }
 }
 
-// 后端会话转换为前端会话
+// 鍚庣浼氳瘽杞崲涓哄墠绔細璇?
 function backendSessionToFrontend(session: BackendSession | BackendSessionDetail): ChatSession {
   const detail = session as BackendSessionDetail
   return {
@@ -126,7 +155,7 @@ function backendSessionToFrontend(session: BackendSession | BackendSessionDetail
   }
 }
 
-// 创建本地会话
+// 鍒涘缓鏈湴浼氳瘽
 function createLocalSession(): ChatSession {
   const now = new Date().toLocaleString('zh-CN')
   return {
@@ -139,16 +168,17 @@ function createLocalSession(): ChatSession {
 }
 
 export const useChatStore = defineStore('chat', () => {
-  // 状态
+  // 鐘舵€?
   const sessions = ref<ChatSession[]>([])
   const currentSessionId = ref<string>('')
   const currentStrategy = ref<Strategy>('deep-research')
   const isProcessing = ref<boolean>(false)
   const isLoading = ref<boolean>(false)
   const currentKnowledgeBaseId = ref<string>('')
+  const currentLlmMessageId = ref<string | null>(null)
   const todoStore = useTodoStore()
 
-  // 计算属性
+  // 璁＄畻灞炴€?
   const currentSession = computed(() => {
     return sessions.value.find(s => s.id === currentSessionId.value)
   })
@@ -157,21 +187,21 @@ export const useChatStore = defineStore('chat', () => {
     return currentSession.value?.messages || []
   })
 
-  // API 调用方法
+  // API 璋冪敤鏂规硶
   async function loadSessions() {
     try {
       isLoading.value = true
       const response = await fetch(`${API_BASE}/api/sessions`)
-      if (!response.ok) throw new Error('加载会话列表失败')
+      if (!response.ok) throw new Error('鍔犺浇浼氳瘽鍒楄〃澶辫触')
       const result: { code: number; message: string; data: BackendSession[] } = await response.json()
       const backendSessions = result.data || []
       sessions.value = backendSessions.map(backendSessionToFrontend)
 
-      // 如果没有会话，创建一个默认会话
+      // 濡傛灉娌℃湁浼氳瘽锛屽垱寤轰竴涓粯璁や細璇?
       if (sessions.value.length === 0) {
         await createNewSession()
       } else if (!currentSessionId.value) {
-        // 设置当前会话为第一个
+        // 璁剧疆褰撳墠浼氳瘽涓虹涓€涓?
         const firstSession = sessions.value[0]
         if (firstSession) {
           currentSessionId.value = firstSession.id
@@ -179,8 +209,8 @@ export const useChatStore = defineStore('chat', () => {
         }
       }
     } catch (error) {
-      console.error('加载会话列表失败:', error)
-      // 失败时创建默认会话
+      console.error('鍔犺浇浼氳瘽鍒楄〃澶辫触:', error)
+      // 澶辫触鏃跺垱寤洪粯璁や細璇?
       if (sessions.value.length === 0) {
         await createNewSession()
       }
@@ -192,11 +222,11 @@ export const useChatStore = defineStore('chat', () => {
   async function loadSessionDetail(sessionId: string) {
     try {
       const response = await fetch(`${API_BASE}/api/sessions/${sessionId}`)
-      if (!response.ok) throw new Error('加载会话详情失败')
+      if (!response.ok) throw new Error('鍔犺浇浼氳瘽璇︽儏澶辫触')
       const result: { code: number; message: string; data: BackendSessionDetail } = await response.json()
       const frontendSession = backendSessionToFrontend(result.data)
 
-      // 更新或添加会话
+      // 鏇存柊鎴栨坊鍔犱細璇?
       const index = sessions.value.findIndex(s => s.id === sessionId)
       if (index >= 0) {
         sessions.value[index] = frontendSession
@@ -204,7 +234,7 @@ export const useChatStore = defineStore('chat', () => {
         sessions.value.unshift(frontendSession)
       }
     } catch (error) {
-      console.error('加载会话详情失败:', error)
+      console.error('鍔犺浇浼氳瘽璇︽儏澶辫触:', error)
     }
   }
 
@@ -222,7 +252,7 @@ export const useChatStore = defineStore('chat', () => {
       })
 
       if (!response.ok) {
-        throw new Error('创建会话失败')
+        throw new Error('鍒涘缓浼氳瘽澶辫触')
       }
 
       const result: { code: number; message: string; data: BackendSessionDetail } = await response.json()
@@ -232,8 +262,8 @@ export const useChatStore = defineStore('chat', () => {
       todoStore.clearOnSessionReset()
       return newSession
     } catch (error) {
-      console.error('创建会话失败:', error)
-      // 降级：创建本地会话
+      console.error('鍒涘缓浼氳瘽澶辫触:', error)
+      // 闄嶇骇锛氬垱寤烘湰鍦颁細璇?
       const newSession = createLocalSession()
       sessions.value.unshift(newSession)
       currentSessionId.value = newSession.id
@@ -243,7 +273,7 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   async function deleteSession(sessionId: string) {
-    // 删除会话的通用逻辑
+    // 鍒犻櫎浼氳瘽鐨勯€氱敤閫昏緫
     function removeSession() {
       const index = sessions.value.findIndex(s => s.id === sessionId)
       if (index > -1) {
@@ -260,13 +290,13 @@ export const useChatStore = defineStore('chat', () => {
       })
 
       if (!response.ok) {
-        throw new Error('删除会话失败')
+        throw new Error('鍒犻櫎浼氳瘽澶辫触')
       }
 
       removeSession()
     } catch (error) {
-      console.error('删除会话失败:', error)
-      // 降级：仅删除本地会话
+      console.error('鍒犻櫎浼氳瘽澶辫触:', error)
+      // 闄嶇骇锛氫粎鍒犻櫎鏈湴浼氳瘽
       removeSession()
     }
   }
@@ -283,16 +313,16 @@ export const useChatStore = defineStore('chat', () => {
 
       const result: { code: number; message: string; data?: { count: number } } = await response.json()
 
-      // 清空会话列表
+      // 娓呯┖浼氳瘽鍒楄〃
       sessions.value = []
       currentSessionId.value = ''
-      // 创建默认会话
+      // 鍒涘缓榛樿浼氳瘽
       await createNewSession()
 
       return result.data?.count ?? 0
     } catch (error) {
-      console.error('删除所有会话失败:', error)
-      // 即使 API 调用失败，也清空本地会话列表并创建默认会话
+      console.error('鍒犻櫎鎵€鏈変細璇濆け璐?', error)
+      // 鍗充娇 API 璋冪敤澶辫触锛屼篃娓呯┖鏈湴浼氳瘽鍒楄〃骞跺垱寤洪粯璁や細璇?
       sessions.value = []
       currentSessionId.value = ''
       await createNewSession()
@@ -303,18 +333,18 @@ export const useChatStore = defineStore('chat', () => {
   function switchSession(sessionId: string) {
     currentSessionId.value = sessionId
     todoStore.clearOnSessionReset()
-    // 从后端加载会话详情
+    // 浠庡悗绔姞杞戒細璇濊鎯?
     loadSessionDetail(sessionId)
   }
 
-  // 发送消息
+  // 鍙戦€佹秷鎭?
   async function sendMessage(content: string, files?: File[]) {
     if ((!content.trim() && !files?.length) || isProcessing.value) return
 
     const agentStore = useAgentStore()
     const agentTimelineStore = useAgentTimelineStore()
 
-    // 上传文件（如果有）
+    // 涓婁紶鏂囦欢锛堝鏋滄湁锛?
     let fileContents: TemporaryFileContent[] | null = null
     let attachments: MessageAttachment[] | undefined
 
@@ -328,15 +358,15 @@ export const useChatStore = defineStore('chat', () => {
           fileSize: f.size,
           fileType: f.type
         }))
-        console.log('文件上传成功:', response.summary)
+        console.log('鏂囦欢涓婁紶鎴愬姛:', response.summary)
       } catch (error) {
-        console.error('文件上传失败:', error)
-        alert('文件上传失败: ' + (error as Error).message)
+        console.error('鏂囦欢涓婁紶澶辫触:', error)
+        alert('鏂囦欢涓婁紶澶辫触: ' + (error as Error).message)
         return
       }
     }
 
-    // 创建用户消息
+    // 鍒涘缓鐢ㄦ埛娑堟伅
     const userMessage: Message = {
       id: `${Date.now()}`,
       role: 'user',
@@ -345,29 +375,21 @@ export const useChatStore = defineStore('chat', () => {
       attachments
     }
 
-    // 创建 AI 消息占位符
-    const aiMessage: Message = {
-      id: `${Date.now() + 1}`,
-      role: 'assistant',
-      content: '',
-      timestamp: new Date().toLocaleString('zh-CN'),
-      status: 'thinking'
-    }
-
-    // 添加消息到当前会话
+    // 娣诲姞娑堟伅鍒板綋鍓嶄細璇?
     if (currentSession.value) {
-      currentSession.value.messages.push(userMessage, aiMessage)
+      currentSession.value.messages.push(userMessage)
       currentSession.value.updatedAt = new Date().toLocaleString('zh-CN')
     }
+    currentLlmMessageId.value = null
 
-    // 创建 AbortController 用于取消请求
+    // 鍒涘缓 AbortController 鐢ㄤ簬鍙栨秷璇锋眰
     const controller = new AbortController()
     isProcessing.value = true
 
     const request: AgentExecuteRequest = {
       input: content,
       sessionId: currentSessionId.value || undefined,
-      timeout: undefined, // 使用默认超时
+      timeout: undefined, // 浣跨敤榛樿瓒呮椂
       initialState: currentKnowledgeBaseId.value ? { knowledgeBaseId: currentKnowledgeBaseId.value } : undefined,
       fileContents: fileContents || undefined
     }
@@ -376,7 +398,7 @@ export const useChatStore = defineStore('chat', () => {
     console.log('POST URL:', url)
 
     try {
-      // 使用 fetch 发送 POST 请求，绑定 AbortSignal
+      // 浣跨敤 fetch 鍙戦€?POST 璇锋眰锛岀粦瀹?AbortSignal
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -390,21 +412,21 @@ export const useChatStore = defineStore('chat', () => {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      // 从响应体读取 SSE 流
+      // 浠庡搷搴斾綋璇诲彇 SSE 娴?
       const reader = response.body?.getReader()
       const decoder = new TextDecoder()
       let buffer = ''
 
       if (!reader) {
-        throw new Error('无法获取响应流')
+        throw new Error('Failed to read streaming response')
       }
 
-      // 读取流
+      // 璇诲彇娴?
       while (true) {
         const { done, value } = await reader.read()
         console.log('[read] done:', done, 'value length:', value?.length)
 
-        // 解码数据（包括最后一次）
+        // 瑙ｇ爜鏁版嵁锛堝寘鎷渶鍚庝竴娆★級
         if (value) {
           const decoded = decoder.decode(value, { stream: true })
           console.log('[read] decoded:', decoded)
@@ -414,26 +436,26 @@ export const useChatStore = defineStore('chat', () => {
         console.log('[read] current buffer length:', buffer.length, 'content:', buffer.substring(0, 200))
 
         if (done) {
-          console.log('=== SSE 流读取完成 ===')
-          console.log('=== 最终 buffer length:', buffer.length, 'content:', buffer)
-          // 流结束时，处理 buffer 中的剩余数据
+          console.log('=== SSE 娴佽鍙栧畬鎴?===')
+          console.log('=== 鏈€缁?buffer length:', buffer.length, 'content:', buffer)
+          // 娴佺粨鏉熸椂锛屽鐞?buffer 涓殑鍓╀綑鏁版嵁
           if (buffer.trim()) {
-            console.log('=== 处理 buffer 中的剩余数据 ===')
-            processSSEBuffer(buffer, aiMessage, agentTimelineStore, controller)
+            console.log('=== 澶勭悊 buffer 涓殑鍓╀綑鏁版嵁 ===')
+            processSSEBuffer(buffer, agentTimelineStore, controller)
             buffer = ''
           } else {
-            console.log('=== buffer 为空，没有数据可处理 ===')
+            console.log('=== buffer 涓虹┖锛屾病鏈夋暟鎹彲澶勭悊 ===')
           }
           break
         }
 
-        // 使用 \n\n 分隔符（SSE 标准）处理粘包
+        // 浣跨敤 \n\n 鍒嗛殧绗︼紙SSE 鏍囧噯锛夊鐞嗙矘鍖?
         let parts = buffer.split('\n\n')
         buffer = parts.pop() || ''
 
         for (const eventBlock of parts) {
-          // SSE 事件块可能包含多行（id: xxx\ndata: {...}）
-          // 逐行查找 data: 开头的行
+          // SSE 浜嬩欢鍧楀彲鑳藉寘鍚琛岋紙id: xxx\ndata: {...}锛?
+          // 閫愯鏌ユ壘 data: 寮€澶寸殑琛?
           const lines = eventBlock.split('\n')
           for (const line of lines) {
             const trimmedLine = line.trim()
@@ -446,12 +468,12 @@ export const useChatStore = defineStore('chat', () => {
               const data: AgentEvent = JSON.parse(jsonStr)
               console.log(`[SSE] ${data.eventType} | ${data.nodeId || 'N/A'}`)
 
-              // 直接传入解析好的数据，无需 mock EventSource
-              handleSSEMessage(data, aiMessage, agentTimelineStore, controller, () => {
+              // 鐩存帴浼犲叆瑙ｆ瀽濂界殑鏁版嵁锛屾棤闇€ mock EventSource
+              handleSSEMessage(data, agentTimelineStore, controller, () => {
                 isProcessing.value = false
               })
             } catch (error) {
-              console.error('解析 SSE 数据失败:', error, jsonStr)
+              console.error('瑙ｆ瀽 SSE 鏁版嵁澶辫触:', error, jsonStr)
             }
           }
         }
@@ -460,25 +482,24 @@ export const useChatStore = defineStore('chat', () => {
       if (error.name === 'AbortError') {
         console.log('Fetch aborted')
       } else {
-        console.error('SSE 连接错误:', error)
-        handleSSEError(aiMessage)
+        console.error('SSE 杩炴帴閿欒:', error)
+        handleSSEError()
       }
     } finally {
       isProcessing.value = false
     }
   }
 
-  // 处理 buffer 中的剩余数据
+  // 澶勭悊 buffer 涓殑鍓╀綑鏁版嵁
   function processSSEBuffer(
     buffer: string,
-    aiMessage: Message,
     agentTimelineStore: ReturnType<typeof useAgentTimelineStore>,
     controller: AbortController
   ) {
-    // 使用 \n\n 分隔符处理事件块
+    // 浣跨敤 \n\n 鍒嗛殧绗﹀鐞嗕簨浠跺潡
     const eventBlocks = buffer.split('\n\n')
     for (const eventBlock of eventBlocks) {
-      // 逐行查找 data: 开头的行
+      // 閫愯鏌ユ壘 data: 寮€澶寸殑琛?
       const lines = eventBlock.split('\n')
       for (const line of lines) {
         const trimmedLine = line.trim()
@@ -489,28 +510,27 @@ export const useChatStore = defineStore('chat', () => {
 
         try {
           const data: AgentEvent = JSON.parse(jsonStr)
-          console.log(`[SSE] 最后处理 ${data.eventType} | ${data.nodeId || 'N/A'}`)
-          handleSSEMessage(data, aiMessage, agentTimelineStore, controller, () => {
+          console.log(`[SSE] 鏈€鍚庡鐞?${data.eventType} | ${data.nodeId || 'N/A'}`)
+          handleSSEMessage(data, agentTimelineStore, controller, () => {
             isProcessing.value = false
           })
         } catch (error) {
-          console.error('解析 buffer SSE 数据失败:', error, jsonStr)
+          console.error('瑙ｆ瀽 buffer SSE 鏁版嵁澶辫触:', error, jsonStr)
         }
       }
     }
   }
 
-  // 处理 SSE 消息事件
+  // 澶勭悊 SSE 娑堟伅浜嬩欢
   function handleSSEMessage(
     data: AgentEvent,
-    aiMessage: Message,
     agentTimelineStore: ReturnType<typeof useAgentTimelineStore>,
     abortController: AbortController,
     onComplete: () => void
   ) {
-    console.log('收到事件:', data.eventType, data)
+    console.log('鏀跺埌浜嬩欢:', data.eventType, data)
 
-    // 添加到时间线
+    // 娣诲姞鍒版椂闂寸嚎
     const syncedTodoState = todoStore.syncFromStateData(data.stateData, `${data.eventType}:${data.nodeId || 'unknown'}`)
     if (syncedTodoState) {
       todoStore.markTodoToolSeen('state_data')
@@ -522,6 +542,7 @@ export const useChatStore = defineStore('chat', () => {
       stateData: (data.stateData || {}) as any,
       message: data.message,
       timestamp: data.timestamp || new Date().toISOString(),
+      metadata: data.metadata as any,
       title: data.title,
       startTime: data.startTime,
       endTime: data.endTime,
@@ -529,13 +550,25 @@ export const useChatStore = defineStore('chat', () => {
       logs: data.logs
     })
 
-    // 检测并添加工具调用消息到聊天框
+    if (data.nodeType === 'llm' && data.eventType === 'starting') {
+      const newLlmMessage: Message = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        role: 'assistant',
+        content: '',
+        timestamp: new Date().toLocaleString('zh-CN'),
+        status: 'thinking'
+      }
+      currentSession.value?.messages.push(newLlmMessage)
+      currentLlmMessageId.value = newLlmMessage.id
+    }
+
+    // 妫€娴嬪苟娣诲姞宸ュ叿璋冪敤娑堟伅鍒拌亰澶╂
     handleToolCallMessage(data)
 
-    // 检测并添加工具执行消息到聊天框
+    // 妫€娴嬪苟娣诲姞宸ュ叿鎵ц娑堟伅鍒拌亰澶╂
     handleToolExecutionMessage(data)
 
-    // 处理标题生成事件
+    // 澶勭悊鏍囬鐢熸垚浜嬩欢
     if (data.eventType === 'TITLE_GENERATED' && data.metadata?.title) {
       const session = sessions.value.find(s => s.id === currentSessionId.value)
       if (session) {
@@ -543,18 +576,18 @@ export const useChatStore = defineStore('chat', () => {
       }
     }
 
-    // 处理中断事件（HILP - 人工在环）
+    // 澶勭悊涓柇浜嬩欢锛圚ILP - 浜哄伐鍦ㄧ幆锛?
     if (data.eventType === 'INTERRUPTION') {
-      console.log('[INTERRUPTION] 收到中断事件:', data)
-      // 停止流处理
+      console.log('[INTERRUPTION] 鏀跺埌涓柇浜嬩欢:', data)
+      // 鍋滄娴佸鐞?
       abortController.abort()
-      // 将消息状态设置为等待审批
-      const msgIndex = currentSession.value?.messages.findIndex(m => m.id === aiMessage.id)
+      // 灏嗘秷鎭姸鎬佽缃负绛夊緟瀹℃壒
+      const msgIndex = findActiveAssistantMessageIndex()
       if (msgIndex !== undefined && msgIndex >= 0 && currentSession.value) {
         const msg = currentSession.value.messages[msgIndex]
         if (msg) {
           msg.status = 'interrupted'
-          // 保存完整的审批数据
+          // 淇濆瓨瀹屾暣鐨勫鎵规暟鎹?
           const toolFeedbacks = data.stateData?.interruption?.metadata?.customData?.tool_feedbacks
           if (toolFeedbacks && toolFeedbacks.length > 0) {
             ;(msg as any).interruptionData = {
@@ -562,34 +595,36 @@ export const useChatStore = defineStore('chat', () => {
               tool_feedbacks: toolFeedbacks
             }
           }
-          // 保存检查点 ID 和 threadId 以便后续恢复
+          // 淇濆瓨妫€鏌ョ偣 ID 鍜?threadId 浠ヤ究鍚庣画鎭㈠
           if (data.stateData?.interruption?.checkpointId) {
             ;(msg as any).checkpointId = data.stateData.interruption.checkpointId
-            // 优先使用 threadId，如果没有则使用当前会话 ID
+            // 浼樺厛浣跨敤 threadId锛屽鏋滄病鏈夊垯浣跨敤褰撳墠浼氳瘽 ID
             ;(msg as any).threadId = data.stateData.interruption.threadId || currentSessionId.value
           }
         }
       }
       onComplete()
+      currentLlmMessageId.value = null
       return
     }
 
-    // 直接调用 updateAIMessage，无需再次解析
-    updateAIMessage(aiMessage, data, abortController, onComplete)
+    // 鐩存帴璋冪敤 updateAIMessage锛屾棤闇€鍐嶆瑙ｆ瀽
+    updateAIMessage(data, abortController, onComplete)
 
-    // 更新会话时间戳
+    // 鏇存柊浼氳瘽鏃堕棿鎴?
     if (currentSession.value) {
       currentSession.value.updatedAt = new Date().toLocaleString('zh-CN')
     }
   }
 
-  // 处理工具调用消息（Function Call）
+  // 澶勭悊宸ュ叿璋冪敤娑堟伅锛團unction Call锛?
   function handleToolCallMessage(data: AgentEvent) {
     // 只在 LLM 节点完成时处理
     if (data.nodeType !== 'llm' || data.eventType !== 'completed') return
 
     const toolCalls = data.stateData?.execution_record?.toolCalls
     if (!toolCalls || toolCalls.length === 0) return
+    const finalThinking = extractFinalThinking(data.metadata)
     if (toolCalls.some((tc: any) => isTodoToolName(tc?.name))) {
       todoStore.markTodoToolSeen('tool_call')
     }
@@ -606,6 +641,7 @@ export const useChatStore = defineStore('chat', () => {
       id: `tool-call-${Date.now()}-${toolCalls[0]?.id}`,
       role: 'tool_call',
       content: '',
+      thinkingContent: finalThinking,
       timestamp: new Date().toLocaleString('zh-CN'),
       status: 'completed',
       metadata: {
@@ -618,13 +654,75 @@ export const useChatStore = defineStore('chat', () => {
       }
     }
 
+    // Function call 卡片已承载 think，避免 assistant 重复展示
+    const activeAssistantIndex = findActiveAssistantMessageIndex()
+    if (activeAssistantIndex >= 0 && currentSession.value) {
+      const activeAssistant = currentSession.value.messages[activeAssistantIndex]
+      if (activeAssistant) {
+        activeAssistant.metadata = {
+          ...(activeAssistant.metadata || {}),
+          hide_thinking: true
+        }
+      }
+    }
+
     console.log('[handleToolCallMessage] 添加工具调用消息:', toolCallMessage)
     currentSession.value?.messages.push(toolCallMessage)
   }
 
-  // 处理工具执行消息（Tool Execution）
+  function findActiveAssistantMessageIndex(): number {
+    const session = currentSession.value
+    if (!session) return -1
+
+    if (currentLlmMessageId.value) {
+      const activeIndex = session.messages.findIndex(m =>
+        m.id === currentLlmMessageId.value && m.role === 'assistant'
+      )
+      if (activeIndex >= 0) {
+        return activeIndex
+      }
+    }
+
+    for (let i = session.messages.length - 1; i >= 0; i--) {
+      if (session.messages[i]?.role === 'assistant') {
+        return i
+      }
+    }
+    return -1
+  }
+
+  function ensureActiveAssistantMessage(data: AgentEvent): number {
+    const session = currentSession.value
+    if (!session) return -1
+
+    if (data.nodeType === 'llm' && (data.eventType === 'running' || data.eventType === 'completed' || data.eventType === 'failed')) {
+      const existingIndex = findActiveAssistantMessageIndex()
+      if (existingIndex >= 0) {
+        return existingIndex
+      }
+
+      const fallbackMessage: Message = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        role: 'assistant',
+        content: '',
+        timestamp: new Date().toLocaleString('zh-CN'),
+        status: 'thinking'
+      }
+      session.messages.push(fallbackMessage)
+      currentLlmMessageId.value = fallbackMessage.id
+      return session.messages.length - 1
+    }
+
+    if (data.eventType === 'GRAPH_COMPLETED' || data.eventType === 'failed') {
+      return findActiveAssistantMessageIndex()
+    }
+
+    return -1
+  }
+
+  // 澶勭悊宸ュ叿鎵ц娑堟伅锛圱ool Execution锛?
   function handleToolExecutionMessage(data: AgentEvent) {
-    // 检查是否是 tool 节点且已完成
+    // 妫€鏌ユ槸鍚︽槸 tool 鑺傜偣涓斿凡瀹屾垚
     if (data.nodeType !== 'tool' || data.eventType !== 'completed') return
 
     const executions = data.stateData?.execution_record?.executions
@@ -633,14 +731,14 @@ export const useChatStore = defineStore('chat', () => {
       todoStore.markTodoToolSeen('tool_execution')
     }
 
-    // 检查是否已经添加过这个工具执行消息
+    // 妫€鏌ユ槸鍚﹀凡缁忔坊鍔犺繃杩欎釜宸ュ叿鎵ц娑堟伅
     const existingMsg = currentSession.value?.messages.find(m =>
       m.role === 'tool_response' &&
       m.metadata?.tool_responses?.[0]?.id === executions[0]?.id
     )
     if (existingMsg) return
 
-    // 创建 tool_response 消息
+    // 鍒涘缓 tool_response 娑堟伅
     const toolResponseMessage: Message = {
       id: `tool-response-${Date.now()}-${executions[0]?.id}`,
       role: 'tool_response',
@@ -649,7 +747,7 @@ export const useChatStore = defineStore('chat', () => {
       status: 'completed',
       metadata: {
         tool_responses: executions.map((exec: any) => {
-          // 处理 result 字段 - 如果是对象则转换为 JSON 字符串
+          // 澶勭悊 result 瀛楁 - 濡傛灉鏄璞″垯杞崲涓?JSON 瀛楃涓?
           let resultStr = exec.result
           if (typeof exec.result === 'object' && exec.result !== null) {
             resultStr = JSON.stringify(exec.result, null, 2)
@@ -665,85 +763,98 @@ export const useChatStore = defineStore('chat', () => {
       }
     }
 
-    console.log('[handleToolExecutionMessage] 添加工具执行消息:', toolResponseMessage)
+    console.log('[handleToolExecutionMessage] 娣诲姞宸ュ叿鎵ц娑堟伅:', toolResponseMessage)
     currentSession.value?.messages.push(toolResponseMessage)
   }
 
-  // 更新 AI 消息状态
+  // 鏇存柊 AI 娑堟伅鐘舵€?
   function updateAIMessage(
-    aiMessage: Message,
     data: AgentEvent,
     abortController: AbortController,
     onComplete: () => void
   ) {
-    const msgIndex = currentSession.value?.messages.findIndex(m => m.id === aiMessage.id)
+    const msgIndex = ensureActiveAssistantMessage(data)
 
     if (msgIndex === undefined || msgIndex < 0 || !currentSession.value) {
-      console.warn('[updateAIMessage] 消息未找到:', aiMessage.id)
+      if (data.eventType === 'GRAPH_COMPLETED') {
+        onComplete()
+        currentLlmMessageId.value = null
+        abortController.abort()
+        return
+      }
+      console.warn('[updateAIMessage] 未找到可更新的 assistant 回合消息')
       return
     }
 
     const messages = currentSession.value.messages
 
-    // 验证消息存在
+    // 楠岃瘉娑堟伅瀛樺湪
     const initialMsg = messages[msgIndex]
     if (!initialMsg) {
-      console.warn('[updateAIMessage] 消息对象为空')
+      console.warn('[updateAIMessage] 娑堟伅瀵硅薄涓虹┖')
       return
     }
 
-    console.log(`[updateAIMessage] 处理事件: eventType=${data.eventType}`)
+    console.log(`[updateAIMessage] 澶勭悊浜嬩欢: eventType=${data.eventType}`)
 
     switch (data.eventType) {
       case 'running':
-        // 增量追加：流式输出 - 重新获取最新消息引用
+        // 增量追加：流式输出
         const currentMsg = messages[msgIndex]
-        console.log('[updateAIMessage] running - 当前消息:', currentMsg)
-        console.log('[updateAIMessage] running - 收到内容:', data.message)
-        if (data.message && currentMsg) {
+        console.log('[updateAIMessage] running - 褰撳墠娑堟伅:', currentMsg)
+        console.log('[updateAIMessage] running - 鏀跺埌鍐呭:', data.message)
+        if (currentMsg) {
+          const thinkDelta = extractThinkingDelta(data.metadata)
+          const updatedThinking = thinkDelta
+            ? `${currentMsg.thinkingContent ?? ''}${thinkDelta}`
+            : currentMsg.thinkingContent
+
           messages[msgIndex] = {
             ...currentMsg,
             id: currentMsg.id,
             role: currentMsg.role,
-            content: currentMsg.content + data.message,
+            content: currentMsg.content + (data.message ?? ''),
+            thinkingContent: updatedThinking,
             timestamp: currentMsg.timestamp,
             status: 'thinking'
           }
-          console.log('[updateAIMessage] running - 更新后:', messages[msgIndex])
+          console.log('[updateAIMessage] running - 鏇存柊鍚?', messages[msgIndex])
         }
         break
 
       case 'completed':
-        // 全量覆盖：仅 _AGENT_MODEL_ 节点 - 重新获取最新消息引用
+        // 全量覆盖：仅 _AGENT_MODEL_ 节点
         const completedMsg = messages[msgIndex]
-        if (data.nodeId === '_AGENT_MODEL_' && data.message && completedMsg) {
+        if (data.nodeId === '_AGENT_MODEL_' && completedMsg) {
           console.log('[updateAIMessage] completed - _AGENT_MODEL_')
           console.log('[updateAIMessage] metadata:', data.metadata)
           console.log('[updateAIMessage] metadata.citations:', data.metadata?.citations)
 
-          // 提取 citations
+          // 鎻愬彇 citations
           const citations = data.metadata?.citations as CitationReference[] | undefined
+          const finalThinking = extractFinalThinking(data.metadata) ?? completedMsg.thinkingContent
 
           messages[msgIndex] = {
             ...completedMsg,
             id: completedMsg.id,
             role: completedMsg.role,
-            content: data.message,
+            content: data.message ?? completedMsg.content,
+            thinkingContent: finalThinking,
             timestamp: completedMsg.timestamp,
             status: 'thinking',
             citations: citations?.length ? citations : undefined
           }
 
-          console.log('[updateAIMessage] 已设置 citations:', citations?.length || 0)
+          console.log('[updateAIMessage] 宸茶缃?citations:', citations?.length || 0)
         }
         break
 
       case 'GRAPH_COMPLETED':
-        // 重新获取最新消息引用
+        // 閲嶆柊鑾峰彇鏈€鏂版秷鎭紩鐢?
         const graphCompletedMsg = messages[msgIndex]
         if (graphCompletedMsg) {
-          console.log('[updateAIMessage] GRAPH_COMPLETED - 完成')
-          console.log('[updateAIMessage] citations 已存在:', graphCompletedMsg.citations?.length || 0)
+          console.log('[updateAIMessage] GRAPH_COMPLETED - 瀹屾垚')
+          console.log('[updateAIMessage] citations 宸插瓨鍦?', graphCompletedMsg.citations?.length || 0)
           messages[msgIndex] = {
             ...graphCompletedMsg,
             id: graphCompletedMsg.id,
@@ -751,47 +862,50 @@ export const useChatStore = defineStore('chat', () => {
             content: graphCompletedMsg.content,
             timestamp: graphCompletedMsg.timestamp,
             status: 'completed'
-            // citations 已经在 completed 事件中设置了
+            // citations 宸茬粡鍦?completed 浜嬩欢涓缃簡
           }
         }
         onComplete()
-        abortController.abort()  // 真正停止流
+        currentLlmMessageId.value = null
+        abortController.abort()  // 鐪熸鍋滄娴?
         break
 
       case 'failed':
-        // 重新获取最新消息引用
+        // 閲嶆柊鑾峰彇鏈€鏂版秷鎭紩鐢?
         const failedMsg = messages[msgIndex]
         if (failedMsg) {
-          console.log('[updateAIMessage] failed - 失败:', data.nodeErrorMessage)
+          console.log('[updateAIMessage] failed - 澶辫触:', data.nodeErrorMessage)
           messages[msgIndex] = {
             ...failedMsg,
             id: failedMsg.id,
             role: failedMsg.role,
-            content: failedMsg.content + `\n(错误: ${data.nodeErrorMessage || '执行失败'})`,
+            content: failedMsg.content + `\n(閿欒: ${data.nodeErrorMessage || '鎵ц澶辫触'})`,
             timestamp: failedMsg.timestamp,
             status: 'error'
           }
         }
         onComplete()
+        currentLlmMessageId.value = null
         abortController.abort()
         break
     }
   }
 
-  // 处理 SSE 错误
-  function handleSSEError(aiMessage: Message) {
+  // 澶勭悊 SSE 閿欒
+  function handleSSEError() {
     console.error('SSE connection error')
 
-    // 更新消息为错误状态
-    const msgIndex = currentSession.value?.messages.findIndex(m => m.id === aiMessage.id)
+    // 鏇存柊娑堟伅涓洪敊璇姸鎬?
+    const msgIndex = findActiveAssistantMessageIndex()
     if (msgIndex !== undefined && msgIndex >= 0 && currentSession.value) {
       const msg = currentSession.value.messages[msgIndex]
       if (msg) {
-        msg.content = '连接错误，请稍后重试'
+        msg.content = '杩炴帴閿欒锛岃绋嶅悗閲嶈瘯'
         msg.status = 'error'
       }
     }
 
+    currentLlmMessageId.value = null
     isProcessing.value = false
   }
 
@@ -815,20 +929,21 @@ export const useChatStore = defineStore('chat', () => {
 
     const agentTimelineStore = useAgentTimelineStore()
 
-    // 找到对应的 AI 消息
+    // 鎵惧埌瀵瑰簲鐨?AI 娑堟伅
     const msgIndex = currentSession.value?.messages.findIndex(m => m.id === messageId)
     if (msgIndex === undefined || msgIndex < 0 || !currentSession.value) {
-      console.error('[resumeAgent] 消息未找到:', messageId)
+      console.error('[resumeAgent] 娑堟伅鏈壘鍒?', messageId)
       return
     }
 
     const aiMessage = currentSession.value.messages[msgIndex]!
 
-    // 更新消息状态为思考中
+    // 鏇存柊娑堟伅鐘舵€佷负鎬濊€冧腑
     aiMessage.status = 'thinking'
     aiMessage.content += '\n\n--- Approval granted, continue execution ---\n\n'
+    currentLlmMessageId.value = null
 
-    // 创建 AbortController
+    // 鍒涘缓 AbortController
     const controller = new AbortController()
     isProcessing.value = true
 
@@ -858,7 +973,7 @@ export const useChatStore = defineStore('chat', () => {
       let buffer = ''
 
       if (!reader) {
-        throw new Error('无法获取响应流')
+        throw new Error('Failed to read streaming response')
       }
 
       while (true) {
@@ -871,15 +986,15 @@ export const useChatStore = defineStore('chat', () => {
         }
 
         if (done) {
-          console.log('[resumeAgent] SSE 流读取完成')
+          console.log('[resumeAgent] SSE stream completed')
           if (buffer.trim()) {
-            processSSEBuffer(buffer, aiMessage, agentTimelineStore, controller)
+            processSSEBuffer(buffer, agentTimelineStore, controller)
             buffer = ''
           }
           break
         }
 
-        // 处理粘包
+        // 澶勭悊绮樺寘
         let parts = buffer.split('\n\n')
         buffer = parts.pop() || ''
 
@@ -896,11 +1011,11 @@ export const useChatStore = defineStore('chat', () => {
               const data: AgentEvent = JSON.parse(jsonStr)
               console.log(`[resumeAgent] SSE ${data.eventType}`)
 
-              handleSSEMessage(data, aiMessage!, agentTimelineStore, controller, () => {
+              handleSSEMessage(data, agentTimelineStore, controller, () => {
                 isProcessing.value = false
               })
             } catch (error) {
-              console.error('[resumeAgent] 解析 SSE 数据失败:', error, jsonStr)
+              console.error('[resumeAgent] 瑙ｆ瀽 SSE 鏁版嵁澶辫触:', error, jsonStr)
             }
           }
         }
@@ -909,8 +1024,8 @@ export const useChatStore = defineStore('chat', () => {
       if (error.name === 'AbortError') {
         console.log('[resumeAgent] Fetch aborted')
       } else {
-        console.error('[resumeAgent] SSE 连接错误:', error)
-        handleSSEError(aiMessage!)
+        console.error('[resumeAgent] SSE 杩炴帴閿欒:', error)
+        handleSSEError()
       }
     } finally {
       isProcessing.value = false
@@ -918,17 +1033,17 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   return {
-    // 状态
+    // 鐘舵€?
     sessions,
     currentSessionId,
     currentStrategy,
     isProcessing,
     isLoading,
     currentKnowledgeBaseId,
-    // 计算属性
+    // 璁＄畻灞炴€?
     currentSession,
     messages,
-    // 操作
+    // 鎿嶄綔
     loadSessions,
     loadSessionDetail,
     sendMessage,

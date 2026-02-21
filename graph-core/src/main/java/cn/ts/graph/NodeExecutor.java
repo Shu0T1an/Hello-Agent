@@ -52,6 +52,9 @@ import java.util.concurrent.ForkJoinPool;
 public class NodeExecutor {
 
     private static final Logger logger = LoggerFactory.getLogger(NodeExecutor.class);
+    private static final String THINK = "think";
+    private static final String REASONING_CONTENT = "reasoningContent";
+    private static final String REASONING_CONTENT_SNAKE = "reasoning_content";
 
     private final ExecutionRecordManager recordManager;
 
@@ -429,6 +432,7 @@ public class NodeExecutor {
 
         // 累积所有文本内容和 toolCalls
         StringBuilder fullContent = new StringBuilder();
+        StringBuilder fullThinking = new StringBuilder();
         ChatResponse lastResponse = null;
         List<AssistantMessage.ToolCall> toolCalls = new ArrayList<>();
         Map<String, Object> messageMetadata = new HashMap<>();
@@ -446,6 +450,7 @@ public class NodeExecutor {
                 if (output.getText() != null) {
                     fullContent.append(output.getText());
                 }
+                extractReasoningFromMetadata(output.getMetadata()).ifPresent(fullThinking::append);
                 // 收集 toolCalls（通常在最后一个响应中）
                 if (output.getToolCalls() != null && !output.getToolCalls().isEmpty()) {
                     toolCalls = output.getToolCalls();
@@ -465,12 +470,29 @@ public class NodeExecutor {
             if (!output.getMetadata().isEmpty()) {
                 // 带 metadata 的构造函数
                 messageMetadata = new HashMap<>(output.getMetadata());
+                if (!fullThinking.isEmpty()) {
+                    messageMetadata.put(THINK, fullThinking.toString());
+                    messageMetadata.put(REASONING_CONTENT, fullThinking.toString());
+                    messageMetadata.put(REASONING_CONTENT_SNAKE, fullThinking.toString());
+                }
                 // 将 toolCalls 信息也加入 metadata
-                assistantMessage = new AssistantMessage(fullContent.toString(), messageMetadata,toolCalls);
+                assistantMessage = AssistantMessage.builder()
+                        .content(fullContent.toString())
+                        .properties(messageMetadata)
+                        .toolCalls(toolCalls)
+                        .build();
             } else {
                 // 只有 content 的构造函数
-                assistantMessage = new AssistantMessage(fullContent.toString(), messageMetadata, toolCalls);
-            }
+                if (!fullThinking.isEmpty()) {
+                    messageMetadata.put(THINK, fullThinking.toString());
+                    messageMetadata.put(REASONING_CONTENT, fullThinking.toString());
+                    messageMetadata.put(REASONING_CONTENT_SNAKE, fullThinking.toString());
+                }
+                assistantMessage = AssistantMessage.builder()
+                        .content(fullContent.toString())
+                        .properties(messageMetadata)
+                        .toolCalls(toolCalls)
+                        .build();            }
 
             result.add(assistantMessage);
         }
@@ -674,6 +696,23 @@ public class NodeExecutor {
         }
 
         return new TokenUsage(promptTokens, completionTokens, totalTokens);
+    }
+
+    private Optional<String> extractReasoningFromMetadata(Map<String, Object> metadata) {
+        if (metadata == null || metadata.isEmpty()) {
+            return Optional.empty();
+        }
+        return normalizeText(metadata.get(THINK))
+                .or(() -> normalizeText(metadata.get(REASONING_CONTENT)))
+                .or(() -> normalizeText(metadata.get(REASONING_CONTENT_SNAKE)));
+    }
+
+    private Optional<String> normalizeText(Object value) {
+        if (value == null) {
+            return Optional.empty();
+        }
+        String text = value.toString();
+        return text.isEmpty() ? Optional.empty() : Optional.of(text);
     }
 
     /**

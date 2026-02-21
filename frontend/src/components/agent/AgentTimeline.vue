@@ -3,11 +3,21 @@
     <div class="timeline-header flex items-center gap-2 pb-4 border-b border-zinc-200">
       <Activity class="text-indigo-500" :size="18" />
       <span class="font-semibold text-zinc-900">Execution Timeline</span>
-      <span v-if="events.length > 0" class="text-xs text-zinc-500 ml-2">({{ events.length }} events)</span>
+      <span v-if="processedEvents.length > 0" class="text-xs text-zinc-500 ml-2">({{ processedEvents.length }} events)</span>
+    </div>
+
+    <div v-if="subAgentOverview.total > 0" class="px-4 pt-3 pb-2 border-b border-zinc-100 bg-zinc-50">
+      <div class="flex items-center gap-2 flex-wrap text-xs">
+        <span class="px-2 py-1 rounded bg-cyan-100 text-cyan-800">SubAgents {{ subAgentOverview.total }}</span>
+        <span class="px-2 py-1 rounded bg-zinc-200 text-zinc-800">Running {{ subAgentOverview.running }}</span>
+        <span class="px-2 py-1 rounded bg-amber-100 text-amber-800">Queued {{ subAgentOverview.queued }}</span>
+        <span class="px-2 py-1 rounded bg-sky-100 text-sky-800">Done {{ subAgentOverview.completed }}</span>
+        <span class="px-2 py-1 rounded bg-rose-100 text-rose-800">Failed {{ subAgentOverview.failed }}</span>
+      </div>
     </div>
 
     <div class="timeline-content flex-1 overflow-y-auto">
-      <div v-if="events.length === 0" class="flex flex-col items-center justify-center py-12 text-zinc-400">
+      <div v-if="processedEvents.length === 0" class="flex flex-col items-center justify-center py-12 text-zinc-400">
         <Activity :size="48" class="opacity-30 mb-3" />
         <p class="text-sm">{{ loading ? 'Waiting for events...' : 'No events recorded' }}</p>
       </div>
@@ -72,6 +82,27 @@
                 </div>
               </div>
 
+              <div v-else-if="isSubAgentEvent(event)" class="space-y-3">
+                <div class="flex items-center gap-2 text-cyan-700">
+                  <GitBranch :size="14" />
+                  <span class="text-sm font-medium">SubAgent Progress</span>
+                </div>
+                <div class="text-xs text-zinc-700 space-y-1">
+                  <div><span class="font-medium">Type:</span> {{ event.metadata?.subagentType || 'unknown' }}</div>
+                  <div><span class="font-medium">Phase:</span> {{ event.metadata?.phase || event.eventType }}</div>
+                  <div><span class="font-medium">Progress:</span> {{ event.metadata?.progress ?? 0 }}%</div>
+                  <div v-if="event.metadata?.durationMs !== undefined">
+                    <span class="font-medium">Duration:</span> {{ event.metadata?.durationMs }} ms
+                  </div>
+                </div>
+                <div v-if="event.metadata?.summary" class="text-sm text-zinc-700 whitespace-pre-wrap">
+                  {{ event.metadata?.summary }}
+                </div>
+                <div v-if="event.metadata?.errorMessage" class="text-sm text-rose-700 whitespace-pre-wrap">
+                  {{ event.metadata?.errorMessage }}
+                </div>
+              </div>
+
               <div v-else class="space-y-3">
                 <div class="flex items-center gap-2 text-zinc-700">
                   <Cog :size="14" />
@@ -102,7 +133,7 @@
         </div>
       </div>
 
-      <div v-if="loading && events.length > 0" class="flex items-center justify-center gap-2 py-4 text-zinc-400">
+      <div v-if="loading && processedEvents.length > 0" class="flex items-center justify-center gap-2 py-4 text-zinc-400">
         <Loader :size="16" class="animate-spin" />
         <span class="text-sm">Processing...</span>
       </div>
@@ -112,10 +143,10 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Activity, ChevronDown, ChevronRight, Sparkles, MessageSquare, Wrench, Cog, Loader, Eye, EyeOff, Palette } from 'lucide-vue-next'
+import { Activity, ChevronDown, ChevronRight, Sparkles, MessageSquare, Wrench, Cog, Loader, Eye, EyeOff, Palette, GitBranch } from 'lucide-vue-next'
 import type { AgentEvent } from '@/types/agent'
 import { formatDateTime, formatJSON } from '@/utils/helpers'
-import { isToolNode, isLLMToolCall, isLLMResponse, getNodeConfig, getEventId } from '@/utils/agentEvents'
+import { isToolNode, isLLMToolCall, isLLMResponse, isSubAgentEvent, getNodeConfig, getEventId } from '@/utils/agentEvents'
 
 // Raw Data 风格类型定义
 type RawDataStyle = 'dark' | 'light' | 'solarized'
@@ -140,7 +171,78 @@ const expandedEvents = ref<Set<string>>(new Set())
 const showRawData = ref<Record<string, boolean>>({})
 const currentStyle = ref<RawDataStyle>('dark')
 
-const processedEvents = computed(() => props.events)
+const subAgentLatestEvents = computed(() => {
+  const latestByTaskId = new Map<string, AgentEvent>()
+
+  for (const event of props.events) {
+    if (!isSubAgentEvent(event)) continue
+    const taskId = event.metadata?.subagentTaskId
+    if (!taskId || typeof taskId !== 'string') continue
+    latestByTaskId.set(taskId, event)
+  }
+
+  return Array.from(latestByTaskId.values())
+})
+
+const subAgentOverview = computed(() => {
+  let queued = 0
+  let running = 0
+  let completed = 0
+  let failed = 0
+
+  for (const event of subAgentLatestEvents.value) {
+    const status = getSubAgentStatus(event)
+    if (status === 'queued') queued++
+    if (status === 'running') running++
+    if (status === 'completed') completed++
+    if (status === 'failed') failed++
+  }
+
+  return {
+    total: subAgentLatestEvents.value.length,
+    queued,
+    running,
+    completed,
+    failed
+  }
+})
+
+const processedEvents = computed(() => {
+  const merged: AgentEvent[] = []
+  const latestByTaskId = new Map<string, AgentEvent>()
+
+  for (const event of props.events) {
+    if (!isSubAgentEvent(event)) {
+      merged.push(event)
+      continue
+    }
+    const taskId = event.metadata?.subagentTaskId
+    if (!taskId || typeof taskId !== 'string') {
+      merged.push(event)
+      continue
+    }
+    latestByTaskId.set(taskId, event)
+  }
+
+  merged.push(...latestByTaskId.values())
+
+  merged.sort((a, b) => {
+    const timeA = Date.parse(a.timestamp || '')
+    const timeB = Date.parse(b.timestamp || '')
+    return timeA - timeB
+  })
+
+  return merged
+})
+
+type SubAgentStatus = 'queued' | 'running' | 'completed' | 'failed'
+
+function getSubAgentStatus(event: AgentEvent): SubAgentStatus {
+  if (event.eventType === 'SUBAGENT_FAILED') return 'failed'
+  if (event.eventType === 'SUBAGENT_COMPLETED') return 'completed'
+  if (event.metadata?.phase === 'queued') return 'queued'
+  return 'running'
+}
 
 // 判断事件是否展开
 function isExpanded(eventId: string): boolean {

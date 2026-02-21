@@ -17,6 +17,7 @@ public class DeepSearchProperties {
     private boolean includeGeneralPurposeSubagent = true;
     private int maxIterations = 25;
     private boolean streamEnabled = true;
+    private int maxParallelSubagents = 3;
 
     public boolean isEnabled() {
         return enabled;
@@ -72,5 +73,13 @@ public class DeepSearchProperties {
 
     public void setStreamEnabled(boolean streamEnabled) {
         this.streamEnabled = streamEnabled;
+    }
+
+    public int getMaxParallelSubagents() {
+        return maxParallelSubagents;
+    }
+
+    public void setMaxParallelSubagents(int maxParallelSubagents) {
+        this.maxParallelSubagents = maxParallelSubagents;
     }
 }

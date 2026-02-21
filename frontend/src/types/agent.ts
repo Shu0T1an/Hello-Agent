@@ -28,8 +28,31 @@ export interface StateData {
   [key: string]: unknown
 }
 
-export type AgentEventType = 'starting' | 'running' | 'completed' | 'failed' | 'GRAPH_COMPLETED'
-export type NodeType = 'llm' | 'tool' | 'custom'
+export type AgentEventType =
+  | 'starting'
+  | 'running'
+  | 'completed'
+  | 'failed'
+  | 'GRAPH_COMPLETED'
+  | 'SUBAGENT_STARTED'
+  | 'SUBAGENT_PROGRESS'
+  | 'SUBAGENT_COMPLETED'
+  | 'SUBAGENT_FAILED'
+export type NodeType = 'llm' | 'tool' | 'custom' | 'subagent'
+
+export interface SubAgentMetadata {
+  subagentTaskId?: string
+  subagentType?: string
+  parentToolCallId?: string
+  parentExecutionId?: string
+  phase?: string
+  progress?: number
+  durationMs?: number
+  summary?: string
+  errorCode?: string
+  errorMessage?: string
+  [key: string]: unknown
+}
 
 export interface AgentEvent {
   eventType: AgentEventType
@@ -38,6 +61,7 @@ export interface AgentEvent {
   stateData: StateData
   message?: string
   timestamp: string
+  metadata?: SubAgentMetadata
   title?: string            // 节点标题（来自后端）
   startTime?: string
   endTime?: string
