@@ -3,6 +3,8 @@ package cn.ts.web.agent.deepsearch;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 /**
  * Configuration for built-in DeepSearch agent.
  */
@@ -18,6 +20,10 @@ public class DeepSearchProperties {
     private int maxIterations = 25;
     private boolean streamEnabled = true;
     private int maxParallelSubagents = 3;
+    private List<String> researchToolAllowlist = List.of();
+    private List<String> critiqueToolAllowlist = List.of();
+    private List<String> generalToolAllowlist = List.of();
+    private List<String> blockedToolNames = List.of();
 
     public boolean isEnabled() {
         return enabled;
@@ -81,5 +87,37 @@ public class DeepSearchProperties {
 
     public void setMaxParallelSubagents(int maxParallelSubagents) {
         this.maxParallelSubagents = maxParallelSubagents;
+    }
+
+    public List<String> getResearchToolAllowlist() {
+        return researchToolAllowlist;
+    }
+
+    public void setResearchToolAllowlist(List<String> researchToolAllowlist) {
+        this.researchToolAllowlist = researchToolAllowlist;
+    }
+
+    public List<String> getCritiqueToolAllowlist() {
+        return critiqueToolAllowlist;
+    }
+
+    public void setCritiqueToolAllowlist(List<String> critiqueToolAllowlist) {
+        this.critiqueToolAllowlist = critiqueToolAllowlist;
+    }
+
+    public List<String> getGeneralToolAllowlist() {
+        return generalToolAllowlist;
+    }
+
+    public void setGeneralToolAllowlist(List<String> generalToolAllowlist) {
+        this.generalToolAllowlist = generalToolAllowlist;
+    }
+
+    public List<String> getBlockedToolNames() {
+        return blockedToolNames;
+    }
+
+    public void setBlockedToolNames(List<String> blockedToolNames) {
+        this.blockedToolNames = blockedToolNames;
     }
 }

@@ -10,7 +10,7 @@ DROP TABLE IF EXISTS checkpoint_snapshots CASCADE;
 -- 1. 创建 sessions 表
 CREATE TABLE IF NOT EXISTS sessions (
     id BIGSERIAL PRIMARY KEY,
-    session_id VARCHAR(100) NOT NULL UNIQUE,
+    session_id VARCHAR(255) NOT NULL UNIQUE,
     title VARCHAR(200) NOT NULL DEFAULT '新对话',
     current_agent VARCHAR(100) NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'active',
@@ -22,11 +22,11 @@ CREATE TABLE IF NOT EXISTS sessions (
 -- 2. 创建 checkpoint_snapshots 表（重构）
 CREATE TABLE IF NOT EXISTS checkpoint_snapshots (
     id BIGSERIAL PRIMARY KEY,
-    session_id VARCHAR(100) NOT NULL,
-    checkpoint_id VARCHAR(100) NOT NULL,
-    node_id VARCHAR(100),
-    last_node_id VARCHAR(100),
-    parent_id VARCHAR(100),
+    session_id VARCHAR(255) NOT NULL,
+    checkpoint_id VARCHAR(255) NOT NULL,
+    node_id VARCHAR(255),
+    last_node_id VARCHAR(255),
+    parent_id VARCHAR(255),
     state_json JSONB NOT NULL,
     metadata_json JSONB NOT NULL,
     source VARCHAR(20) NOT NULL,
@@ -38,11 +38,13 @@ CREATE TABLE IF NOT EXISTS checkpoint_snapshots (
 );
 
 -- 索引
-CREATE INDEX idx_sessions_status ON sessions(status);
-CREATE INDEX idx_sessions_updated_at ON sessions(updated_at DESC);
-CREATE INDEX idx_checkpoint_session_id ON checkpoint_snapshots(session_id);
-CREATE INDEX idx_checkpoint_parent_id ON checkpoint_snapshots(parent_id);
-CREATE INDEX idx_checkpoint_created_at ON checkpoint_snapshots(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_sessions_status ON sessions(status);
+CREATE INDEX IF NOT EXISTS idx_sessions_updated_at ON sessions(updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_checkpoint_session_id ON checkpoint_snapshots(session_id);
+CREATE INDEX IF NOT EXISTS idx_checkpoint_parent_id ON checkpoint_snapshots(parent_id);
+CREATE INDEX IF NOT EXISTS idx_checkpoint_created_at ON checkpoint_snapshots(created_at DESC);
+
+
 
 -- 注释
 COMMENT ON TABLE sessions IS '会话表，存储会话级别的元数据';

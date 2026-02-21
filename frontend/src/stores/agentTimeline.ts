@@ -18,6 +18,7 @@ export const useAgentTimelineStore = defineStore('agentTimeline', () => {
   const events = ref<AgentEvent[]>([])
   const isCollecting = ref(false)
   const sessionId = ref<string>('')
+  const subAgentEventKeys = ref<Set<string>>(new Set())
 
   // 计算属性
   const hasEvents = computed(() => events.value.length > 0)
@@ -52,6 +53,15 @@ export const useAgentTimelineStore = defineStore('agentTimeline', () => {
    */
   function addEvent(event: AgentEvent) {
     if (!isCollecting.value) return
+    if (event.eventType.startsWith('SUBAGENT_')) {
+      const taskId = event.metadata?.subagentTaskId
+      const seq = event.metadata?.seq
+      const dedupKey = `${taskId || 'unknown'}:${seq ?? event.timestamp}:${event.eventType}`
+      if (subAgentEventKeys.value.has(dedupKey)) {
+        return
+      }
+      subAgentEventKeys.value.add(dedupKey)
+    }
     if (shouldAddEvent(event)) {
       events.value.push(event)
     }
@@ -62,6 +72,7 @@ export const useAgentTimelineStore = defineStore('agentTimeline', () => {
    */
   function clearEvents() {
     events.value = []
+    subAgentEventKeys.value.clear()
   }
 
   /**
@@ -70,6 +81,7 @@ export const useAgentTimelineStore = defineStore('agentTimeline', () => {
   function startCollecting(currentSessionId?: string) {
     isCollecting.value = true
     events.value = []
+    subAgentEventKeys.value.clear()
     if (currentSessionId) {
       sessionId.value = currentSessionId
     }
@@ -89,6 +101,7 @@ export const useAgentTimelineStore = defineStore('agentTimeline', () => {
     events.value = []
     isCollecting.value = false
     sessionId.value = ''
+    subAgentEventKeys.value.clear()
   }
 
   /**
@@ -110,7 +123,7 @@ export const useAgentTimelineStore = defineStore('agentTimeline', () => {
    * 获取所有失败的事件
    */
   function getFailedEvents(): AgentEvent[] {
-    return events.value.filter(e => e.eventType === 'failed')
+    return events.value.filter(e => e.eventType === 'failed' || e.eventType === 'SUBAGENT_FAILED')
   }
 
   return {

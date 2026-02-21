@@ -2,7 +2,9 @@ package cn.ts.web.factory;
 
 import cn.ts.agent.core.ReactAgent;
 import cn.ts.agent.extension.interceptor.SubAgentInterceptor;
+import cn.ts.agent.extension.interceptor.ToolPolicyInterceptor;
 import cn.ts.agent.extension.tools.TaskTool;
+import cn.ts.agent.interceptor.ModelInterceptor;
 import cn.ts.graph.checkpoint.CheckpointManager;
 import cn.ts.web.dto.agent.AgentConfigDTO;
 import cn.ts.web.dto.agent.SubAgentMappingDTO;
@@ -19,10 +21,12 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +49,7 @@ public class AgentFactory {
     private final SubAgentMappingMapper subAgentMappingMapper;
     private final CheckpointManager checkpointManager;
     private final SubAgentProgressBus subAgentProgressBus;
+    private final List<String> blockedToolNames;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public AgentFactory(ModelConfigService modelConfigService,
@@ -52,13 +57,15 @@ public class AgentFactory {
                         AgentConfigMapper agentConfigMapper,
                         SubAgentMappingMapper subAgentMappingMapper,
                         CheckpointManager checkpointManager,
-                        SubAgentProgressBus subAgentProgressBus) {
+                        SubAgentProgressBus subAgentProgressBus,
+                        @Value("${agent.subagent.blocked-tool-names:}") String blockedToolNamesRaw) {
         this.modelConfigService = modelConfigService;
         this.toolDefinitionService = toolDefinitionService;
         this.agentConfigMapper = agentConfigMapper;
         this.subAgentMappingMapper = subAgentMappingMapper;
         this.checkpointManager = checkpointManager;
         this.subAgentProgressBus = subAgentProgressBus;
+        this.blockedToolNames = parseBlockedToolNames(blockedToolNamesRaw);
     }
 
     public ReactAgent createAgent(AgentConfigDTO config) {
@@ -84,10 +91,21 @@ public class AgentFactory {
             builder.streaming(config.getEnableStreaming());
         }
 
+        List<ModelInterceptor> modelInterceptors = new ArrayList<>();
         if (includeSubAgentInterceptor && Boolean.TRUE.equals(config.getEnableSubAgentInterceptor())) {
             Map<String, ReactAgent> subAgents = buildSubAgentsFor(config);
             tools = appendTaskTool(tools, subAgents);
-            builder.modelInterceptors(List.of(new SubAgentInterceptor(null, subAgents, subAgentProgressBus)));
+            modelInterceptors.add(new SubAgentInterceptor(null, subAgents, subAgentProgressBus));
+        }
+        if (!blockedToolNames.isEmpty()) {
+            modelInterceptors.add(new ToolPolicyInterceptor(
+                    "AgentFactoryGlobalToolPolicy",
+                    List.of(),
+                    blockedToolNames
+            ));
+        }
+        if (!modelInterceptors.isEmpty()) {
+            builder.modelInterceptors(modelInterceptors);
         }
         builder.tools(tools);
 
@@ -311,5 +329,15 @@ public class AgentFactory {
             logger.warn("Failed to parse custom tool ids JSON, fallback to empty: {}", json, e);
             return List.of();
         }
+    }
+
+    private List<String> parseBlockedToolNames(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return List.of();
+        }
+        return Arrays.stream(raw.split(","))
+                .map(String::trim)
+                .filter(value -> !value.isEmpty())
+                .toList();
     }
 }

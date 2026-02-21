@@ -54,6 +54,21 @@ public final class ExecutionRecords {
     }
 
     /**
+     * 创建成功的 LLM 执行记录（含 toolCalls）。
+     */
+    public static LLMExecutionRecord llmSuccess(
+            String nodeId,
+            Instant startTime,
+            Instant endTime,
+            List<InputMessage> inputMessages,
+            String output,
+            List<ToolCallInfo> toolCalls,
+            TokenUsage usage) {
+        return llm(nodeId, startTime, endTime,
+                inputMessages, output, toolCalls != null ? toolCalls : List.of(), usage, true, null);
+    }
+
+    /**
      * 创建失败的 LLM 执行记录
      */
     public static LLMExecutionRecord llmFailure(

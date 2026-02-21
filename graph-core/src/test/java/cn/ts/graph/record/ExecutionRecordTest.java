@@ -94,6 +94,36 @@ class ExecutionRecordTest {
     }
 
     @Test
+    void testLLMExecutionRecordWithToolCalls() {
+        Instant startTime = Instant.parse("2025-01-15T10:00:00Z");
+        Instant endTime = Instant.parse("2025-01-15T10:00:02Z");
+
+        LLMExecutionRecord record = ExecutionRecords.llmSuccess(
+                "test-node",
+                startTime,
+                endTime,
+                List.of(new InputMessage("user", "help me search weather")),
+                "",
+                List.of(
+                        new ToolCallInfo("call-1", "weather_search", "{\"city\":\"Beijing\"}"),
+                        new ToolCallInfo("call-2", "news_search", "{\"query\":\"weather alert\"}")
+                ),
+                new TokenUsage(20, 10, 30)
+        );
+
+        assertEquals(2, record.getToolCalls().size());
+        assertEquals("weather_search", record.getToolCalls().get(0).name());
+
+        Map<String, Object> map = record.toMap();
+        assertTrue(map.containsKey("toolCalls"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> toolCalls = (List<Map<String, Object>>) map.get("toolCalls");
+        assertEquals(2, toolCalls.size());
+        assertEquals("call-1", toolCalls.get(0).get("id"));
+        assertEquals("weather_search", toolCalls.get(0).get("name"));
+    }
+
+    @Test
     void testLLMExecutionRecordFromMap() {
         Map<String, Object> map = Map.of(
                 "nodeType", "llm",

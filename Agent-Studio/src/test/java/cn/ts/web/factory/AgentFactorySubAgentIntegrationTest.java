@@ -74,7 +74,9 @@ class AgentFactorySubAgentIntegrationTest {
                 agentConfigMapper,
                 subAgentMappingMapper,
                 checkpointManager,
-                subAgentProgressBus
+                subAgentProgressBus,
+                "test-agent"
+
         );
         when(modelConfigService.createChatModel(any())).thenReturn(chatModel);
         ModelConfigDTO fallbackModelConfig = new ModelConfigDTO();

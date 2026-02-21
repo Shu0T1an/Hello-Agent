@@ -71,12 +71,40 @@ export function getNodeConfig(event: AgentEvent): NodeThemeConfig {
   }
 
   if (isSubAgentEvent(event)) {
-    const failed = event.eventType === 'SUBAGENT_FAILED'
-    const completed = event.eventType === 'SUBAGENT_COMPLETED'
+    const phase = String(event.metadata?.phase || '').toLowerCase()
+    const failed = event.eventType === 'SUBAGENT_FAILED' || phase === 'failed'
+    const completed = event.eventType === 'SUBAGENT_COMPLETED' || phase === 'done'
+    const queued = phase === 'queued'
+    const toolCall = phase === 'tool_call'
+    const toolResult = phase === 'tool_result'
+    const synthesizing = phase === 'synthesizing'
+    const label = failed
+      ? 'SubAgent Failed'
+      : completed
+        ? 'SubAgent Done'
+        : queued
+          ? 'SubAgent Queued'
+          : toolCall
+            ? 'SubAgent Tool Call'
+            : toolResult
+              ? 'SubAgent Tool Result'
+              : synthesizing
+                ? 'SubAgent Synthesizing'
+                : 'SubAgent'
     return {
       icon: GitBranch,
-      label: failed ? 'SubAgent Failed' : completed ? 'SubAgent Done' : 'SubAgent',
-      dotBg: failed ? 'bg-rose-500' : completed ? 'bg-sky-500' : 'bg-cyan-500',
+      label,
+      dotBg: failed
+        ? 'bg-rose-500'
+        : completed
+          ? 'bg-sky-500'
+          : queued
+            ? 'bg-amber-500'
+            : toolCall || toolResult
+              ? 'bg-indigo-500'
+              : synthesizing
+                ? 'bg-emerald-500'
+                : 'bg-cyan-500',
       borderClass: failed ? 'border-rose-200' : 'border-cyan-200',
       labelClass: failed ? 'text-rose-700' : 'text-cyan-700'
     }

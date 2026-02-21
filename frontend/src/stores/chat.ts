@@ -124,6 +124,48 @@ function extractFinalThinking(metadata?: Record<string, unknown>): string | unde
     ?? toNonEmptyString(metadata.reasoning_content)
 }
 
+function normalizeToolCalls(rawCalls: unknown): Array<{ id: string; name: string; type: string; arguments: string }> {
+  if (!Array.isArray(rawCalls)) return []
+
+  return rawCalls
+    .map((item) => {
+      if (!item || typeof item !== 'object') return null
+      const record = item as Record<string, unknown>
+      const name = toNonEmptyString(record.name)
+      if (!name) return null
+
+      const id = toNonEmptyString(record.id) ?? `${name}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+      const type = toNonEmptyString(record.type) ?? 'function'
+      const rawArguments = record.arguments
+      let argumentsStr = ''
+
+      if (typeof rawArguments === 'string') {
+        argumentsStr = rawArguments
+      } else if (rawArguments !== undefined) {
+        try {
+          argumentsStr = JSON.stringify(rawArguments, null, 2)
+        } catch {
+          argumentsStr = String(rawArguments)
+        }
+      }
+
+      return {
+        id,
+        name,
+        type,
+        arguments: argumentsStr
+      }
+    })
+    .filter((item): item is { id: string; name: string; type: string; arguments: string } => item !== null)
+}
+
+function hasToolCallPayload(data: AgentEvent): boolean {
+  const fromExecutionRecord = normalizeToolCalls(data.stateData?.execution_record?.toolCalls)
+  if (fromExecutionRecord.length > 0) return true
+  const fromMetadata = normalizeToolCalls((data.metadata as Record<string, unknown> | undefined)?.tool_calls)
+  return fromMetadata.length > 0
+}
+
 // 后端消息转换为前端消息
 function backendMessageToFrontend(msg: BackendMessage): Message {
   const thinkingContent = msg.metadata
@@ -622,10 +664,23 @@ export const useChatStore = defineStore('chat', () => {
     // 只在 LLM 节点完成时处理
     if (data.nodeType !== 'llm' || data.eventType !== 'completed') return
 
-    const toolCalls = data.stateData?.execution_record?.toolCalls
-    if (!toolCalls || toolCalls.length === 0) return
+    const toolCallsFromExecutionRecord = normalizeToolCalls(data.stateData?.execution_record?.toolCalls)
+    const toolCallsFromMetadata = normalizeToolCalls((data.metadata as Record<string, unknown> | undefined)?.tool_calls)
+    const toolCalls = toolCallsFromExecutionRecord.length > 0 ? toolCallsFromExecutionRecord : toolCallsFromMetadata
+
+    if (toolCalls.length === 0) {
+      console.debug('[handleToolCallMessage] no tool calls in execution_record.toolCalls or metadata.tool_calls', data)
+      return
+    }
+    if (toolCallsFromExecutionRecord.length === 0 && toolCallsFromMetadata.length > 0) {
+      console.debug('[handleToolCallMessage] fallback to metadata.tool_calls', {
+        count: toolCallsFromMetadata.length,
+        nodeId: data.nodeId
+      })
+    }
+
     const finalThinking = extractFinalThinking(data.metadata)
-    if (toolCalls.some((tc: any) => isTodoToolName(tc?.name))) {
+    if (toolCalls.some(tc => isTodoToolName(tc.name))) {
       todoStore.markTodoToolSeen('tool_call')
     }
 
@@ -645,7 +700,7 @@ export const useChatStore = defineStore('chat', () => {
       timestamp: new Date().toLocaleString('zh-CN'),
       status: 'completed',
       metadata: {
-        tool_calls: toolCalls.map((tc: any) => ({
+        tool_calls: toolCalls.map(tc => ({
           id: tc.id,
           name: tc.name,
           type: tc.type || 'function',
@@ -659,9 +714,19 @@ export const useChatStore = defineStore('chat', () => {
     if (activeAssistantIndex >= 0 && currentSession.value) {
       const activeAssistant = currentSession.value.messages[activeAssistantIndex]
       if (activeAssistant) {
-        activeAssistant.metadata = {
-          ...(activeAssistant.metadata || {}),
-          hide_thinking: true
+        const hasVisibleContent = (activeAssistant.content ?? '').trim().length > 0
+        // LLM 首轮仅产出 tool call 时，移除空占位 assistant，避免出现悬挂“思考中...”气泡。
+        if (!hasVisibleContent) {
+          currentSession.value.messages.splice(activeAssistantIndex, 1)
+          if (currentLlmMessageId.value === activeAssistant.id) {
+            currentLlmMessageId.value = null
+          }
+        } else {
+          activeAssistant.status = 'completed'
+          activeAssistant.metadata = {
+            ...(activeAssistant.metadata || {}),
+            hide_thinking: true
+          }
         }
       }
     }
@@ -773,6 +838,11 @@ export const useChatStore = defineStore('chat', () => {
     abortController: AbortController,
     onComplete: () => void
   ) {
+    // 仅触发 function call 的 LLM 完成事件不更新 assistant 气泡，避免与 Function Call 卡片重复展示 THINK。
+    if (data.nodeType === 'llm' && data.eventType === 'completed' && hasToolCallPayload(data)) {
+      return
+    }
+
     const msgIndex = ensureActiveAssistantMessage(data)
 
     if (msgIndex === undefined || msgIndex < 0 || !currentSession.value) {

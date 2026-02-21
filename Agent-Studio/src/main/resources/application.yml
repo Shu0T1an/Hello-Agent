@@ -26,6 +26,8 @@ server:
 
 # Agent 鎵ц閰嶇疆
 agent:
+  subagent:
+    progress-buffer-size: 1024
   execution:
     timeout: 300s              # 鎵ц瓒呮椂鏃堕棿
     heartbeat-interval: 30s    # 蹇冭烦闂撮殧
@@ -47,6 +49,10 @@ agent:
     max-iterations: 25
     stream-enabled: true
     max-parallel-subagents: 3
+    research-tool-allowlist: []
+    critique-tool-allowlist: []
+    general-tool-allowlist: []
+    blocked-tool-names: []
 # MCP 绠＄悊鍣ㄩ厤缃?
 mcp:
   manager:

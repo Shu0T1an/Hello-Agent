@@ -45,12 +45,17 @@ export interface SubAgentMetadata {
   subagentType?: string
   parentToolCallId?: string
   parentExecutionId?: string
-  phase?: string
+  phase?: 'queued' | 'planning' | 'running' | 'tool_call' | 'tool_result' | 'synthesizing' | 'done' | 'failed' | string
   progress?: number
   durationMs?: number
   summary?: string
   errorCode?: string
   errorMessage?: string
+  seq?: number
+  stepId?: string
+  stepTitle?: string
+  toolName?: string
+  toolCallId?: string
   [key: string]: unknown
 }
 

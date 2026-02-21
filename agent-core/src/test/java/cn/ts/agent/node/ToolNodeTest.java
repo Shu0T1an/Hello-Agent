@@ -177,7 +177,10 @@ class ToolNodeTest {
                 "upsert_todos",
                 "{}"
         );
-        AssistantMessage assistantMessage = new AssistantMessage("call upsert_todos", Map.of(), List.of(toolCall));
+        AssistantMessage assistantMessage = AssistantMessage.builder()
+                .content("call upsert_todos")
+                .toolCalls(List.of(toolCall))
+                .build();
         State state = new MapState(Map.of("messages", List.of(assistantMessage)));
 
         Map<String, Object> result = node.apply(state);
@@ -203,7 +206,10 @@ class ToolNodeTest {
                 removedToolName,
                 "{}"
         );
-        AssistantMessage assistantMessage = new AssistantMessage("call removed legacy tool", Map.of(), List.of(toolCall));
+        AssistantMessage assistantMessage = AssistantMessage.builder()
+                .content("call removed legacy tool")
+                .toolCalls(List.of(toolCall))
+                .build();
         State state = new MapState(Map.of("messages", List.of(assistantMessage)));
 
         Map<String, Object> result = node.apply(state);
@@ -227,7 +233,10 @@ class ToolNodeTest {
                 "clear_todos",
                 "{}"
         );
-        AssistantMessage assistantMessage = new AssistantMessage("call clear_todos", Map.of(), List.of(toolCall));
+        AssistantMessage assistantMessage = AssistantMessage.builder()
+                .content("call clear_todos")
+                .toolCalls(List.of(toolCall))
+                .build();
         State state = new MapState(Map.of("messages", List.of(assistantMessage)));
 
         Map<String, Object> result = node.apply(state);

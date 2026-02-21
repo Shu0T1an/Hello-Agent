@@ -2,6 +2,7 @@ package cn.ts.web.agent.deepsearch;
 
 import cn.ts.agent.core.ReactAgent;
 import cn.ts.agent.extension.interceptor.SubAgentInterceptor;
+import cn.ts.agent.extension.interceptor.ToolPolicyInterceptor;
 import cn.ts.agent.extension.tools.TaskTool;
 import cn.ts.agent.interceptor.ModelInterceptor;
 import cn.ts.agent.interceptor.ModelInvocationContext;
@@ -27,6 +28,7 @@ public class DeepSearchAgentBuilder {
     private final DeepSearchProperties properties;
     private final CheckpointManager checkpointManager;
     private final SubAgentProgressBus subAgentProgressBus;
+    private final SubAgentToolPolicyResolver toolPolicyResolver;
 
     public DeepSearchAgentBuilder(DeepSearchProperties properties,
                                   CheckpointManager checkpointManager,
@@ -34,6 +36,7 @@ public class DeepSearchAgentBuilder {
         this.properties = properties;
         this.checkpointManager = checkpointManager;
         this.subAgentProgressBus = subAgentProgressBus;
+        this.toolPolicyResolver = new SubAgentToolPolicyResolver(properties);
     }
 
     public ReactAgent build(ChatModel chatModel, Object[] tools) {
@@ -58,7 +61,14 @@ public class DeepSearchAgentBuilder {
                 .chatModel(chatModel)
                 .streaming(properties.isStreamEnabled())
                 .tools(toolsWithTask)
-                .modelInterceptors(List.of(subAgentInterceptor))
+                .modelInterceptors(List.of(
+                        subAgentInterceptor,
+                        new ToolPolicyInterceptor(
+                                "DeepSearchMainToolPolicy",
+                                List.of(),
+                                toolPolicyResolver.blockedToolNames()
+                        )
+                ))
                 .checkpointManager(checkpointManager)
                 .build();
     }
@@ -89,7 +99,7 @@ public class DeepSearchAgentBuilder {
                 .modelInterceptors(List.of(new PromptInjectingInterceptor(
                         "DeepSearchResearchPrompt",
                         DeepSearchPrompts.RESEARCH_SUBAGENT_PROMPT
-                )))
+                ), toolPolicyResolver.forResearchAgent()))
                 .checkpointManager(checkpointManager)
                 .build();
         subAgents.put("research-agent", researchAgent);
@@ -103,7 +113,7 @@ public class DeepSearchAgentBuilder {
                 .modelInterceptors(List.of(new PromptInjectingInterceptor(
                         "DeepSearchCritiquePrompt",
                         DeepSearchPrompts.CRITIQUE_SUBAGENT_PROMPT
-                )))
+                ), toolPolicyResolver.forCritiqueAgent()))
                 .checkpointManager(checkpointManager)
                 .build();
         subAgents.put("critique-agent", critiqueAgent);
@@ -118,7 +128,7 @@ public class DeepSearchAgentBuilder {
                     .modelInterceptors(List.of(new PromptInjectingInterceptor(
                             "DeepSearchGeneralPrompt",
                             DeepSearchPrompts.GENERAL_PURPOSE_SUBAGENT_PROMPT
-                    )))
+                    ), toolPolicyResolver.forGeneralAgent()))
                     .checkpointManager(checkpointManager)
                     .build();
             subAgents.put("general-purpose", generalPurposeAgent);

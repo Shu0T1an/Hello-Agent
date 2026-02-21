@@ -612,6 +612,7 @@ public class NodeExecutor {
                 Instant.now(),
                 inputMessages,
                 fullContent,
+                toolCalls,
                 usage
         );
     }

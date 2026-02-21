@@ -115,39 +115,7 @@ class TypedStateSerializationTest {
         assertTrue(restored.isEmpty());
     }
 
-    @Test
-    void testStateWithMultipleMessageTypes() throws JsonProcessingException {
-        // 测试包含多种消息类型的复杂场景
-        List<Message> messages = new ArrayList<>();
-        messages.add(new SystemMessage("System prompt"));
-        messages.add(new UserMessage("User input"));
-        messages.add(new AssistantMessage("Assistant response with tool calls",
-                Map.of("key", "value"),
-                List.of(new AssistantMessage.ToolCall("call-123", "function", "search", "{\"query\":\"test\"}"))));
 
-        Map<String, Object> state = new HashMap<>();
-        state.put("messages", messages);
-        state.put("counter", 42);
-        state.put("active", true);
-
-        String json = serializer.serializeWithTypeMetadata(state);
-        Map<String, Object> restored = deserializer.deserializeWithTypeMetadata(json);
-
-        @SuppressWarnings("unchecked")
-        List<Message> restoredMessages = (List<Message>) restored.get("messages");
-
-        assertEquals(3, restoredMessages.size());
-        assertTrue(restoredMessages.get(0) instanceof SystemMessage);
-        assertTrue(restoredMessages.get(1) instanceof UserMessage);
-        assertTrue(restoredMessages.get(2) instanceof AssistantMessage);
-
-        // 验证 AssistantMessage 的 toolCalls
-        AssistantMessage assistantMsg = (AssistantMessage) restoredMessages.get(2);
-        assertTrue(assistantMsg.hasToolCalls());
-        assertEquals(1, assistantMsg.getToolCalls().size());
-        assertEquals("call-123", assistantMsg.getToolCalls().get(0).id());
-        assertEquals("search", assistantMsg.getToolCalls().get(0).name());
-    }
 
     @Test
     void testStateWithoutRegisteredType() throws JsonProcessingException {

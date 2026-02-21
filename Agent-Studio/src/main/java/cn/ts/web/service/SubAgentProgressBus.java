@@ -4,6 +4,7 @@ import cn.ts.agent.extension.progress.SubAgentProgressEvent;
 import cn.ts.agent.extension.progress.SubAgentProgressReporter;
 import cn.ts.web.constant.ApiConstants;
 import cn.ts.web.dto.AgentResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
@@ -19,6 +20,11 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SubAgentProgressBus implements SubAgentProgressReporter {
 
     private final Map<String, Sinks.Many<AgentResponse>> sinksByExecutionId = new ConcurrentHashMap<>();
+    private final int replayLimit;
+
+    public SubAgentProgressBus(@Value("${agent.subagent.progress-buffer-size:1024}") int replayLimit) {
+        this.replayLimit = replayLimit > 0 ? replayLimit : 1024;
+    }
 
     public Flux<AgentResponse> stream(String executionId) {
         if (executionId == null || executionId.isBlank()) {
@@ -49,7 +55,7 @@ public class SubAgentProgressBus implements SubAgentProgressReporter {
     private Sinks.Many<AgentResponse> getOrCreateSink(String executionId) {
         return sinksByExecutionId.computeIfAbsent(
                 executionId,
-                key -> Sinks.many().replay().limit(256)
+                key -> Sinks.many().replay().limit(replayLimit)
         );
     }
 

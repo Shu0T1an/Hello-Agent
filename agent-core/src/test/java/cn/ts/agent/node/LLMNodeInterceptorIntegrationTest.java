@@ -54,7 +54,9 @@ class LLMNodeInterceptorIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        AssistantMessage assistantMessage = new AssistantMessage("ok", Map.of(), List.of());
+        AssistantMessage.builder()
+                .build();
+        AssistantMessage assistantMessage =  AssistantMessage.builder().build();
         chatResponse = new ChatResponse(List.of(new Generation(assistantMessage)));
 
         when(chatClient.prompt()).thenReturn(requestSpec);

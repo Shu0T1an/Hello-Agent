@@ -6,6 +6,31 @@
       <span v-if="processedEvents.length > 0" class="text-xs text-zinc-500 ml-2">({{ processedEvents.length }} events)</span>
     </div>
 
+    <div class="px-4 pt-3 pb-2 border-b border-zinc-100 bg-zinc-50">
+      <div class="flex items-center gap-2 flex-wrap text-xs">
+        <button
+          class="px-2 py-1 rounded border transition-colors"
+          :class="activeFilter === 'all' ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white text-zinc-700 border-zinc-200'"
+          @click="activeFilter = 'all'"
+        >全部</button>
+        <button
+          class="px-2 py-1 rounded border transition-colors"
+          :class="activeFilter === 'main' ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white text-zinc-700 border-zinc-200'"
+          @click="activeFilter = 'main'"
+        >主流程</button>
+        <button
+          class="px-2 py-1 rounded border transition-colors"
+          :class="activeFilter === 'subagent' ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white text-zinc-700 border-zinc-200'"
+          @click="activeFilter = 'subagent'"
+        >SubAgent</button>
+        <button
+          class="px-2 py-1 rounded border transition-colors"
+          :class="activeFilter === 'failed' ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white text-zinc-700 border-zinc-200'"
+          @click="activeFilter = 'failed'"
+        >失败</button>
+      </div>
+    </div>
+
     <div v-if="subAgentOverview.total > 0" class="px-4 pt-3 pb-2 border-b border-zinc-100 bg-zinc-50">
       <div class="flex items-center gap-2 flex-wrap text-xs">
         <span class="px-2 py-1 rounded bg-cyan-100 text-cyan-800">SubAgents {{ subAgentOverview.total }}</span>
@@ -95,6 +120,29 @@
                     <span class="font-medium">Duration:</span> {{ event.metadata?.durationMs }} ms
                   </div>
                 </div>
+                <div v-if="getSubAgentSteps(event).length > 0" class="rounded border border-cyan-100 bg-white p-3">
+                  <div class="text-xs font-medium text-cyan-700 mb-2">操作日志</div>
+                  <div class="space-y-2 max-h-52 overflow-y-auto">
+                    <div
+                      v-for="(step, stepIdx) in getSubAgentSteps(event)"
+                      :key="step.metadata?.stepId || `${getEventId(step, stepIdx)}-${stepIdx}`"
+                      class="text-xs border border-zinc-100 rounded px-2 py-1"
+                    >
+                      <div class="flex items-center justify-between gap-2">
+                        <span class="font-medium text-zinc-700">
+                          {{ step.metadata?.stepTitle || step.metadata?.phase || step.eventType }}
+                        </span>
+                        <span class="text-zinc-400">#{{ step.metadata?.seq ?? stepIdx + 1 }}</span>
+                      </div>
+                      <div class="text-zinc-500 mt-1">
+                        {{ formatDateTime(step.timestamp) }}
+                        <span v-if="step.metadata?.toolName"> · {{ step.metadata?.toolName }}</span>
+                      </div>
+                      <div v-if="step.metadata?.summary" class="text-zinc-600 mt-1 whitespace-pre-wrap">{{ step.metadata?.summary }}</div>
+                      <div v-if="step.metadata?.errorMessage" class="text-rose-700 mt-1 whitespace-pre-wrap">{{ step.metadata?.errorMessage }}</div>
+                    </div>
+                  </div>
+                </div>
                 <div v-if="event.metadata?.summary" class="text-sm text-zinc-700 whitespace-pre-wrap">
                   {{ event.metadata?.summary }}
                 </div>
@@ -168,20 +216,52 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const expandedEvents = ref<Set<string>>(new Set())
+const collapsedEvents = ref<Set<string>>(new Set())
 const showRawData = ref<Record<string, boolean>>({})
 const currentStyle = ref<RawDataStyle>('dark')
+const activeFilter = ref<'all' | 'main' | 'subagent' | 'failed'>('all')
 
-const subAgentLatestEvents = computed(() => {
-  const latestByTaskId = new Map<string, AgentEvent>()
-
+const subAgentGroups = computed(() => {
+  const grouped = new Map<string, AgentEvent[]>()
   for (const event of props.events) {
     if (!isSubAgentEvent(event)) continue
     const taskId = event.metadata?.subagentTaskId
     if (!taskId || typeof taskId !== 'string') continue
-    latestByTaskId.set(taskId, event)
+    const list = grouped.get(taskId) || []
+    list.push(event)
+    grouped.set(taskId, list)
   }
+  grouped.forEach((list, key) => {
+    list.sort((a, b) => {
+      const seqA = Number(a.metadata?.seq ?? Number.NaN)
+      const seqB = Number(b.metadata?.seq ?? Number.NaN)
+      if (Number.isFinite(seqA) && Number.isFinite(seqB) && seqA !== seqB) {
+        return seqA - seqB
+      }
+      const timeA = Date.parse(a.timestamp || '')
+      const timeB = Date.parse(b.timestamp || '')
+      return timeA - timeB
+    })
+    const deduped: AgentEvent[] = []
+    const seen = new Set<string>()
+    for (const event of list) {
+      const seq = event.metadata?.seq
+      const dedupKey = `${event.metadata?.subagentTaskId || key}:${seq ?? event.timestamp}:${event.eventType}`
+      if (seen.has(dedupKey)) continue
+      seen.add(dedupKey)
+      deduped.push(event)
+    }
+    grouped.set(key, deduped)
+  })
+  return grouped
+})
 
-  return Array.from(latestByTaskId.values())
+const nonSubAgentEvents = computed(() => props.events.filter(event => !isSubAgentEvent(event)))
+
+const subAgentLatestEvents = computed(() => {
+  return Array.from(subAgentGroups.value.values())
+    .map(events => events[events.length - 1])
+    .filter((event): event is AgentEvent => !!event)
 })
 
 const subAgentOverview = computed(() => {
@@ -208,23 +288,19 @@ const subAgentOverview = computed(() => {
 })
 
 const processedEvents = computed(() => {
-  const merged: AgentEvent[] = []
-  const latestByTaskId = new Map<string, AgentEvent>()
-
-  for (const event of props.events) {
-    if (!isSubAgentEvent(event)) {
-      merged.push(event)
-      continue
-    }
-    const taskId = event.metadata?.subagentTaskId
-    if (!taskId || typeof taskId !== 'string') {
-      merged.push(event)
-      continue
-    }
-    latestByTaskId.set(taskId, event)
+  let merged: AgentEvent[] = []
+  if (activeFilter.value === 'main') {
+    merged = [...nonSubAgentEvents.value]
+  } else if (activeFilter.value === 'subagent') {
+    merged = [...subAgentLatestEvents.value]
+  } else if (activeFilter.value === 'failed') {
+    merged = [
+      ...nonSubAgentEvents.value.filter(event => event.eventType === 'failed'),
+      ...subAgentLatestEvents.value.filter(event => getSubAgentStatus(event) === 'failed')
+    ]
+  } else {
+    merged = [...nonSubAgentEvents.value, ...subAgentLatestEvents.value]
   }
-
-  merged.push(...latestByTaskId.values())
 
   merged.sort((a, b) => {
     const timeA = Date.parse(a.timestamp || '')
@@ -246,16 +322,29 @@ function getSubAgentStatus(event: AgentEvent): SubAgentStatus {
 
 // 判断事件是否展开
 function isExpanded(eventId: string): boolean {
-  return expandedEvents.value.has(eventId)
+  if (expandedEvents.value.has(eventId)) return true
+  if (collapsedEvents.value.has(eventId)) return false
+  const event = processedEvents.value.find((item, idx) => getEventId(item, idx) === eventId)
+  if (!event || !isSubAgentEvent(event)) return false
+  const status = getSubAgentStatus(event)
+  return status === 'running' || status === 'queued' || status === 'failed'
 }
 
 // 切换事件展开状态
 function toggleExpand(eventId: string): void {
   if (expandedEvents.value.has(eventId)) {
     expandedEvents.value.delete(eventId)
+    collapsedEvents.value.add(eventId)
   } else {
+    collapsedEvents.value.delete(eventId)
     expandedEvents.value.add(eventId)
   }
+}
+
+function getSubAgentSteps(event: AgentEvent): AgentEvent[] {
+  const taskId = event.metadata?.subagentTaskId
+  if (!taskId || typeof taskId !== 'string') return []
+  return subAgentGroups.value.get(taskId) || []
 }
 
 // 切换原始数据显示

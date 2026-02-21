@@ -7,41 +7,27 @@
     <list default="true" id="0e294f23-af53-4e42-af50-c9a578c991d4" name="Changes" comment="fix 会话Input">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Agent-Studio/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/Component/LocalToolScanner.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/Component/LocalToolScanner.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/agent/deepsearch/DeepSearchAgentBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/agent/deepsearch/DeepSearchAgentBuilder.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/agent/deepsearch/DeepSearchProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/agent/deepsearch/DeepSearchProperties.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/constant/ApiConstants.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/constant/ApiConstants.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/factory/AgentFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/factory/AgentFactory.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/AgentExecutionService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/AgentExecutionService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/AgentResponseBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/AgentResponseBuilder.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/strategy/AssistantMessageStrategy.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/strategy/AssistantMessageStrategy.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/strategy/ToolResponseMessageStrategy.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/strategy/ToolResponseMessageStrategy.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/SubAgentProgressBus.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/SubAgentProgressBus.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/resources/application-dev.yml" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/resources/application-dev.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/resources/application.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/resources/db/schema.sql" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/resources/db/schema.sql" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/test/java/cn/ts/web/agent/deepsearch/DeepSearchAgentBuilderTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/test/java/cn/ts/web/agent/deepsearch/DeepSearchAgentBuilderTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/resources/db/schema-checkpoint.sql" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/resources/db/schema-checkpoint.sql" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Agent-Studio/src/test/java/cn/ts/web/factory/AgentFactorySubAgentIntegrationTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/test/java/cn/ts/web/factory/AgentFactorySubAgentIntegrationTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/test/java/cn/ts/web/service/SessionManagementTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/test/java/cn/ts/web/service/SessionManagementTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/api/AgentConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/api/AgentConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/extension/interceptor/SubAgentInterceptor.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/extension/interceptor/SubAgentInterceptor.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/extension/tools/TaskTool.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/extension/tools/TaskTool.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/hook/HumanInTheLoopHook.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/hook/HumanInTheLoopHook.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/mcp/McpManagerImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/mcp/McpManagerImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/node/ToolNode.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/node/ToolNode.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/util/MessageUtils.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/util/MessageUtils.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/assets/styles/markdown.css" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/assets/styles/markdown.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-core/src/test/java/cn/ts/agent/node/LLMNodeInterceptorIntegrationTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/test/java/cn/ts/agent/node/LLMNodeInterceptorIntegrationTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-core/src/test/java/cn/ts/agent/node/ToolNodeTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/test/java/cn/ts/agent/node/ToolNodeTest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/components/agent/AgentTimeline.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/agent/AgentTimeline.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/chat/ChatContainer.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/chat/ChatContainer.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/chat/ChatMessage.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/chat/ChatMessage.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/sidebar/Sidebar.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/sidebar/Sidebar.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/layouts/MainLayout.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/layouts/MainLayout.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/stores/agentTimeline.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/stores/agentTimeline.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/stores/chat.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/stores/chat.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/types/agent.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/types/agent.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/types/message.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/types/message.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/utils/agentEvents.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/utils/agentEvents.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java" beforeDir="false" afterPath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/StreamingOutput.java" beforeDir="false" afterPath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/StreamingOutput.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/serialization/MessageJsonModule.java" beforeDir="false" afterPath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/serialization/MessageJsonModule.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/record/ExecutionRecords.java" beforeDir="false" afterPath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/record/ExecutionRecords.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/graph-core/src/test/java/cn/ts/graph/record/ExecutionRecordTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/graph-core/src/test/java/cn/ts/graph/record/ExecutionRecordTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/graph-core/src/test/java/cn/ts/graph/serialization/TypedStateSerializationTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/graph-core/src/test/java/cn/ts/graph/serialization/TypedStateSerializationTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -113,6 +99,9 @@
     "JUnit.SimpleMyBatisTest.testDatabaseConnection.executor": "Run",
     "JUnit.TypedStateSerializationTest.executor": "Run",
     "Maven. [org.apache.maven.plugins:maven-archetype-plugin:RELEASE:generate].executor": "Run",
+    "Maven.Hello-Agent [clean].executor": "Run",
+    "Maven.Hello-Agent [compile].executor": "Run",
+    "Maven.Hello-Agent [install].executor": "Run",
     "RequestMappingsPanelOrder0": "0",
     "RequestMappingsPanelOrder1": "1",
     "RequestMappingsPanelWidth0": "75",
@@ -301,7 +290,7 @@
       <workItem from="1771470150972" duration="4886000" />
       <workItem from="1771553563950" duration="19694000" />
       <workItem from="1771599162046" duration="3937000" />
-      <workItem from="1771634857441" duration="10622000" />
+      <workItem from="1771634857441" duration="15743000" />
     </task>
     <task id="LOCAL-00001" summary="fix 会话Input">
       <option name="closed" value="true" />
@@ -417,12 +406,12 @@
         </line-breakpoint>
         <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java</url>
-          <line>736</line>
+          <line>737</line>
           <option name="timeStamp" value="188" />
         </line-breakpoint>
         <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java</url>
-          <line>726</line>
+          <line>727</line>
           <option name="timeStamp" value="189" />
         </line-breakpoint>
         <line-breakpoint type="java-line">
