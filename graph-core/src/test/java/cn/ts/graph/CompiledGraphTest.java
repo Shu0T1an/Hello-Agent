@@ -8,9 +8,11 @@ import cn.ts.graph.checkpoint.MemoryCheckpointStorage;
 import cn.ts.graph.checkpoint.StateSnapshot;
 import cn.ts.graph.config.RunnableConfig;
 import cn.ts.graph.constant.GraphConstants;
+import cn.ts.graph.hook.JumpTo;
 import cn.ts.graph.node.AsyncNodeActionWithConfig;
 import cn.ts.graph.node.InterruptableAction;
 import cn.ts.graph.node.Node;
+import cn.ts.graph.NodeStatus;
 import cn.ts.graph.state.State;
 import cn.ts.graph.state.MapState;
 import cn.ts.graph.test.TestFixture;
@@ -72,6 +74,38 @@ class CompiledGraphTest {
                 responses.stream().anyMatch(r -> "tool_node".equals(r.getNodeId())),
                 "tool node should not execute after interruption"
         );
+    }
+
+    @Test
+    void testStreamShouldConsumeStateJumpToAfterSingleHop() {
+        StateGraph graph = new StateGraph();
+        graph.addNode("resume_hook", state -> Map.of("jump_to", JumpTo.MODEL));
+        graph.addNode(GraphConstants.AGENT_MODEL, state -> {
+            int count = state.<Integer>value("model_count").orElse(0);
+            return Map.of("model_count", count + 1);
+        });
+
+        graph.addEdge(GraphConstants.START, "resume_hook");
+        graph.addConditionalEdge("resume_hook", state -> "model", Map.of("model", GraphConstants.AGENT_MODEL));
+        graph.addConditionalEdge(GraphConstants.AGENT_MODEL, state -> "end", Map.of("end", GraphConstants.END));
+
+        CompiledGraph compiled = graph.compile();
+        RunnableConfig config = RunnableConfig.builder()
+                .maxIterations(5)
+                .build();
+
+        List<GraphResponse<NodeOutput>> responses = compiled.stream(Map.of(), config).collectList().block();
+
+        assertNotNull(responses);
+        long modelCompletedCount = responses.stream()
+                .filter(response -> GraphConstants.AGENT_MODEL.equals(response.getNodeId()))
+                .map(GraphResponse::getData)
+                .filter(NodeOutput.class::isInstance)
+                .map(NodeOutput.class::cast)
+                .filter(output -> output.getStatus() == NodeStatus.COMPLETED)
+                .count();
+        assertEquals(1, modelCompletedCount, "jump_to should only affect one routing decision");
+        assertTrue(responses.stream().anyMatch(response -> response.type() == GraphResponse.ResponseType.COMPLETE));
     }
 
     @Test

@@ -517,6 +517,8 @@ public class GraphRunner {
         Optional<JumpTo> stateJumpTo = state.value("jump_to");
         if (stateJumpTo.isPresent()) {
             logger.debug("使用 state.jump_to 跳转: {}", stateJumpTo.get());
+            // Consume one-shot jump_to to avoid persistent re-routing loops in stream mode.
+            state.update("jump_to", null);
             return jumpToToNode(stateJumpTo.get());
         }
 
