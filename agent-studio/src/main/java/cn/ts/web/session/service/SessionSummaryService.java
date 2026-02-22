@@ -1,13 +1,13 @@
-package cn.ts.web.service;
+package cn.ts.web.session.service;
 
 import cn.ts.graph.record.ExecutionRecord;
 import cn.ts.graph.record.LLMExecutionRecord;
 import cn.ts.graph.record.ToolExecutionRecord;
-import cn.ts.web.dto.SessionSummaryDTO;
+import cn.ts.web.session.dto.SessionSummaryDTO;
 import cn.ts.web.entity.CheckpointEntity;
-import cn.ts.web.entity.SessionEntity;
+import cn.ts.web.session.entity.SessionEntity;
 import cn.ts.web.mapper.CheckpointMapper;
-import cn.ts.web.mapper.SessionMapper;
+import cn.ts.web.session.mapper.SessionMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;

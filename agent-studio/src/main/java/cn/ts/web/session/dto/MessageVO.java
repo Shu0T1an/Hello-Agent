@@ -1,4 +1,4 @@
-package cn.ts.web.dto;
+package cn.ts.web.session.dto;
 
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;

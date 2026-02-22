@@ -1,7 +1,7 @@
 package cn.ts.web.service;
 
 import cn.ts.web.shared.constant.ApiConstants;
-import cn.ts.web.service.strategy.*;
+import cn.ts.web.session.service.strategy.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.messages.AssistantMessage;

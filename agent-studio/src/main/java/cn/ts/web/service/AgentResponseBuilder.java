@@ -7,6 +7,7 @@ import cn.ts.graph.constant.GraphConstants;
 import cn.ts.graph.state.State;
 import cn.ts.web.shared.constant.ApiConstants;
 import cn.ts.web.dto.AgentResponse;
+import cn.ts.web.session.service.MessageConversionService;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.model.ChatResponse;

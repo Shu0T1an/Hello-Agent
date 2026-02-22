@@ -1,12 +1,12 @@
-package cn.ts.web.service;
+package cn.ts.web.session.service;
 
 import cn.ts.graph.checkpoint.StateSnapshot;
 import cn.ts.web.shared.constant.SessionConstants;
-import cn.ts.web.dto.SessionDTO;
-import cn.ts.web.dto.SessionDetailDTO;
-import cn.ts.web.entity.SessionEntity;
+import cn.ts.web.session.dto.SessionDTO;
+import cn.ts.web.session.dto.SessionDetailDTO;
+import cn.ts.web.session.entity.SessionEntity;
 import cn.ts.web.mapper.CheckpointMapper;
-import cn.ts.web.mapper.SessionMapper;
+import cn.ts.web.session.mapper.SessionMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

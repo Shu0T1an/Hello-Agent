@@ -1,6 +1,6 @@
-package cn.ts.web.mapper;
+package cn.ts.web.session.mapper;
 
-import cn.ts.web.entity.SessionEntity;
+import cn.ts.web.session.entity.SessionEntity;
 import org.apache.ibatis.annotations.*;
 
 import java.util.List;

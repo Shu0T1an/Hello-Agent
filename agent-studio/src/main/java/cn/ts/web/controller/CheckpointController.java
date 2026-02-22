@@ -8,7 +8,7 @@ import cn.ts.web.controller.response.ResultCode;
 import cn.ts.web.dto.CheckpointDTO;
 import cn.ts.web.dto.CheckpointDetailDTO;
 import cn.ts.web.mapper.CheckpointMapper;
-import cn.ts.web.mapper.SessionMapper;
+import cn.ts.web.session.mapper.SessionMapper;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;

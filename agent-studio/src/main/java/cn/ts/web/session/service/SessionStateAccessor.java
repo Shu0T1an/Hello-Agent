@@ -1,4 +1,4 @@
-package cn.ts.web.service;
+package cn.ts.web.session.service;
 
 import cn.ts.graph.checkpoint.StateSnapshot;
 import cn.ts.graph.util.TypeSafeStateUtils;

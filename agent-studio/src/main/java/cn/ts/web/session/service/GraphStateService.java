@@ -1,9 +1,9 @@
-package cn.ts.web.service;
+package cn.ts.web.session.service;
 
 import cn.ts.graph.checkpoint.CheckpointManager;
 import cn.ts.graph.checkpoint.StateSnapshot;
-import cn.ts.web.dto.GraphStateVO;
-import cn.ts.web.dto.SessionDetailVO;
+import cn.ts.web.session.dto.GraphStateVO;
+import cn.ts.web.session.dto.SessionDetailVO;
 import org.springframework.stereotype.Service;
 
 import java.util.List;

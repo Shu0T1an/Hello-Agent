@@ -1,8 +1,8 @@
-package cn.ts.web.service;
+package cn.ts.web.session.service;
 
 import cn.ts.agent.util.MessageUtils;
 import cn.ts.graph.checkpoint.StateSnapshot;
-import cn.ts.web.dto.SessionDetailDTO;
+import cn.ts.web.session.dto.SessionDetailDTO;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.stereotype.Component;
 

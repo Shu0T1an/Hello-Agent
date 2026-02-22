@@ -1,4 +1,4 @@
-package cn.ts.web.service;
+package cn.ts.web.session.service;
 
 import cn.ts.web.shared.constant.SessionConstants;
 import org.springframework.ai.chat.model.ChatModel;

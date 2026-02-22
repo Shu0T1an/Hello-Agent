@@ -1,7 +1,7 @@
-package cn.ts.web.service;
+package cn.ts.web.session.service;
 
 import cn.ts.web.shared.constant.ApiConstants;
-import cn.ts.web.service.strategy.*;
+import cn.ts.web.session.service.strategy.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.messages.Message;

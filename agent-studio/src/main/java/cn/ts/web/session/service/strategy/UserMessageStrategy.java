@@ -1,4 +1,4 @@
-package cn.ts.web.service.strategy;
+package cn.ts.web.session.service.strategy;
 
 import cn.ts.web.shared.constant.ApiConstants;
 import org.slf4j.Logger;

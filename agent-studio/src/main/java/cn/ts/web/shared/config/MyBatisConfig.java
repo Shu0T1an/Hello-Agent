@@ -15,7 +15,10 @@ import javax.sql.DataSource;
  * 配置 MyBatis 与 Spring 的集成
  */
 @Configuration
-@MapperScan("cn.ts.web.mapper")
+@MapperScan({
+        "cn.ts.web.mapper",
+        "cn.ts.web.session.mapper"
+})
 public class MyBatisConfig {
 
     /**
@@ -38,7 +41,7 @@ public class MyBatisConfig {
         }
 
         // 配置类型别名包
-        factoryBean.setTypeAliasesPackage("cn.ts.web.entity");
+        factoryBean.setTypeAliasesPackage("cn.ts.web.entity,cn.ts.web.session.entity");
 
         // MyBatis 配置
         org.apache.ibatis.session.Configuration configuration = new org.apache.ibatis.session.Configuration();

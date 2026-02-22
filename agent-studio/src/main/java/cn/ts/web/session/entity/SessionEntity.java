@@ -1,4 +1,4 @@
-package cn.ts.web.entity;
+package cn.ts.web.session.entity;
 
 import java.io.Serializable;
 import java.time.Instant;

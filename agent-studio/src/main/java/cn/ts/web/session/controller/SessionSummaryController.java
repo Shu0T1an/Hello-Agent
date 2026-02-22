@@ -1,9 +1,9 @@
-package cn.ts.web.controller;
+package cn.ts.web.session.controller;
 
 import cn.ts.web.controller.response.Result;
 import cn.ts.web.controller.response.ResultCode;
-import cn.ts.web.dto.SessionSummaryDTO;
-import cn.ts.web.service.SessionSummaryService;
+import cn.ts.web.session.dto.SessionSummaryDTO;
+import cn.ts.web.session.service.SessionSummaryService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;

@@ -1,4 +1,4 @@
-package cn.ts.web.dto;
+package cn.ts.web.session.dto;
 
 import cn.ts.graph.checkpoint.StateSnapshot;
 
