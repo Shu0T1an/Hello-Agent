@@ -17,12 +17,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static cn.ts.agent.Tool.ToolContextConstants.TOOL_CALL_ID_CONTEXT_KEY;
-import static cn.ts.agent.Tool.ToolContextConstants.TOOL_CALL_NAME_CONTEXT_KEY;
-import static cn.ts.agent.Tool.ToolContextConstants.TOOL_EXTRA_STATE_KEY;
-import static cn.ts.agent.Tool.ToolContextConstants.TOOL_STATE_CONTEXT_KEY;
-import static cn.ts.agent.Tool.ToolContextConstants.TOOL_TRANSIENT_CONTEXT_KEY;
-import static cn.ts.agent.Tool.ToolUtils.getAllToolCallbacksFromTools;
+import static cn.ts.agent.tool.ToolContextConstants.TOOL_CALL_ID_CONTEXT_KEY;
+import static cn.ts.agent.tool.ToolContextConstants.TOOL_CALL_NAME_CONTEXT_KEY;
+import static cn.ts.agent.tool.ToolContextConstants.TOOL_EXTRA_STATE_KEY;
+import static cn.ts.agent.tool.ToolContextConstants.TOOL_STATE_CONTEXT_KEY;
+import static cn.ts.agent.tool.ToolContextConstants.TOOL_TRANSIENT_CONTEXT_KEY;
+import static cn.ts.agent.tool.ToolUtils.getAllToolCallbacksFromTools;
 
 /**
  * 工具节点：处理工具调用
@@ -291,7 +291,7 @@ public class ToolNode implements NodeAction {
     private String extractErrorCode(Exception e) {
         Throwable current = e;
         while (current != null) {
-            if (current instanceof cn.ts.agent.Tool.TodoToolException todoException) {
+            if (current instanceof cn.ts.agent.tool.TodoToolException todoException) {
                 return todoException.getErrorCode();
             }
             current = current.getCause();

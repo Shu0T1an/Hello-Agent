@@ -1,4 +1,4 @@
-package cn.ts.agent.Tool;
+package cn.ts.agent.tool;
 
 import io.modelcontextprotocol.client.McpSyncClient;
 import org.springframework.ai.mcp.SyncMcpToolCallbackProvider;

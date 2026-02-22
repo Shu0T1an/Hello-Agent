@@ -1,7 +1,7 @@
 package cn.ts.agent.extension.tools;
 
 import cn.ts.agent.api.AgentConfig;
-import cn.ts.agent.Tool.ToolContextConstants;
+import cn.ts.agent.tool.ToolContextConstants;
 import cn.ts.agent.core.ReactAgent;
 import cn.ts.agent.extension.progress.SubAgentProgressEvent;
 import cn.ts.agent.extension.progress.SubAgentProgressReporter;

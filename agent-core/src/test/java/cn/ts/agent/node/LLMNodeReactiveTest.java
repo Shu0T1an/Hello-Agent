@@ -43,7 +43,7 @@ class LLMNodeReactiveTest {
     @BeforeEach
     void setUp() {
         // 获取工具回调 - 使用 ToolUtils 获取
-        toolCallbacks = cn.ts.agent.Tool.ToolUtils.getAllToolCallbacksFromTools(new ExampleTools());
+        toolCallbacks = cn.ts.agent.tool.ToolUtils.getAllToolCallbacksFromTools(new ExampleTools());
     }
 
     @Test

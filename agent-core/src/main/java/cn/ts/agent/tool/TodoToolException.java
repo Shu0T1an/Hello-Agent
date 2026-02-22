@@ -1,4 +1,4 @@
-package cn.ts.agent.Tool;
+package cn.ts.agent.tool;
 
 /**
  * Todo 工具业务异常，包含稳定错误码用于观测和执行记录。

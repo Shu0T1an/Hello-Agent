@@ -33,7 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-import static cn.ts.agent.Tool.ToolUtils.getAllToolCallbacksFromTools;
+import static cn.ts.agent.tool.ToolUtils.getAllToolCallbacksFromTools;
 
 /**
  * LLM node backed by Spring AI ChatClient.

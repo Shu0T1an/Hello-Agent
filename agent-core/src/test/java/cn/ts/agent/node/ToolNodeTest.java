@@ -1,6 +1,6 @@
 package cn.ts.agent.node;
 
-import cn.ts.agent.Tool.WriteToDoTool;
+import cn.ts.agent.tool.WriteToDoTool;
 import cn.ts.graph.state.MapState;
 import cn.ts.graph.state.State;
 import org.junit.jupiter.api.Test;
@@ -24,7 +24,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
-import static cn.ts.agent.Tool.ToolContextConstants.TOOL_STATE_CONTEXT_KEY;
+import static cn.ts.agent.tool.ToolContextConstants.TOOL_STATE_CONTEXT_KEY;
 
 /**
  * ToolNode 单元测试

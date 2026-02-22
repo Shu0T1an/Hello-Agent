@@ -1,4 +1,4 @@
-package cn.ts.agent.Tool;
+package cn.ts.agent.tool;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonFormat;

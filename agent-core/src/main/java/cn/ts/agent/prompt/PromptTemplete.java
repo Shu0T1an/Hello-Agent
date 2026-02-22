@@ -1,4 +1,4 @@
-package cn.ts.agent.Prompt;
+package cn.ts.agent.prompt;
 
 /**
  * Prompt constants.

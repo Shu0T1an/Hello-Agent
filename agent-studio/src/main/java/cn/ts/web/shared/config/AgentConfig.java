@@ -1,6 +1,6 @@
 package cn.ts.web.shared.config;
 
-import cn.ts.agent.Tool.WriteToDoTool;
+import cn.ts.agent.tool.WriteToDoTool;
 import cn.ts.agent.core.ReactAgent;
 import cn.ts.agent.hook.HumanInTheLoopHook;
 import cn.ts.agent.hook.LoggingHook;
