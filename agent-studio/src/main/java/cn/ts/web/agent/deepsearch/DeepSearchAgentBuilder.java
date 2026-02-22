@@ -4,12 +4,14 @@ import cn.ts.agent.core.ReactAgent;
 import cn.ts.agent.extension.interceptor.SubAgentInterceptor;
 import cn.ts.agent.extension.interceptor.ToolPolicyInterceptor;
 import cn.ts.agent.extension.tools.TaskTool;
+import cn.ts.agent.hook.ClarificationQaHook;
 import cn.ts.agent.interceptor.ModelInterceptor;
 import cn.ts.agent.interceptor.ModelInvocationContext;
 import cn.ts.agent.interceptor.ModelInvocationResult;
 import cn.ts.agent.interceptor.ModelInvoker;
 import cn.ts.agent.model.ChatModelRequest;
 import cn.ts.graph.checkpoint.CheckpointManager;
+import cn.ts.graph.hook.Hook;
 import cn.ts.web.agent.service.SubAgentProgressBus;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.stereotype.Component;
@@ -61,6 +63,7 @@ public class DeepSearchAgentBuilder {
                 .chatModel(chatModel)
                 .streaming(properties.isStreamEnabled())
                 .tools(toolsWithTask)
+                .hooks(buildGlobalHooks())
                 .modelInterceptors(List.of(
                         subAgentInterceptor,
                         new ToolPolicyInterceptor(
@@ -96,6 +99,7 @@ public class DeepSearchAgentBuilder {
                 .chatModel(chatModel)
                 .streaming(false)
                 .tools(tools)
+                .hooks(buildGlobalHooks())
                 .modelInterceptors(List.of(new PromptInjectingInterceptor(
                         "DeepSearchResearchPrompt",
                         DeepSearchPrompts.RESEARCH_SUBAGENT_PROMPT
@@ -109,6 +113,7 @@ public class DeepSearchAgentBuilder {
                 .chatModel(chatModel)
                 .streaming(false)
                 .tools(tools)
+                .hooks(buildGlobalHooks())
                 .modelInterceptors(List.of(new PromptInjectingInterceptor(
                         "DeepSearchCritiquePrompt",
                         DeepSearchPrompts.CRITIQUE_SUBAGENT_PROMPT
@@ -123,6 +128,7 @@ public class DeepSearchAgentBuilder {
                     .chatModel(chatModel)
                     .streaming(false)
                     .tools(tools)
+                    .hooks(buildGlobalHooks())
                     .modelInterceptors(List.of(new PromptInjectingInterceptor(
                             "DeepSearchGeneralPrompt",
                             DeepSearchPrompts.GENERAL_PURPOSE_SUBAGENT_PROMPT
@@ -132,6 +138,10 @@ public class DeepSearchAgentBuilder {
         }
 
         return subAgents;
+    }
+
+    private List<Hook> buildGlobalHooks() {
+        return List.of(ClarificationQaHook.builder().build());
     }
 
     static class PromptInjectingInterceptor implements ModelInterceptor {

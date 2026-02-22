@@ -1,6 +1,15 @@
-﻿import { ref, computed } from 'vue'
+import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
-import type { Message, ChatSession, Strategy, MessageAttachment, CitationReference, MessageRole } from '@/types/message'
+import type {
+  Message,
+  ChatSession,
+  Strategy,
+  MessageAttachment,
+  CitationReference,
+  MessageRole,
+  InterruptionMode,
+  ClarificationQuestion
+} from '@/types/message'
 import { useAgentStore } from './agent'
 import { useAgentTimelineStore } from './agentTimeline'
 import { useTodoStore } from './todo'
@@ -25,6 +34,7 @@ interface AgentEvent {
         nodeId: string
         message: string
         customData: {
+          mode?: InterruptionMode
           tool_feedbacks?: Array<{
             id: string
             name: string
@@ -32,7 +42,9 @@ interface AgentEvent {
             description: string
             result: string
           }>
+          questions?: ClarificationQuestion[]
           message?: string
+          reason?: string
         }
         timestamp: string
       }
@@ -197,6 +209,39 @@ function backendSessionToFrontend(session: BackendSession | BackendSessionDetail
   }
 }
 
+function hasInterruptionPendingData(message: Message): boolean {
+  if (!message.checkpointId || !message.interruptionData) {
+    return false
+  }
+  const mode = message.interruptionData.mode ?? 'tool_approval'
+  if (mode === 'clarification_qa') {
+    return Array.isArray(message.interruptionData.questions) && message.interruptionData.questions.length > 0
+  }
+  return Array.isArray(message.interruptionData.tool_feedbacks) && message.interruptionData.tool_feedbacks.length > 0
+}
+
+function mergeInterruptedMessages(remote: ChatSession, local?: ChatSession): ChatSession {
+  if (!local) return remote
+
+  const pendingLocalMessages = local.messages.filter(msg =>
+    msg.status === 'interrupted' && hasInterruptionPendingData(msg)
+  )
+  if (pendingLocalMessages.length === 0) return remote
+
+  const existingCheckpointIds = new Set(
+    remote.messages.map(msg => msg.checkpointId).filter((id): id is string => typeof id === 'string' && id.length > 0)
+  )
+
+  for (const pendingMessage of pendingLocalMessages) {
+    const checkpointId = pendingMessage.checkpointId
+    if (!checkpointId || existingCheckpointIds.has(checkpointId)) continue
+    remote.messages.push({ ...pendingMessage })
+    existingCheckpointIds.add(checkpointId)
+  }
+
+  return remote
+}
+
 // 鍒涘缓鏈湴浼氳瘽
 function createLocalSession(): ChatSession {
   const now = new Date().toLocaleString('zh-CN')
@@ -266,7 +311,11 @@ export const useChatStore = defineStore('chat', () => {
       const response = await fetch(`${API_BASE}/api/sessions/${sessionId}`)
       if (!response.ok) throw new Error('鍔犺浇浼氳瘽璇︽儏澶辫触')
       const result: { code: number; message: string; data: BackendSessionDetail } = await response.json()
-      const frontendSession = backendSessionToFrontend(result.data)
+      const localSession = sessions.value.find(s => s.id === sessionId)
+      const frontendSession = mergeInterruptedMessages(
+        backendSessionToFrontend(result.data),
+        localSession
+      )
 
       // 鏇存柊鎴栨坊鍔犱細璇?
       const index = sessions.value.findIndex(s => s.id === sessionId)
@@ -564,6 +613,88 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   // 澶勭悊 SSE 娑堟伅浜嬩欢
+  function extractInterruptionMode(data: AgentEvent): InterruptionMode {
+    const mode = data.stateData?.interruption?.metadata?.customData?.mode
+    return mode === 'clarification_qa' ? 'clarification_qa' : 'tool_approval'
+  }
+
+  function extractInterruptionToolFeedbacks(data: AgentEvent): Array<{
+    id: string
+    name: string
+    arguments: Record<string, unknown>
+    description: string
+    result: string
+  }> {
+    const raw = data.stateData?.interruption?.metadata?.customData?.tool_feedbacks
+    return Array.isArray(raw) ? raw : []
+  }
+
+  function extractInterruptionQuestions(data: AgentEvent): ClarificationQuestion[] {
+    const raw = data.stateData?.interruption?.metadata?.customData?.questions as unknown
+    if (!Array.isArray(raw)) return []
+    const questions: ClarificationQuestion[] = []
+    for (const item of raw) {
+      if (!item || typeof item !== 'object') continue
+      const record = item as { id?: unknown; question?: unknown; required?: unknown }
+      const id = toNonEmptyString(record.id)
+      const question = toNonEmptyString(record.question)
+      if (!id || !question) continue
+      questions.push({
+        id,
+        question,
+        required: record.required === true ? true : undefined
+      })
+    }
+    return questions
+  }
+
+  function findToolCallMessageIndexByFeedbacks(
+    feedbacks: Array<{ id: string }>
+  ): number {
+    const session = currentSession.value
+    if (!session) return -1
+
+    const feedbackIds = new Set(feedbacks.map(item => item.id).filter(Boolean))
+    for (let i = session.messages.length - 1; i >= 0; i--) {
+      const msg = session.messages[i]
+      if (!msg || msg.role !== 'tool_call') continue
+      const toolCalls = msg.metadata?.tool_calls
+      if (!toolCalls || toolCalls.length === 0) continue
+
+      if (feedbackIds.size === 0) {
+        return i
+      }
+
+      const matched = toolCalls.some(toolCall => feedbackIds.has(toolCall.id))
+      if (matched) return i
+    }
+
+    return -1
+  }
+
+  function findInterruptionTargetMessageIndex(
+    feedbacks: Array<{ id: string }>
+  ): number {
+    const toolCallIndex = findToolCallMessageIndexByFeedbacks(feedbacks)
+    if (toolCallIndex >= 0) return toolCallIndex
+
+    const assistantIndex = findActiveAssistantMessageIndex()
+    if (assistantIndex >= 0) return assistantIndex
+
+    const session = currentSession.value
+    if (!session) return -1
+
+    const fallbackMessage: Message = {
+      id: `interruption-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date().toLocaleString('zh-CN'),
+      status: 'interrupted'
+    }
+    session.messages.push(fallbackMessage)
+    return session.messages.length - 1
+  }
+
   function handleSSEMessage(
     data: AgentEvent,
     agentTimelineStore: ReturnType<typeof useAgentTimelineStore>,
@@ -620,29 +751,41 @@ export const useChatStore = defineStore('chat', () => {
 
     // 澶勭悊涓柇浜嬩欢锛圚ILP - 浜哄伐鍦ㄧ幆锛?
     if (data.eventType === 'INTERRUPTION') {
-      console.log('[INTERRUPTION] 鏀跺埌涓柇浜嬩欢:', data)
-      // 鍋滄娴佸鐞?
+      console.log('[INTERRUPTION] 收到中断事件:', data)
       abortController.abort()
-      // 灏嗘秷鎭姸鎬佽缃负绛夊緟瀹℃壒
-      const msgIndex = findActiveAssistantMessageIndex()
-      if (msgIndex !== undefined && msgIndex >= 0 && currentSession.value) {
+
+      const interruptionMode = extractInterruptionMode(data)
+      const toolFeedbacks = extractInterruptionToolFeedbacks(data)
+      const clarificationQuestions = extractInterruptionQuestions(data)
+      const interruptionMessage = data.stateData?.interruption?.metadata?.message
+        || data.stateData?.interruption?.metadata?.customData?.message
+        || (interruptionMode === 'clarification_qa' ? '请先补充信息后继续。' : '需要人工审批')
+      const checkpointId = data.stateData?.interruption?.checkpointId
+      const threadId = data.stateData?.interruption?.threadId || currentSessionId.value
+      const msgIndex = findInterruptionTargetMessageIndex(
+        interruptionMode === 'clarification_qa' ? [] : toolFeedbacks
+      )
+      if (msgIndex >= 0 && currentSession.value) {
         const msg = currentSession.value.messages[msgIndex]
         if (msg) {
           msg.status = 'interrupted'
-          // 淇濆瓨瀹屾暣鐨勫鎵规暟鎹?
-          const toolFeedbacks = data.stateData?.interruption?.metadata?.customData?.tool_feedbacks
-          if (toolFeedbacks && toolFeedbacks.length > 0) {
-            ;(msg as any).interruptionData = {
-              message: data.stateData?.interruption?.metadata?.message || '需要人工审批',
+          if (interruptionMode === 'clarification_qa') {
+            msg.interruptionData = {
+              mode: interruptionMode,
+              message: interruptionMessage,
+              questions: clarificationQuestions
+            }
+          } else {
+            msg.interruptionData = {
+              mode: interruptionMode,
+              message: interruptionMessage,
               tool_feedbacks: toolFeedbacks
             }
           }
-          // 淇濆瓨妫€鏌ョ偣 ID 鍜?threadId 浠ヤ究鍚庣画鎭㈠
-          if (data.stateData?.interruption?.checkpointId) {
-            ;(msg as any).checkpointId = data.stateData.interruption.checkpointId
-            // 浼樺厛浣跨敤 threadId锛屽鏋滄病鏈夊垯浣跨敤褰撳墠浼氳瘽 ID
-            ;(msg as any).threadId = data.stateData.interruption.threadId || currentSessionId.value
+          if (checkpointId) {
+            msg.checkpointId = checkpointId
           }
+          msg.threadId = threadId
         }
       }
       onComplete()
@@ -987,39 +1130,75 @@ export const useChatStore = defineStore('chat', () => {
     currentKnowledgeBaseId.value = knowledgeBaseId
   }
 
-  // Resume agent execution after approval
+  type ToolApprovalPayload = {
+    mode: 'tool_approval'
+    feedbacks: Array<{ id: string; name: string; result: string }>
+  }
+
+  type ClarificationQaPayload = {
+    mode: 'clarification_qa'
+    clarificationAnswers: Array<{ id: string; answer: string }>
+  }
+
+  type ResumePayload = ToolApprovalPayload | ClarificationQaPayload
+
+  // Resume agent execution after interruption
   async function resumeAgent(
     agentName: string,
     checkpointId: string,
     sessionId: string,
-    feedbacks: Array<{ id: string; name: string; result: string }>,
+    payload: ResumePayload,
     messageId: string
   ) {
     if (isProcessing.value) return
 
     const agentTimelineStore = useAgentTimelineStore()
 
-    // 鎵惧埌瀵瑰簲鐨?AI 娑堟伅
-    const msgIndex = currentSession.value?.messages.findIndex(m => m.id === messageId)
-    if (msgIndex === undefined || msgIndex < 0 || !currentSession.value) {
-      console.error('[resumeAgent] 娑堟伅鏈壘鍒?', messageId)
+    const session = currentSession.value
+    if (!session) {
+      console.error('[resumeAgent] no active session')
       return
     }
 
-    const aiMessage = currentSession.value.messages[msgIndex]!
+    // 先按 messageId 找，切页重载后再兜底按 checkpointId 找。
+    let msgIndex = session.messages.findIndex(m => m.id === messageId)
+    if (msgIndex < 0) {
+      msgIndex = session.messages.findIndex(m => m.checkpointId === checkpointId)
+    }
+    if (msgIndex < 0) {
+      console.error('[resumeAgent] message not found for approval submit', { messageId, checkpointId })
+      return
+    }
+
+    const aiMessage = session.messages[msgIndex]!
 
     // 鏇存柊娑堟伅鐘舵€佷负鎬濊€冧腑
     aiMessage.status = 'thinking'
-    aiMessage.content += '\n\n--- Approval granted, continue execution ---\n\n'
+    aiMessage.content += payload.mode === 'clarification_qa'
+      ? '\n\n--- Clarification received, continue execution ---\n\n'
+      : '\n\n--- Approval granted, continue execution ---\n\n'
+    delete aiMessage.interruptionData
+    delete aiMessage.checkpointId
+    delete aiMessage.threadId
     currentLlmMessageId.value = null
 
     // 鍒涘缓 AbortController
     const controller = new AbortController()
     isProcessing.value = true
 
+    const feedbackData = payload.mode === 'clarification_qa'
+      ? {
+          mode: 'clarification_qa',
+          clarificationAnswers: payload.clarificationAnswers
+        }
+      : {
+          mode: 'tool_approval',
+          feedbacks: payload.feedbacks
+        }
+
     const request = {
       checkpointId,
-      feedbackData: { feedbacks },
+      feedbackData,
       sessionId
     }
 

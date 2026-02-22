@@ -99,6 +99,22 @@ public final class StateKeys {
     public static final String INTERRUPTED = "interrupted";
 
     /**
+     * 澄清轮次键
+     * <p>
+     * 记录当前会话已触发的澄清轮次，避免无限循环澄清
+     * </p>
+     */
+    public static final String CLARIFICATION_ROUND = "clarification_round";
+
+    /**
+     * 最近一次澄清问题签名
+     * <p>
+     * 用于防止相同澄清问题在连续轮次重复触发
+     * </p>
+     */
+    public static final String CLARIFICATION_LAST_SIGNATURE = "clarification_last_signature";
+
+    /**
      * Todo 列表键
      */
     public static final String TODOS = "todos";

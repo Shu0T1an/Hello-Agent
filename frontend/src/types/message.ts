@@ -34,6 +34,14 @@ export interface CitationReference {
   chunkIndex: number
 }
 
+export type InterruptionMode = 'tool_approval' | 'clarification_qa'
+
+export interface ClarificationQuestion {
+  id: string
+  question: string
+  required?: boolean
+}
+
 export interface Message {
   id: string
   role: MessageRole
@@ -43,6 +51,7 @@ export interface Message {
   status?: MessageStatus
   avatar?: string
   checkpointId?: string
+  threadId?: string
   metadata?: {
     tool_calls?: ToolCall[]
     tool_responses?: ToolResponse[]
@@ -50,14 +59,16 @@ export interface Message {
     hide_thinking?: boolean
   }
   interruptionData?: {
+    mode?: InterruptionMode
     message: string
-    tool_feedbacks: Array<{
+    tool_feedbacks?: Array<{
       id: string
       name: string
       arguments: Record<string, unknown>
       description: string
       result: string
     }>
+    questions?: ClarificationQuestion[]
   }
   attachments?: MessageAttachment[]
   citations?: CitationReference[]

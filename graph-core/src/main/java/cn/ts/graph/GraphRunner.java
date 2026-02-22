@@ -371,6 +371,15 @@ public class GraphRunner {
         String currentNodeId = context.getCurrentNodeId();
         State currentState = context.getOverallState();
 
+        List<GraphResponse<?>> history = context.getHistory();
+        if (!history.isEmpty()) {
+            GraphResponse<?> lastResponse = history.get(history.size() - 1);
+            if (lastResponse.isInterruption()) {
+                logger.info("Execution interrupted at node: {}, stop scheduling next node", currentNodeId);
+                return Flux.empty();
+            }
+        }
+
         // 查找下一个节点
         String nextNodeId = findNextNode(currentNodeId, currentState, context.getConfig());
 

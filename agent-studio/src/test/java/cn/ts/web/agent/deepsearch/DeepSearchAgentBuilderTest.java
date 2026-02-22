@@ -58,6 +58,7 @@ class DeepSearchAgentBuilderTest {
         ReactAgent agent = builder.build(chatModel, new Object[0]);
         List<ModelInterceptor> interceptors = getLlmInterceptors(agent);
         assertFalse(interceptors.isEmpty());
+        assertTrue(agent.getGraph().getNodes().containsKey("__hook_ClarificationQaHook_after"));
         assertTrue(getToolNodeCallbacks(agent).stream().anyMatch(tc -> "task".equals(tc.getToolDefinition().name())));
 
         ModelInterceptor subAgentInterceptor = interceptors.stream()

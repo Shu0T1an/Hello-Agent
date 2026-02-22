@@ -26,6 +26,19 @@ import java.util.Optional;
 public class ChatModelRequest implements ModelRequest {
 
     private static final Logger logger = LoggerFactory.getLogger(ChatModelRequest.class);
+    private static final String CLARIFICATION_PROTOCOL_PROMPT = """
+            ## Ambiguity Handling Protocol
+            If the user's request is missing critical information and you cannot safely continue, return ONLY valid JSON:
+            {
+              "clarification_needed": true,
+              "reason": "short reason",
+              "questions": ["question 1", "question 2", "question 3"]
+            }
+            Rules:
+            - Ask at most 3 concrete clarification questions.
+            - Do not call tools when clarification_needed is true.
+            - If information is sufficient, answer normally and do not output the JSON above.
+            """;
 
     private final State state;
     private final String systemPrompt;
@@ -104,6 +117,7 @@ public class ChatModelRequest implements ModelRequest {
         }
 
         StringBuilder enhancedPrompt = new StringBuilder(systemPrompt);
+        enhancedPrompt.append("\n\n").append(CLARIFICATION_PROTOCOL_PROMPT);
 
         // 检查是否有 todolist 相关工具
         if (hasTool("upsert_todos") || hasTool("list_todos")

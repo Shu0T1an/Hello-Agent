@@ -30,7 +30,9 @@ public class AgentResumeRequest {
     /**
      * 反馈数据
      * <p>
-     * 包含用户对工具调用的审批结果
+     * 支持两种恢复模式：
+     * 1) 工具审批：{ "mode": "tool_approval", "feedbacks": [...] }
+     * 2) 澄清问答：{ "mode": "clarification_qa", "clarificationAnswers": [...] }
      * </p>
      */
     @NotNull(message = "反馈数据不能为空")

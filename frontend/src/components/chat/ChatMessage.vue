@@ -172,7 +172,7 @@
           @click="handleOpenApproval"
         >
           <CheckCircle :size="14" />
-          查看并审批
+          {{ interruptionActionLabel }}
         </BaseButton>
       </div>
     </div>
@@ -184,10 +184,11 @@
 
     <!-- 审批对话框 -->
     <ApprovalDialog
+      v-if="interruptionMode === 'tool_approval'"
       :is-open="approvalDialogOpen"
       :agent-name="agentName || 'default'"
       :checkpoint-id="message.checkpointId || ''"
-      :session-id="(message as any).threadId || sessionId"
+      :session-id="message.threadId || sessionId"
       :message="approvalMessage"
       :tool-calls="toolCalls"
       @close="approvalDialogOpen = false"
@@ -287,20 +288,33 @@ function formatToolArguments(args: string): string {
 }
 
 // 检查是否有审批数据
+const interruptionMode = computed(() => {
+  return props.message.interruptionData?.mode || 'tool_approval'
+})
+
 const hasApprovalData = computed(() => {
-  const result = !!(props.message.checkpointId) &&
-         props.message.interruptionData?.tool_feedbacks &&
-         props.message.interruptionData?.tool_feedbacks.length > 0
+  const hasCheckpoint = !!props.message.checkpointId
+  const hasToolFeedbacks = (props.message.interruptionData?.tool_feedbacks?.length || 0) > 0
+  const hasQuestions = (props.message.interruptionData?.questions?.length || 0) > 0
+  const result = hasCheckpoint && (
+    interruptionMode.value === 'clarification_qa' ? hasQuestions : hasToolFeedbacks
+  )
 
   // 调试输出
   console.log('[ChatMessage] hasApprovalData:', result, {
     status: props.message.status,
     checkpointId: props.message.checkpointId,
     hasInterruptionData: !!props.message.interruptionData,
-    toolFeedbacksCount: props.message.interruptionData?.tool_feedbacks?.length || 0
+    mode: interruptionMode.value,
+    toolFeedbacksCount: props.message.interruptionData?.tool_feedbacks?.length || 0,
+    questionsCount: props.message.interruptionData?.questions?.length || 0
   })
 
   return result
+})
+
+const interruptionActionLabel = computed(() => {
+  return interruptionMode.value === 'clarification_qa' ? '补充信息' : '查看并审批'
 })
 
 // 获取审批消息
@@ -310,6 +324,9 @@ const approvalMessage = computed(() => {
 
 // 获取工具调用列表
 const toolCalls = computed(() => {
+  if (interruptionMode.value === 'clarification_qa') {
+    return []
+  }
   const feedbacks = props.message.interruptionData?.tool_feedbacks || []
   return feedbacks.map((f) => ({
     id: f.id,
@@ -321,6 +338,10 @@ const toolCalls = computed(() => {
 
 // 打开审批对话框
 function handleOpenApproval() {
+  if (interruptionMode.value === 'clarification_qa') {
+    void handleClarificationSubmit()
+    return
+  }
   approvalDialogOpen.value = true
 }
 
@@ -333,8 +354,36 @@ async function handleApprovalSubmit(feedbacks: Array<{ id: string; name: string;
   await chatStore.resumeAgent(
     props.agentName || 'default',
     props.message.checkpointId || '',
-    (props.message as any).threadId || props.sessionId || '',
-    feedbacks,
+    props.message.threadId || props.sessionId || '',
+    { mode: 'tool_approval', feedbacks },
+    props.message.id
+  )
+}
+
+async function handleClarificationSubmit() {
+  const questions = props.message.interruptionData?.questions || []
+  if (questions.length === 0) return
+
+  const answers: Array<{ id: string; answer: string }> = []
+  for (const question of questions) {
+    const raw = window.prompt(question.question, '')
+    if (raw === null) {
+      return
+    }
+    const answer = raw.trim()
+    if (question.required !== false && answer.length === 0) {
+      alert('该问题为必填，请补充后再继续。')
+      return
+    }
+    answers.push({ id: question.id, answer })
+  }
+
+  const chatStore = useChatStore()
+  await chatStore.resumeAgent(
+    props.agentName || 'default',
+    props.message.checkpointId || '',
+    props.message.threadId || props.sessionId || '',
+    { mode: 'clarification_qa', clarificationAnswers: answers },
     props.message.id
   )
 }

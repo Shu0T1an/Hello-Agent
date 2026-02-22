@@ -3,11 +3,15 @@ package cn.ts.graph;
 import cn.ts.graph.checkpoint.CheckpointConfig;
 import cn.ts.graph.checkpoint.CheckpointManager;
 import cn.ts.graph.checkpoint.CheckpointStorage;
+import cn.ts.graph.checkpoint.InterruptionMetadata;
 import cn.ts.graph.checkpoint.MemoryCheckpointStorage;
 import cn.ts.graph.checkpoint.StateSnapshot;
 import cn.ts.graph.config.RunnableConfig;
 import cn.ts.graph.constant.GraphConstants;
+import cn.ts.graph.node.AsyncNodeActionWithConfig;
+import cn.ts.graph.node.InterruptableAction;
 import cn.ts.graph.node.Node;
+import cn.ts.graph.state.State;
 import cn.ts.graph.state.MapState;
 import cn.ts.graph.test.TestFixture;
 import org.junit.jupiter.api.Test;
@@ -17,6 +21,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -29,6 +34,45 @@ import static org.junit.jupiter.api.Assertions.*;
  * @author tianshuo
  */
 class CompiledGraphTest {
+
+    @Test
+    void testStreamShouldStopAfterInterruptionWithoutExecutingNextNode() {
+        StateGraph graph = new StateGraph();
+
+        class InterruptNodeAction implements InterruptableAction, AsyncNodeActionWithConfig {
+            @Override
+            public Optional<InterruptionMetadata> interrupt(String nodeId, State state, RunnableConfig config) {
+                return Optional.of(InterruptionMetadata.builder(nodeId, state)
+                        .message("need human approval")
+                        .build());
+            }
+
+            @Override
+            public CompletableFuture<Map<String, Object>> applyAsync(State state, RunnableConfig config) {
+                return CompletableFuture.completedFuture(Map.of("should_not_run", true));
+            }
+        }
+
+        graph.addNode(Node.ofInterruptable("interrupt_node", new InterruptNodeAction()));
+        graph.addNode("tool_node", state -> Map.of("tool_executed", true));
+        graph.addEdge(GraphConstants.START, "interrupt_node");
+        graph.addConditionalEdge(
+                "interrupt_node",
+                state -> "tool",
+                Map.of("tool", "tool_node")
+        );
+        graph.addEdge("tool_node", GraphConstants.END);
+
+        CompiledGraph compiled = graph.compile();
+        List<GraphResponse<NodeOutput>> responses = compiled.stream(Map.of()).collectList().block();
+
+        assertNotNull(responses);
+        assertTrue(responses.stream().anyMatch(GraphResponse::isInterruption), "should emit interruption response");
+        assertFalse(
+                responses.stream().anyMatch(r -> "tool_node".equals(r.getNodeId())),
+                "tool node should not execute after interruption"
+        );
+    }
 
     @Test
     void testInvoke() {

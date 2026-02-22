@@ -53,6 +53,8 @@ class StateKeysTest {
     void testInterruptionStateKeys() {
         assertEquals("interruption", StateKeys.INTERRUPTION);
         assertEquals("interrupted", StateKeys.INTERRUPTED);
+        assertEquals("clarification_round", StateKeys.CLARIFICATION_ROUND);
+        assertEquals("clarification_last_signature", StateKeys.CLARIFICATION_LAST_SIGNATURE);
     }
 
     @Test
@@ -62,6 +64,7 @@ class StateKeysTest {
         assertNotEquals(StateKeys.ITERATION, StateKeys.MAX_ITERATIONS);
         assertNotEquals(StateKeys.CURRENT_AGENT, StateKeys.AGENT_HISTORY);
         assertNotEquals(StateKeys.INTERRUPTION, StateKeys.INTERRUPTED);
+        assertNotEquals(StateKeys.CLARIFICATION_ROUND, StateKeys.CLARIFICATION_LAST_SIGNATURE);
     }
 
     @Test
@@ -93,5 +96,7 @@ class StateKeysTest {
         assertTrue(StateKeys.AGENT_HISTORY.matches(regex));
         assertTrue(StateKeys.INTERRUPTION.matches(regex));
         assertTrue(StateKeys.INTERRUPTED.matches(regex));
+        assertTrue(StateKeys.CLARIFICATION_ROUND.matches(regex));
+        assertTrue(StateKeys.CLARIFICATION_LAST_SIGNATURE.matches(regex));
     }
 }

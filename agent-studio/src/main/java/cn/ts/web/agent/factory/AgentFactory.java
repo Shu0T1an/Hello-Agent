@@ -4,7 +4,9 @@ import cn.ts.agent.core.ReactAgent;
 import cn.ts.agent.extension.interceptor.SubAgentInterceptor;
 import cn.ts.agent.extension.interceptor.ToolPolicyInterceptor;
 import cn.ts.agent.extension.tools.TaskTool;
+import cn.ts.agent.hook.ClarificationQaHook;
 import cn.ts.agent.interceptor.ModelInterceptor;
+import cn.ts.graph.hook.Hook;
 import cn.ts.graph.checkpoint.CheckpointManager;
 import cn.ts.web.agent.dto.AgentConfigDTO;
 import cn.ts.web.agent.dto.SubAgentMappingDTO;
@@ -86,6 +88,7 @@ public class AgentFactory {
                 .name(config.getAgentName())
                 .description(config.getDescription() != null ? config.getDescription() : config.getDisplayName())
                 .chatModel(chatModel);
+        builder.hooks(buildGlobalHooks());
 
         if (attachCheckpointManager) {
             builder.checkpointManager(checkpointManager);
@@ -116,6 +119,10 @@ public class AgentFactory {
         ReactAgent agent = builder.build();
         logger.info("Agent created successfully: {}", config.getAgentName());
         return agent;
+    }
+
+    private List<Hook> buildGlobalHooks() {
+        return List.of(ClarificationQaHook.builder().build());
     }
 
     private ChatModel createChatModel(AgentConfigDTO config) {

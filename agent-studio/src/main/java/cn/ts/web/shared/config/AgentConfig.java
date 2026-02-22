@@ -2,6 +2,7 @@ package cn.ts.web.shared.config;
 
 import cn.ts.agent.tool.WriteToDoTool;
 import cn.ts.agent.core.ReactAgent;
+import cn.ts.agent.hook.ClarificationQaHook;
 import cn.ts.agent.hook.HumanInTheLoopHook;
 import cn.ts.agent.hook.LoggingHook;
 import cn.ts.agent.mcp.McpManager;
@@ -107,6 +108,7 @@ public class AgentConfig {
                 .approvalOn("clear_todos", "清空所有待办事项")
                 .approvalMessage("⚠️ 需要人工审批：以下操作可能影响数据，请确认是否继续")
                 .build());
+        testAgentHooks.add(ClarificationQaHook.builder().build());
 
         // 创建一个简单的测试 Agent（非流式，带工具和 Hook）
         ReactAgent testAgent = ReactAgent.builder()
@@ -142,6 +144,7 @@ public class AgentConfig {
                 .requireApprovalForAll(false)  // 只对指定工具审批
                 .approvalMessage("🤖 请审批：Agent 请求执行以下工具调用")
                 .build());
+        streamingAgentHooks.add(ClarificationQaHook.builder().build());
 
         // 创建流式测试 Agent（带工具和 Hook）
         ReactAgent streamingAgent = ReactAgent.builder()

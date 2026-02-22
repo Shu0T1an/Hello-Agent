@@ -99,6 +99,7 @@ class AgentFactorySubAgentIntegrationTest {
 
         assertFalse(interceptors.isEmpty());
         assertEquals("SubAgent", interceptors.get(0).getName());
+        assertTrue(agent.getGraph().getNodes().containsKey("__hook_ClarificationQaHook_after"));
         assertTrue(getToolNodeCallbacks(agent).stream().anyMatch(tc -> "task".equals(tc.getToolDefinition().name())));
     }
 
@@ -229,4 +230,5 @@ class AgentFactorySubAgentIntegrationTest {
         field.setAccessible(true);
         return field.get(target);
     }
+
 }
