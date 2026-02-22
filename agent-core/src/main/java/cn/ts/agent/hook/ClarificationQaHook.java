@@ -89,8 +89,14 @@ public class ClarificationQaHook extends ModelHook implements InterruptableActio
                 }
                 return Map.of();
             }
-            logger.debug("Process clarification feedback, keys={}", feedbackData.keySet());
-            return processFeedback(state, feedbackData);
+            String feedbackSignature = buildFeedbackSignature(feedbackData);
+            Optional<String> consumedSignature = state.value(StateKeys.CLARIFICATION_LAST_FEEDBACK_SIGNATURE);
+            if (consumedSignature.isPresent() && consumedSignature.get().equals(feedbackSignature)) {
+                logger.debug("Skip duplicated clarification feedback processing, signature={}", feedbackSignature);
+                return Map.of();
+            }
+            logger.debug("Process clarification feedback, keys={}, signature={}", feedbackData.keySet(), feedbackSignature);
+            return processFeedback(state, feedbackData, feedbackSignature);
         });
     }
 
@@ -143,27 +149,37 @@ public class ClarificationQaHook extends ModelHook implements InterruptableActio
         return Optional.of(metadata);
     }
 
-    private Map<String, Object> processFeedback(State state, Map<String, Object> feedbackData) {
+    private Map<String, Object> processFeedback(State state, Map<String, Object> feedbackData, String feedbackSignature) {
         List<Answer> answers = extractAnswers(feedbackData.get(KEY_CLARIFICATION_ANSWERS));
         if (answers.isEmpty()) {
             logger.warn("Ignore clarification feedback because answers are empty.");
             return Map.of();
         }
 
-        List<Message> existing = state.<List<Message>>value(StateKeys.MESSAGES).orElseGet(ArrayList::new);
-        List<Message> newMessages = new ArrayList<>(existing);
         String clarificationInput = formatClarificationInput(answers);
-        newMessages.add(new UserMessage(clarificationInput));
 
         int currentRound = state.<Integer>value(StateKeys.CLARIFICATION_ROUND).orElse(0);
         Map<String, Object> updates = new HashMap<>();
-        updates.put(StateKeys.MESSAGES, newMessages);
+        // messages uses append strategy in graph state, so only append delta messages.
+        updates.put(StateKeys.MESSAGES, List.of(new UserMessage(clarificationInput)));
         updates.put(StateKeys.INPUT, clarificationInput);
         updates.put(StateKeys.CLARIFICATION_ROUND, currentRound + 1);
         updates.put(StateKeys.CLARIFICATION_LAST_SIGNATURE, buildAnswerSignature(answers));
+        updates.put(StateKeys.CLARIFICATION_LAST_FEEDBACK_SIGNATURE, feedbackSignature);
         updates.put(StateKeys.JUMP_TO, JumpTo.MODEL);
         logger.info("Clarification feedback accepted, answers={}, nextJump={}", answers.size(), JumpTo.MODEL);
         return updates;
+    }
+
+    private String buildFeedbackSignature(Map<String, Object> feedbackData) {
+        if (feedbackData == null || feedbackData.isEmpty()) {
+            return "";
+        }
+        List<Answer> answers = extractAnswers(feedbackData.get(KEY_CLARIFICATION_ANSWERS));
+        if (!answers.isEmpty()) {
+            return buildAnswerSignature(answers);
+        }
+        return String.valueOf(feedbackData.hashCode());
     }
 
     private Optional<Decision> extractDecision(State state) {

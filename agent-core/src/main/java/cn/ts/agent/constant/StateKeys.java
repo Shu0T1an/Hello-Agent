@@ -113,6 +113,7 @@ public final class StateKeys {
      * </p>
      */
     public static final String CLARIFICATION_LAST_SIGNATURE = "clarification_last_signature";
+    public static final String CLARIFICATION_LAST_FEEDBACK_SIGNATURE = "clarification_last_feedback_signature";
 
     /**
      * Todo 列表键

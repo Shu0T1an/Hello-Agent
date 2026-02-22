@@ -107,12 +107,75 @@ class ClarificationQaHookTest {
         assertEquals(JumpTo.MODEL, updates.get(StateKeys.JUMP_TO));
         assertEquals(1, updates.get(StateKeys.CLARIFICATION_ROUND));
         assertTrue(updates.containsKey(StateKeys.MESSAGES));
+        assertTrue(updates.containsKey(StateKeys.CLARIFICATION_LAST_FEEDBACK_SIGNATURE));
 
         @SuppressWarnings("unchecked")
         List<Message> messages = (List<Message>) updates.get(StateKeys.MESSAGES);
+        assertEquals(1, messages.size());
         Message last = messages.get(messages.size() - 1);
         assertInstanceOf(UserMessage.class, last);
         assertTrue(((UserMessage) last).getText().contains("Budget is 100k"));
+    }
+
+    @Test
+    void afterModelShouldProcessClarificationFeedbackOnlyOncePerSignature() throws Exception {
+        ClarificationQaHook hook = ClarificationQaHook.builder().build();
+        MapState state = new MapState();
+        state.update(StateKeys.MESSAGES, new ArrayList<>(List.of(
+                new UserMessage("Calc two numbers"),
+                new AssistantMessage("{\"clarification_needed\":true,\"questions\":[\"q1?\"]}")
+        )));
+
+        RunnableConfig config = RunnableConfig.builder()
+                .feedbackData(Map.of(
+                        "mode", "clarification_qa",
+                        "clarificationAnswers", List.of(
+                                Map.of("id", "q1", "answer", "12"),
+                                Map.of("id", "q2", "answer", "22")
+                        )
+                ))
+                .build();
+
+        Map<String, Object> first = hook.afterModel(state, config).get();
+        assertFalse(first.isEmpty());
+        state.merge(first);
+
+        Map<String, Object> second = hook.afterModel(state, config).get();
+        assertTrue(second.isEmpty());
+    }
+
+    @Test
+    void afterModelShouldProcessAgainWhenClarificationFeedbackSignatureChanges() throws Exception {
+        ClarificationQaHook hook = ClarificationQaHook.builder().build();
+        MapState state = new MapState();
+        state.update(StateKeys.MESSAGES, new ArrayList<>(List.of(
+                new UserMessage("Calc two numbers"),
+                new AssistantMessage("{\"clarification_needed\":true,\"questions\":[\"q1?\"]}")
+        )));
+
+        RunnableConfig firstConfig = RunnableConfig.builder()
+                .feedbackData(Map.of(
+                        "mode", "clarification_qa",
+                        "clarificationAnswers", List.of(
+                                Map.of("id", "q1", "answer", "12")
+                        )
+                ))
+                .build();
+        Map<String, Object> first = hook.afterModel(state, firstConfig).get();
+        assertFalse(first.isEmpty());
+        state.merge(first);
+
+        RunnableConfig changedConfig = RunnableConfig.builder()
+                .feedbackData(Map.of(
+                        "mode", "clarification_qa",
+                        "clarificationAnswers", List.of(
+                                Map.of("id", "q1", "answer", "13")
+                        )
+                ))
+                .build();
+        Map<String, Object> second = hook.afterModel(state, changedConfig).get();
+        assertFalse(second.isEmpty());
+        assertEquals(JumpTo.MODEL, second.get(StateKeys.JUMP_TO));
     }
 
     @Test
