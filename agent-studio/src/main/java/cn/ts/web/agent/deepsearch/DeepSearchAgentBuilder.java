@@ -10,7 +10,7 @@ import cn.ts.agent.interceptor.ModelInvocationResult;
 import cn.ts.agent.interceptor.ModelInvoker;
 import cn.ts.agent.model.ChatModelRequest;
 import cn.ts.graph.checkpoint.CheckpointManager;
-import cn.ts.web.service.SubAgentProgressBus;
+import cn.ts.web.agent.service.SubAgentProgressBus;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.stereotype.Component;
 

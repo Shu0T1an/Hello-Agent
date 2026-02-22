@@ -2,15 +2,15 @@ package cn.ts.web.service;
 
 import cn.ts.agent.core.ReactAgent;
 import cn.ts.graph.CompiledGraph;
-import cn.ts.web.dto.agent.AgentConfigDTO;
-import cn.ts.web.dto.agent.ToolDefinitionDTO;
-import cn.ts.web.dto.agent.ToolType;
-import cn.ts.web.entity.AgentConfigEntity;
-import cn.ts.web.factory.AgentFactory;
-import cn.ts.web.mapper.AgentConfigMapper;
-import cn.ts.web.mapper.AgentToolMappingMapper;
-import cn.ts.web.mapper.SubAgentMappingMapper;
-import cn.ts.web.service.impl.AgentConfigServiceImpl;
+import cn.ts.web.agent.dto.AgentConfigDTO;
+import cn.ts.web.agent.dto.ToolDefinitionDTO;
+import cn.ts.web.agent.dto.ToolType;
+import cn.ts.web.agent.entity.AgentConfigEntity;
+import cn.ts.web.agent.factory.AgentFactory;
+import cn.ts.web.agent.mapper.AgentConfigMapper;
+import cn.ts.web.agent.mapper.AgentToolMappingMapper;
+import cn.ts.web.agent.mapper.SubAgentMappingMapper;
+import cn.ts.web.agent.service.impl.AgentConfigServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -163,7 +163,7 @@ class AgentConfigServiceTest {
         agentConfigService.createAgent(testDTO);
 
         // Assert
-        verify(agentToolMappingMapper, times(2)).insert(any(cn.ts.web.entity.AgentToolMappingEntity.class));
+        verify(agentToolMappingMapper, times(2)).insert(any(cn.ts.web.agent.entity.AgentToolMappingEntity.class));
     }
 
     @Test

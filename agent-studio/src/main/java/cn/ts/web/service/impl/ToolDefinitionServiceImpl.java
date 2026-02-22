@@ -2,8 +2,8 @@ package cn.ts.web.service.impl;
 
 import cn.ts.agent.mcp.McpManager;
 import cn.ts.agent.mcp.model.McpConnection;
-import cn.ts.web.dto.agent.ToolDefinitionDTO;
-import cn.ts.web.dto.agent.ToolType;
+import cn.ts.web.agent.dto.ToolDefinitionDTO;
+import cn.ts.web.agent.dto.ToolType;
 import cn.ts.web.entity.ToolDefinitionEntity;
 import cn.ts.web.mapper.ToolDefinitionMapper;
 import cn.ts.web.service.ToolDefinitionService;

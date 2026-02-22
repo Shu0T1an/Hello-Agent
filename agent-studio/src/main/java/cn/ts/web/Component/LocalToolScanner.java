@@ -1,7 +1,7 @@
 package cn.ts.web.Component;
 
-import cn.ts.web.dto.agent.ToolDefinitionDTO;
-import cn.ts.web.dto.agent.ToolType;
+import cn.ts.web.agent.dto.ToolDefinitionDTO;
+import cn.ts.web.agent.dto.ToolType;
 import cn.ts.web.service.ToolDefinitionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

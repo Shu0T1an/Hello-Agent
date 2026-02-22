@@ -1,11 +1,11 @@
 package cn.ts.web.session.controller;
 
 import cn.ts.web.shared.config.AgentExecutionConfig;
-import cn.ts.web.dto.AgentResponse;
+import cn.ts.web.agent.dto.AgentResponse;
 import cn.ts.web.dto.CitationReference;
 import cn.ts.web.session.dto.GraphStateVO;
 import cn.ts.web.dto.TemporaryFileContent;
-import cn.ts.web.service.AgentExecutionService;
+import cn.ts.web.agent.service.AgentExecutionService;
 import cn.ts.web.service.CitationService;
 import cn.ts.web.session.service.GraphStateService;
 import cn.ts.web.session.service.SessionService;
@@ -73,7 +73,7 @@ public class StreamController {
     @PostMapping(value = "/agent/{agentName}/execute", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<AgentResponse>> executeAgent(
             @PathVariable String agentName,
-            @Valid @RequestBody cn.ts.web.dto.AgentExecuteRequest request) {
+            @Valid @RequestBody cn.ts.web.agent.dto.AgentExecuteRequest request) {
 
         // 如果提供了 sessionId，检查是否需要自动切换 Agent
         String sessionId = request.getSessionId();
@@ -248,7 +248,7 @@ public class StreamController {
     @PostMapping(value = "/agent/{agentName}/resume", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<AgentResponse>> resumeExecution(
             @PathVariable String agentName,
-            @Valid @RequestBody cn.ts.web.dto.AgentResumeRequest request) {
+            @Valid @RequestBody cn.ts.web.agent.dto.AgentResumeRequest request) {
 
         // 确定超时时间
         java.time.Duration actualTimeout = request.getTimeout() != null

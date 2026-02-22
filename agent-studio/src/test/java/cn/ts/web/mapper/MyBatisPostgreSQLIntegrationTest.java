@@ -1,8 +1,8 @@
 package cn.ts.web.mapper;
 
-import cn.ts.web.entity.AgentConfigEntity;
-import cn.ts.web.entity.AgentToolMappingEntity;
-import cn.ts.web.entity.ModelConfigEntity;
+import cn.ts.web.agent.entity.AgentConfigEntity;
+import cn.ts.web.agent.entity.AgentToolMappingEntity;
+import cn.ts.web.agent.entity.ModelConfigEntity;
 import cn.ts.web.entity.ToolDefinitionEntity;
 import cn.ts.web.entity.McpConnectionConfigEntity;
 import org.junit.jupiter.api.*;

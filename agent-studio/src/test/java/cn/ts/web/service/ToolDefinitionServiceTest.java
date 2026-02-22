@@ -1,7 +1,7 @@
 package cn.ts.web.service;
 
-import cn.ts.web.dto.agent.ToolDefinitionDTO;
-import cn.ts.web.dto.agent.ToolType;
+import cn.ts.web.agent.dto.ToolDefinitionDTO;
+import cn.ts.web.agent.dto.ToolType;
 import cn.ts.web.entity.ToolDefinitionEntity;
 import cn.ts.web.mapper.ToolDefinitionMapper;
 import cn.ts.web.service.impl.ToolDefinitionServiceImpl;

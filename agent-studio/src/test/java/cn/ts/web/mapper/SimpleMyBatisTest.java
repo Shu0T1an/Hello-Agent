@@ -1,6 +1,6 @@
 package cn.ts.web.mapper;
 
-import cn.ts.web.entity.ModelConfigEntity;
+import cn.ts.web.agent.entity.ModelConfigEntity;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

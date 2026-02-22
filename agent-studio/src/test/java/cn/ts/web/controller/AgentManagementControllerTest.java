@@ -1,9 +1,9 @@
 package cn.ts.web.controller;
 
-import cn.ts.web.dto.agent.AgentConfigDTO;
-import cn.ts.web.dto.agent.CreateAgentDTO;
-import cn.ts.web.dto.agent.UpdateAgentDTO;
-import cn.ts.web.service.AgentConfigService;
+import cn.ts.web.agent.dto.AgentConfigDTO;
+import cn.ts.web.agent.dto.CreateAgentDTO;
+import cn.ts.web.agent.dto.UpdateAgentDTO;
+import cn.ts.web.agent.service.AgentConfigService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

@@ -1,8 +1,8 @@
 package cn.ts.web.controller;
 
 import cn.ts.web.controller.response.Result;
-import cn.ts.web.dto.agent.ToolDefinitionDTO;
-import cn.ts.web.dto.agent.ToolType;
+import cn.ts.web.agent.dto.ToolDefinitionDTO;
+import cn.ts.web.agent.dto.ToolType;
 import cn.ts.web.service.ToolDefinitionService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;

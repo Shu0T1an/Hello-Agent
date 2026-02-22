@@ -6,7 +6,7 @@ import cn.ts.graph.GraphResponse;
 import cn.ts.graph.NodeOutput;
 import cn.ts.graph.state.MapState;
 import cn.ts.web.shared.constant.ApiConstants;
-import cn.ts.web.dto.AgentResponse;
+import cn.ts.web.agent.dto.AgentResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

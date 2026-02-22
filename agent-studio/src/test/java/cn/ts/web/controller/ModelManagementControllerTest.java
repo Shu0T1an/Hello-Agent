@@ -1,7 +1,7 @@
 package cn.ts.web.controller;
 
-import cn.ts.web.dto.agent.ModelConfigDTO;
-import cn.ts.web.service.ModelConfigService;
+import cn.ts.web.agent.dto.ModelConfigDTO;
+import cn.ts.web.agent.service.ModelConfigService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
