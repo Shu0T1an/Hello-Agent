@@ -27,6 +27,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Interrupts execution when model output indicates user requirements are ambiguous,
@@ -46,6 +48,11 @@ public class ClarificationQaHook extends ModelHook implements InterruptableActio
     private static final String KEY_CLARIFICATION_NEEDED_CAMEL = "clarificationNeeded";
     private static final String KEY_NEED_CLARIFICATION = "need_clarification";
     private static final String KEY_CLARIFICATION_ANSWERS = "clarificationAnswers";
+    private static final Pattern CLARIFICATION_TRUE_PATTERN = Pattern.compile(
+            "(?i)(clarification_needed|clarificationneeded|need_clarification)\\s*[:=]\\s*(true|1|yes)");
+    private static final Pattern REASON_PATTERN = Pattern.compile("(?im)^\\s*reason\\s*[:：]\\s*(.+)$");
+    private static final Pattern QUESTIONS_HEADER_PATTERN = Pattern.compile("(?im)^\\s*questions\\s*[:：]\\s*$");
+    private static final Pattern BULLET_QUESTION_PATTERN = Pattern.compile("^(?:[-*•]|\\d+[.)、])\\s*(.+)$");
 
     private final int maxQuestions;
     private final int maxRounds;
@@ -76,8 +83,13 @@ public class ClarificationQaHook extends ModelHook implements InterruptableActio
         return CompletableFuture.supplyAsync(() -> {
             Map<String, Object> feedbackData = config.feedbackData();
             if (!isClarificationFeedback(feedbackData)) {
+                if (feedbackData != null && !feedbackData.isEmpty()) {
+                    logger.debug("Skip clarification feedback processing, mode={}, keys={}",
+                            feedbackData.get(KEY_MODE), feedbackData.keySet());
+                }
                 return Map.of();
             }
+            logger.debug("Process clarification feedback, keys={}", feedbackData.keySet());
             return processFeedback(state, feedbackData);
         });
     }
@@ -134,6 +146,7 @@ public class ClarificationQaHook extends ModelHook implements InterruptableActio
     private Map<String, Object> processFeedback(State state, Map<String, Object> feedbackData) {
         List<Answer> answers = extractAnswers(feedbackData.get(KEY_CLARIFICATION_ANSWERS));
         if (answers.isEmpty()) {
+            logger.warn("Ignore clarification feedback because answers are empty.");
             return Map.of();
         }
 
@@ -149,6 +162,7 @@ public class ClarificationQaHook extends ModelHook implements InterruptableActio
         updates.put(StateKeys.CLARIFICATION_ROUND, currentRound + 1);
         updates.put(StateKeys.CLARIFICATION_LAST_SIGNATURE, buildAnswerSignature(answers));
         updates.put(StateKeys.JUMP_TO, JumpTo.MODEL);
+        logger.info("Clarification feedback accepted, answers={}, nextJump={}", answers.size(), JumpTo.MODEL);
         return updates;
     }
 
@@ -163,30 +177,97 @@ public class ClarificationQaHook extends ModelHook implements InterruptableActio
             return Optional.empty();
         }
         String text = assistantMessage.getText();
-        if (text == null || text.isBlank()) {
+        Optional<Decision> fromText = extractDecisionFromPayload(text);
+        if (fromText.isPresent()) {
+            return fromText;
+        }
+
+        if (assistantMessage.hasToolCalls()) {
+            for (AssistantMessage.ToolCall toolCall : assistantMessage.getToolCalls()) {
+                Optional<Decision> fromToolArgs = extractDecisionFromPayload(toolCall.arguments());
+                if (fromToolArgs.isPresent()) {
+                    return fromToolArgs;
+                }
+            }
+        }
+
+        return Optional.empty();
+    }
+
+    private Optional<Decision> extractDecisionFromPayload(String rawPayload) {
+        if (rawPayload == null || rawPayload.isBlank()) {
             return Optional.empty();
         }
 
-        Optional<JsonNode> nodeOptional = parseJsonNode(text);
-        if (nodeOptional.isEmpty()) {
-            return Optional.empty();
+        Optional<JsonNode> nodeOptional = parseJsonNode(rawPayload);
+        if (nodeOptional.isPresent()) {
+            Optional<Decision> fromJson = extractDecisionFromJson(nodeOptional.get());
+            if (fromJson.isPresent()) {
+                return fromJson;
+            }
         }
+        return extractDecisionFromStructuredText(rawPayload);
+    }
 
-        JsonNode node = nodeOptional.get();
-        boolean clarificationNeeded = node.path(KEY_CLARIFICATION_NEEDED).asBoolean(false)
-                || node.path(KEY_CLARIFICATION_NEEDED_CAMEL).asBoolean(false)
-                || node.path(KEY_NEED_CLARIFICATION).asBoolean(false);
+    private Optional<Decision> extractDecisionFromJson(JsonNode node) {
+        boolean clarificationNeeded = readBoolean(node, KEY_CLARIFICATION_NEEDED)
+                || readBoolean(node, KEY_CLARIFICATION_NEEDED_CAMEL)
+                || readBoolean(node, KEY_NEED_CLARIFICATION);
         if (!clarificationNeeded) {
             return Optional.empty();
         }
 
         List<String> questions = extractQuestions(node.path(KEY_QUESTIONS));
         if (questions.isEmpty()) {
+            questions = extractQuestions(node.path("question"));
+        }
+        if (questions.isEmpty()) {
             return Optional.empty();
         }
 
         String reason = node.path(KEY_REASON).asText("");
         return Optional.of(new Decision(questions, reason, buildQuestionSignature(questions)));
+    }
+
+    private Optional<Decision> extractDecisionFromStructuredText(String rawPayload) {
+        String normalized = normalizeText(rawPayload);
+        if (normalized.isBlank()) {
+            return Optional.empty();
+        }
+
+        List<String> questions = extractQuestionsFromText(normalized);
+        if (questions.isEmpty()) {
+            return Optional.empty();
+        }
+
+        String lower = normalized.toLowerCase(Locale.ROOT);
+        boolean clarificationNeeded = CLARIFICATION_TRUE_PATTERN.matcher(lower).find()
+                || lower.contains("需要澄清")
+                || lower.contains("需要补充")
+                || lower.contains("信息不足");
+        if (!clarificationNeeded) {
+            return Optional.empty();
+        }
+
+        String reason = "";
+        Matcher reasonMatcher = REASON_PATTERN.matcher(normalized);
+        if (reasonMatcher.find()) {
+            reason = reasonMatcher.group(1).trim();
+        }
+
+        return Optional.of(new Decision(questions, reason, buildQuestionSignature(questions)));
+    }
+
+    private boolean readBoolean(JsonNode node, String key) {
+        JsonNode value = node.path(key);
+        if (value.isMissingNode() || value.isNull()) {
+            return false;
+        }
+        if (value.isBoolean()) {
+            return value.asBoolean();
+        }
+        String text = value.asText("").trim().toLowerCase(Locale.ROOT);
+        return "true".equals(text) || "1".equals(text) || "yes".equals(text);
     }
 
     private Optional<JsonNode> parseJsonNode(String rawText) {
@@ -202,7 +283,7 @@ public class ClarificationQaHook extends ModelHook implements InterruptableActio
     }
 
     private String normalizeJsonPayload(String rawText) {
-        String candidate = rawText.trim();
+        String candidate = normalizeText(rawText).trim();
         if (candidate.startsWith("```")) {
             int firstBrace = candidate.indexOf('{');
             int lastBrace = candidate.lastIndexOf('}');
@@ -218,27 +299,108 @@ public class ClarificationQaHook extends ModelHook implements InterruptableActio
         return candidate;
     }
 
-    private List<String> extractQuestions(JsonNode questionsNode) {
-        if (!questionsNode.isArray()) {
-            return List.of();
+    private String normalizeText(String rawText) {
+        if (rawText == null) {
+            return "";
         }
+        return rawText
+                .replace('\u201c', '"')
+                .replace('\u201d', '"')
+                .replace('\u2018', '\'')
+                .replace('\u2019', '\'')
+                .replace('\uff1a', ':')
+                .replace('\uff0c', ',')
+                .replace('\u3001', ',')
+                .replace('\uff3b', '[')
+                .replace('\uff3d', ']')
+                .replace('\u3010', '[')
+                .replace('\u3011', ']')
+                .replace('\uff5b', '{')
+                .replace('\uff5d', '}')
+                .replace("\r\n", "\n")
+                .replace('\r', '\n');
+    }
+
+    private List<String> extractQuestions(JsonNode questionsNode) {
         List<String> questions = new ArrayList<>();
-        for (JsonNode item : questionsNode) {
+        if (questionsNode.isArray()) {
+            for (JsonNode item : questionsNode) {
+                if (questions.size() >= maxQuestions) {
+                    break;
+                }
+                String question;
+                if (item.isTextual()) {
+                    question = item.asText("");
+                } else {
+                    question = item.path("question").asText("");
+                }
+                addQuestion(questions, question);
+            }
+            return questions;
+        }
+
+        if (questionsNode.isTextual()) {
+            for (String line : normalizeText(questionsNode.asText("")).split("\n")) {
+                addQuestion(questions, line);
+                if (questions.size() >= maxQuestions) {
+                    break;
+                }
+            }
+            return questions;
+        }
+
+        if (questionsNode.isObject()) {
+            addQuestion(questions, questionsNode.path("question").asText(""));
+        }
+
+        return questions;
+    }
+
+    private List<String> extractQuestionsFromText(String text) {
+        List<String> questions = new ArrayList<>();
+        boolean inQuestionsSection = false;
+        for (String rawLine : text.split("\n")) {
+            String line = rawLine.trim();
+            if (line.isEmpty()) {
+                if (inQuestionsSection) {
+                    break;
+                }
+                continue;
+            }
+
+            if (!inQuestionsSection && QUESTIONS_HEADER_PATTERN.matcher(line).matches()) {
+                inQuestionsSection = true;
+                continue;
+            }
+
+            if (inQuestionsSection) {
+                Matcher bulletMatcher = BULLET_QUESTION_PATTERN.matcher(line);
+                if (bulletMatcher.find()) {
+                    addQuestion(questions, bulletMatcher.group(1));
+                } else {
+                    addQuestion(questions, line);
+                }
+            } else if (line.endsWith("?") || line.endsWith("？")) {
+                addQuestion(questions, line);
+            }
+
             if (questions.size() >= maxQuestions) {
                 break;
             }
-            String question;
-            if (item.isTextual()) {
-                question = item.asText("");
-            } else {
-                question = item.path("question").asText("");
-            }
-            String trimmed = question.trim();
-            if (!trimmed.isEmpty()) {
-                questions.add(trimmed);
-            }
         }
         return questions;
+    }
+
+    private void addQuestion(List<String> questions, String candidate) {
+        if (questions.size() >= maxQuestions || candidate == null) {
+            return;
+        }
+        String normalized = candidate
+                .replaceFirst("^[\\-•*\\d.)、\\s]+", "")
+                .trim();
+        if (!normalized.isEmpty()) {
+            questions.add(normalized);
+        }
     }
 
     private boolean isClarificationFeedback(Map<String, Object> feedbackData) {
