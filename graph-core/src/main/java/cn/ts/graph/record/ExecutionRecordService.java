@@ -1,12 +1,6 @@
-package cn.ts.graph;
+package cn.ts.graph.record;
 
-import cn.ts.graph.record.ExecutionRecord;
-import cn.ts.graph.record.ExecutionRecordManager;
-import cn.ts.graph.record.ExecutionRecords;
-import cn.ts.graph.record.InputMessage;
-import cn.ts.graph.record.TokenUsage;
-import cn.ts.graph.record.ToolCallInfo;
-import cn.ts.graph.record.ToolExecutionRecord;
+import cn.ts.graph.GraphRunnerContext;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
@@ -21,16 +15,16 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-class ExecutionRecordService {
+public class ExecutionRecordService {
 
     private final ExecutionRecordManager recordManager;
 
-    ExecutionRecordService(ExecutionRecordManager recordManager) {
+    public ExecutionRecordService(ExecutionRecordManager recordManager) {
         this.recordManager = recordManager;
     }
 
     @SuppressWarnings("unchecked")
-    Optional<Map<String, Object>> extractExecutionInfo(Map<String, Object> updates) {
+    public Optional<Map<String, Object>> extractExecutionInfo(Map<String, Object> updates) {
         if (updates == null || updates.isEmpty()) {
             return Optional.empty();
         }
@@ -41,7 +35,7 @@ class ExecutionRecordService {
         return Optional.empty();
     }
 
-    void saveIfPresent(String nodeId, Optional<Map<String, Object>> execInfo, GraphRunnerContext context) {
+    public void saveIfPresent(String nodeId, Optional<Map<String, Object>> execInfo, GraphRunnerContext context) {
         if (execInfo.isEmpty()) {
             return;
         }
@@ -49,11 +43,11 @@ class ExecutionRecordService {
         saveRecord(record, context);
     }
 
-    void saveRecord(ExecutionRecord record, GraphRunnerContext context) {
+    public void saveRecord(ExecutionRecord record, GraphRunnerContext context) {
         recordManager.saveRecord(record, context.getOverallState());
     }
 
-    ExecutionRecord buildLlmRecord(
+    public ExecutionRecord buildLlmRecord(
             String nodeId,
             GraphRunnerContext context,
             ConcurrentLinkedQueue<ChatResponse> responsesQueue,
