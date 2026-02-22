@@ -12,7 +12,7 @@
   <modules>
     <module>graph-core</module>
     <module>agent-core</module>
-      <module>Agent-Studio</module>
+      <module>agent-studio</module>
   </modules>
 
   <properties>
