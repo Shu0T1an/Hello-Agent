@@ -13,7 +13,7 @@ import cn.ts.web.agent.mapper.AgentToolMappingMapper;
 import cn.ts.web.agent.mapper.SubAgentMappingMapper;
 import cn.ts.web.agent.service.AgentConfigService;
 import cn.ts.web.agent.service.AgentExecutionService;
-import cn.ts.web.service.ToolDefinitionService;
+import cn.ts.web.tool.service.ToolDefinitionService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -194,7 +194,7 @@ public class AgentConfigServiceImpl implements AgentConfigService {
         entity.setToolDefinitions(
                 tools.stream()
                         .map(t -> {
-                            cn.ts.web.entity.ToolDefinitionEntity te = new cn.ts.web.entity.ToolDefinitionEntity();
+                            cn.ts.web.tool.entity.ToolDefinitionEntity te = new cn.ts.web.tool.entity.ToolDefinitionEntity();
                             te.setId(t.getId());
                             te.setToolName(t.getToolName());
                             te.setDisplayName(t.getDisplayName());
@@ -221,7 +221,7 @@ public class AgentConfigServiceImpl implements AgentConfigService {
                     entity.setToolDefinitions(
                             tools.stream()
                                     .map(t -> {
-                                        cn.ts.web.entity.ToolDefinitionEntity te = new cn.ts.web.entity.ToolDefinitionEntity();
+                                        cn.ts.web.tool.entity.ToolDefinitionEntity te = new cn.ts.web.tool.entity.ToolDefinitionEntity();
                                         te.setId(t.getId());
                                         te.setToolName(t.getToolName());
                                         te.setDisplayName(t.getDisplayName());

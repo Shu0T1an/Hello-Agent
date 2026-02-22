@@ -1,6 +1,6 @@
 package cn.ts.web.agent.controller;
 
-import cn.ts.web.controller.response.Result;
+import cn.ts.web.shared.response.Result;
 import cn.ts.web.agent.dto.ModelConfigDTO;
 import cn.ts.web.agent.service.ModelConfigService;
 import jakarta.validation.Valid;

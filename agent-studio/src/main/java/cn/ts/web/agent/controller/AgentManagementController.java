@@ -1,7 +1,7 @@
 package cn.ts.web.agent.controller;
 
-import cn.ts.web.controller.response.Result;
-import cn.ts.web.controller.response.ResultCode;
+import cn.ts.web.shared.response.Result;
+import cn.ts.web.shared.response.ResultCode;
 import cn.ts.web.agent.dto.AgentConfigDTO;
 import cn.ts.web.agent.dto.CreateAgentDTO;
 import cn.ts.web.agent.dto.UpdateAgentDTO;

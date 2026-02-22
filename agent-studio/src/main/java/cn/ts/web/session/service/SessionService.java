@@ -5,7 +5,7 @@ import cn.ts.web.shared.constant.SessionConstants;
 import cn.ts.web.session.dto.SessionDTO;
 import cn.ts.web.session.dto.SessionDetailDTO;
 import cn.ts.web.session.entity.SessionEntity;
-import cn.ts.web.mapper.CheckpointMapper;
+import cn.ts.web.infra.checkpoint.mapper.CheckpointMapper;
 import cn.ts.web.session.mapper.SessionMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;

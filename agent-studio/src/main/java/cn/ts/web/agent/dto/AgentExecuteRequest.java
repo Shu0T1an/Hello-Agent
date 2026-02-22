@@ -1,6 +1,6 @@
 package cn.ts.web.agent.dto;
 
-import cn.ts.web.dto.TemporaryFileContent;
+import cn.ts.web.infra.tempfile.dto.TemporaryFileContent;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

@@ -13,7 +13,7 @@ import cn.ts.graph.observation.GraphObservationLifecycleListener;
 import cn.ts.web.agent.deepsearch.DeepSearchAgentBuilder;
 import cn.ts.web.agent.deepsearch.DeepSearchProperties;
 import cn.ts.web.agent.service.AgentExecutionService;
-import cn.ts.web.tools.SimpleTools;
+import cn.ts.web.tool.local.SimpleTools;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ChatModel;

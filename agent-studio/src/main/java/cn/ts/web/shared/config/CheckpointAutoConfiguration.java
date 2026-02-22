@@ -5,7 +5,7 @@ import cn.ts.graph.checkpoint.CheckpointManager;
 import cn.ts.graph.checkpoint.CheckpointManagerImpl;
 import cn.ts.graph.checkpoint.CheckpointStorage;
 import cn.ts.graph.checkpoint.MemoryCheckpointStorage;
-import cn.ts.web.checkpoint.DatabaseCheckpointStorage;
+import cn.ts.web.infra.checkpoint.storage.DatabaseCheckpointStorage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;

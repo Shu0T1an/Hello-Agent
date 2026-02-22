@@ -1,0 +1,73 @@
+package cn.ts.web.infra.testsupport.service;
+
+import cn.ts.web.tool.local.SimpleTools;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.prompt.ChatOptions;
+import org.springframework.ai.model.tool.ToolCallingChatOptions;
+import org.springframework.ai.openai.OpenAiChatOptions;
+import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * ChatModel 测试服务
+ * 用于验证 Spring AI 模型是否正常工作
+ */
+@Service
+@Slf4j
+public class ChatTestService {
+
+    private final ChatClient chatClient;
+
+    public ChatTestService(ChatClient.Builder chatClientBuilder) {
+        this.chatClient = chatClientBuilder.build();
+    }
+
+    /**
+     * 简单的聊天测试
+     *
+     * @param message 用户消息
+     * @return AI 模型的响应
+     */
+    public String simpleChat(String message) {
+
+        ChatResponse chatResponse = chatClient.prompt()
+                .tools(new SimpleTools())
+                .user(message)
+                .call().chatResponse();
+        return chatResponse.getResult().getOutput().getText();
+    }
+
+    public Flux<ChatResponse> streamChat(String message) {
+        OpenAiChatOptions openAiChatOptions = OpenAiChatOptions.builder()
+                .streamUsage(true)
+                .build();
+        Flux<ChatResponse> chatResponseFlux = chatClient.prompt()
+                .user(message)
+                .options(openAiChatOptions)
+                .stream()
+                .chatResponse();
+        return chatResponseFlux;
+    }
+
+    public Flux<String> streamHistoryChat(String message){
+        StringBuffer sb = new StringBuffer();
+
+        return chatClient.prompt()
+                .user(message)
+                .tools(new SimpleTools())
+                .options(ToolCallingChatOptions.builder()
+                        .internalToolExecutionEnabled(false)
+                        .build())
+                .stream()
+                .content()
+                .doOnNext(log::info)
+                .doOnNext(t-> log.info("nihao "))
+                .doOnNext(sb::append)
+                .doOnComplete(() -> log.info(sb.toString()));
+    }
+}

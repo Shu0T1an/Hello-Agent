@@ -2,11 +2,11 @@ package cn.ts.web.session.controller;
 
 import cn.ts.web.shared.config.AgentExecutionConfig;
 import cn.ts.web.agent.dto.AgentResponse;
-import cn.ts.web.dto.CitationReference;
+import cn.ts.web.rag.dto.CitationReference;
 import cn.ts.web.session.dto.GraphStateVO;
-import cn.ts.web.dto.TemporaryFileContent;
+import cn.ts.web.infra.tempfile.dto.TemporaryFileContent;
 import cn.ts.web.agent.service.AgentExecutionService;
-import cn.ts.web.service.CitationService;
+import cn.ts.web.rag.service.CitationService;
 import cn.ts.web.session.service.GraphStateService;
 import cn.ts.web.session.service.SessionService;
 import org.slf4j.Logger;

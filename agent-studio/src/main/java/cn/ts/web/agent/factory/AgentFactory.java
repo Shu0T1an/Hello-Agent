@@ -16,7 +16,7 @@ import cn.ts.web.agent.mapper.AgentConfigMapper;
 import cn.ts.web.agent.mapper.SubAgentMappingMapper;
 import cn.ts.web.agent.service.ModelConfigService;
 import cn.ts.web.agent.service.SubAgentProgressBus;
-import cn.ts.web.service.ToolDefinitionService;
+import cn.ts.web.tool.service.ToolDefinitionService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;

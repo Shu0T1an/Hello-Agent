@@ -3,7 +3,7 @@ package cn.ts.web.agent.service.impl;
 import cn.ts.web.agent.dto.ModelConfigDTO;
 import cn.ts.web.agent.entity.ModelConfigEntity;
 import cn.ts.web.agent.mapper.ModelConfigMapper;
-import cn.ts.web.service.ApiKeyEncryptionService;
+import cn.ts.web.shared.service.ApiKeyEncryptionService;
 import cn.ts.web.agent.service.ModelConfigService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

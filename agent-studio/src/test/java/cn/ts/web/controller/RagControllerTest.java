@@ -1,8 +1,8 @@
 package cn.ts.web.controller;
 
-import cn.ts.web.service.DocumentLoaderService;
-import cn.ts.web.service.KnowledgeBaseService;
-import cn.ts.web.service.RagQueryService;
+import cn.ts.web.rag.service.DocumentLoaderService;
+import cn.ts.web.rag.service.KnowledgeBaseService;
+import cn.ts.web.rag.service.RagQueryService;
 import cn.ts.web.service.rag.RagTestDataFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

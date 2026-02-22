@@ -1,7 +1,7 @@
 package cn.ts.web.controller;
 
 import cn.ts.agent.mcp.model.McpConnectionType;
-import cn.ts.web.dto.McpConnectionRequest;
+import cn.ts.web.infra.mcp.dto.McpConnectionRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

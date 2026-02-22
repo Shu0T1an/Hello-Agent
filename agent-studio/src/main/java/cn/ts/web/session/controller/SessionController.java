@@ -1,7 +1,7 @@
 package cn.ts.web.session.controller;
 
-import cn.ts.web.controller.response.Result;
-import cn.ts.web.controller.response.ResultCode;
+import cn.ts.web.shared.response.Result;
+import cn.ts.web.shared.response.ResultCode;
 import cn.ts.web.session.dto.SessionDetailDTO;
 import cn.ts.web.session.dto.SessionDTO;
 import cn.ts.web.session.service.SessionService;

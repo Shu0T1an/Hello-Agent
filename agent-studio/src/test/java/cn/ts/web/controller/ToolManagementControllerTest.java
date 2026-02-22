@@ -2,7 +2,7 @@ package cn.ts.web.controller;
 
 import cn.ts.web.agent.dto.ToolDefinitionDTO;
 import cn.ts.web.agent.dto.ToolType;
-import cn.ts.web.service.ToolDefinitionService;
+import cn.ts.web.tool.service.ToolDefinitionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

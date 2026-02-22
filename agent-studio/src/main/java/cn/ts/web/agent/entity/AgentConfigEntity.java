@@ -1,6 +1,6 @@
 package cn.ts.web.agent.entity;
 
-import cn.ts.web.entity.ToolDefinitionEntity;
+import cn.ts.web.tool.entity.ToolDefinitionEntity;
 import lombok.Data;
 
 import java.io.Serializable;
