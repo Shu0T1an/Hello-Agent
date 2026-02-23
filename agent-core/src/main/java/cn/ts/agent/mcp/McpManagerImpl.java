@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 /**
- * MCP 绠＄悊鍣ㄥ疄鐜扮被
+ * MCP 管理器实现类
  * <p>
  * 璐熻矗 MCP 杩炴帴鐨勭敓鍛藉懆鏈熺鐞嗭紝鍖呮嫭鍒涘缓銆佽繛鎺ャ€佸仴搴锋鏌ュ拰鑷姩閲嶈繛
  * </p>
@@ -65,7 +65,7 @@ public class McpManagerImpl implements McpManager {
     }
 
     /**
-     * 鍙戝竷 MCP 杩炴帴浜嬩欢
+     * 发布 MCP 连接事件
      */
     private void publishEvent(McpConnectionEvent event) {
         try {
@@ -78,10 +78,10 @@ public class McpManagerImpl implements McpManager {
     @Override
     public boolean registerConnection(McpConnectionConfig config) {
         if (!StringUtils.hasText(config.getName())) {
-            throw new IllegalArgumentException("杩炴帴鍚嶇О涓嶈兘涓虹┖");
+            throw new IllegalArgumentException("连接名称不能为空");
         }
         if (connections.containsKey(config.getName())) {
-            throw new IllegalArgumentException("杩炴帴鍚嶇О宸插瓨鍦? " + config.getName());
+            throw new IllegalArgumentException("连接名称已存在:  " + config.getName());
         }
 
         try {
@@ -95,10 +95,10 @@ public class McpManagerImpl implements McpManager {
             // 寮傛杩炴帴
             connectAsync(connection);
 
-            logger.info("MCP 杩炴帴娉ㄥ唽鎴愬姛: {}, 绫诲瀷: {}", config.getName(), config.getType());
+            logger.info("MCP 连接注册成功: {}, 绫诲瀷: {}", config.getName(), config.getType());
             return true;
         } catch (Exception e) {
-            logger.error("MCP 杩炴帴娉ㄥ唽澶辫触: {}", config.getName(), e);
+            logger.error("MCP 连接注册失败: {}", config.getName(), e);
             connections.remove(config.getName());
             return false;
         }
@@ -108,32 +108,32 @@ public class McpManagerImpl implements McpManager {
     public void unregisterConnection(String name) {
         McpConnection connection = connections.remove(name);
         if (connection == null) {
-            throw new IllegalArgumentException("杩炴帴涓嶅瓨鍦? " + name);
+            throw new IllegalArgumentException("连接不存在:  " + name);
         }
 
         disconnect(connection);
-        logger.info("MCP 杩炴帴宸叉敞閿€: {}", name);
+        logger.info("MCP 连接已注销€: {}", name);
     }
 
     @Override
     public void updateConnection(String name, McpConnectionConfig newConfig) {
         McpConnection connection = connections.get(name);
         if (connection == null) {
-            throw new IllegalArgumentException("杩炴帴涓嶅瓨鍦? " + name);
+            throw new IllegalArgumentException("连接不存在:  " + name);
         }
 
-        // 鍏堟柇寮€鏃ц繛鎺?
+        // 先断开现有连接
         disconnect(connection);
 
-        // 鏇存柊閰嶇疆
+        // 更新配置
         connection.setConfig(newConfig);
         connection.setStatus(McpConnectionStatus.CONNECTING);
         connection.setErrorMessage(null);
 
-        // 閲嶆柊杩炴帴
+        // 重新连接
         connectAsync(connection);
 
-        logger.info("MCP 杩炴帴宸叉洿鏂? {}", name);
+        logger.info("MCP 连接已更新 {}", name);
     }
 
     @Override
@@ -157,8 +157,8 @@ public class McpManagerImpl implements McpManager {
 
     @Override
     public ToolCallback[] getAllToolCallbacks() {
-        // TODO: 绛夊緟 Spring AI MCP API 绋冲畾鍚庡疄鐜?
-        // 鏆傛椂杩斿洖绌烘暟缁?
+        // TODO: 等待 Spring AI MCP API 稳定后实现
+        // 暂时返回空数组
         return new ToolCallback[0];
     }
 
@@ -166,7 +166,7 @@ public class McpManagerImpl implements McpManager {
     public boolean healthCheck(String name) {
         McpConnection connection = connections.get(name);
         if (connection == null) {
-            logger.warn("鍋ュ悍妫€鏌ュけ璐? 杩炴帴涓嶅瓨鍦?- {}", name);
+            logger.warn("鍋ュ悍妫€鏌ュけ璐? 连接不存在: - {}", name);
             return false;
         }
 
@@ -186,10 +186,10 @@ public class McpManagerImpl implements McpManager {
     public void reconnect(String name) {
         McpConnection connection = connections.get(name);
         if (connection == null) {
-            throw new IllegalArgumentException("杩炴帴涓嶅瓨鍦? " + name);
+            throw new IllegalArgumentException("连接不存在:  " + name);
         }
 
-        logger.info("鎵嬪姩閲嶈繛: {}", name);
+        logger.info("手动重连: {}", name);
         disconnect(connection);
         connection.setStatus(McpConnectionStatus.CONNECTING);
         connection.setErrorMessage(null);
@@ -232,7 +232,7 @@ public class McpManagerImpl implements McpManager {
             double avgResponse = stats.getAverageResponseTime();
             totalResponseTime += avgResponse * connSuccessfulCalls;
 
-            // 鑾峰彇宸ュ叿鏁伴噺
+            // 获取工具数量
             int toolCount = 0;
             if (connection.getClient() != null) {
                 try {
@@ -241,7 +241,7 @@ public class McpManagerImpl implements McpManager {
                         toolCount = tools.tools().size();
                     }
                 } catch (Exception e) {
-                    logger.debug("鑾峰彇宸ュ叿鏁伴噺澶辫触: {}", connection.getName(), e);
+                    logger.debug("获取工具数量澶辫触: {}", connection.getName(), e);
                 }
             }
             totalTools += toolCount;
@@ -279,7 +279,7 @@ public class McpManagerImpl implements McpManager {
     @Override
     public void start() {
         if (running.compareAndSet(false, true)) {
-            logger.info("MCP 绠＄悊鍣ㄥ惎鍔ㄤ腑...");
+            logger.info("MCP 管理器启动中...");
 
             // 鍚姩鍋ュ悍妫€鏌ヤ换鍔?
             if (config.isEnableHealthCheck()) {
@@ -301,12 +301,12 @@ public class McpManagerImpl implements McpManager {
                 healthCheckTask = null;
             }
 
-            // 鍏抽棴鎵€鏈夎繛鎺?
+            // 关闭所有连接
             for (McpConnection connection : connections.values()) {
                 disconnect(connection);
             }
 
-            // 鍏抽棴璋冨害鍣?
+            // 关闭调度器
             scheduler.shutdown();
             connectionExecutor.shutdownNow();
             try {
@@ -318,7 +318,7 @@ public class McpManagerImpl implements McpManager {
                 Thread.currentThread().interrupt();
             }
 
-            logger.info("MCP 绠＄悊鍣ㄥ凡鍋滄");
+            logger.info("MCP 管理器已停止");
         }
     }
 
@@ -391,26 +391,26 @@ public class McpManagerImpl implements McpManager {
         McpConnectionConfig config = connection.getConfig();
         McpSyncClient client = createMcpClient(config);
         client.initialize();
-        logger.info("MCP client initialized");
+        logger.info("MCP 客户端初始化成功");
 
         connection.setClient(client);
         connection.setStatus(McpConnectionStatus.CONNECTED);
         connection.setConnectedAt(Instant.now());
         connection.setErrorMessage(null);
 
-        logger.info("MCP 杩炴帴鎴愬姛: {}, 绫诲瀷: {}", config.getName(), config.getType());
+        logger.info("MCP 连接成功: {}, 绫诲瀷: {}", config.getName(), config.getType());
 
-        // 鍙戝竷杩炴帴鎴愬姛浜嬩欢
+        // 发布连接成功事件
         publishEvent(McpConnectionEvent.connected(this, config.getName()));
     }
 
     /**
-     * 鍒涘缓 MCP 瀹㈡埛绔?
+     * 创建 MCP 客户端
      * <p>
      * 鏍规嵁杩炴帴绫诲瀷鍒涘缓瀵瑰簲鐨?MCP 瀹㈡埛绔細
-     * - STDIO: 鏍囧噯杈撳叆杈撳嚭杩炴帴
-     * - SSE: Server-Sent Events 杩炴帴
-     * - HTTP: HTTP 杩炴帴锛堟殏涓嶆敮鎸侊級
+     * - STDIO: 标准输入输出连接
+     * - SSE: Server-Sent Events 连接
+     * - HTTP: HTTP 连接（暂不支持）
      * </p>
      */
     private McpSyncClient createMcpClient(McpConnectionConfig config) {
@@ -419,7 +419,7 @@ public class McpManagerImpl implements McpManager {
         return switch (config.getType()) {
             case STDIO -> {
                 if (config.getStdioConfig() == null) {
-                    throw new IllegalArgumentException("STDIO 閰嶇疆涓嶈兘涓虹┖");
+                    throw new IllegalArgumentException("STDIO 配置不能为空");
                 }
                 ServerParameters params = ServerParameters
                         .builder(config.getStdioConfig().getCommand())
@@ -432,15 +432,15 @@ public class McpManagerImpl implements McpManager {
 
             case SSE -> {
                 if (config.getSseConfig() == null) {
-                    throw new IllegalArgumentException("SSE 閰嶇疆涓嶈兘涓虹┖");
+                    throw new IllegalArgumentException("SSE 配置不能为空");
                 }
                 String url = config.getSseConfig().getUrl();
                 if (url == null || url.isBlank()) {
-                    throw new IllegalArgumentException("SSE URL 涓嶈兘涓虹┖");
+                    throw new IllegalArgumentException("SSE URL 不能为空");
                 }
                 try {
                     logger.info("鍒涘缓 SSE 瀹㈡埛绔紝URL: {}", url);
-                    // 浣跨敤 Builder 鏂瑰紡鍒涘缓 SSE 浼犺緭灞?
+                    // 使用 Builder 方式创建 SSE 传输层
                     McpClientTransport transport = HttpClientSseClientTransport.builder(url)
                             .jsonMapper(new JacksonMcpJsonMapper(objectMapper))
                             .build();
@@ -511,7 +511,7 @@ public class McpManagerImpl implements McpManager {
             // 鍙戝竷閿欒浜嬩欢
             publishEvent(McpConnectionEvent.error(this, connection.getName(), e.getMessage()));
 
-            // 灏濊瘯閲嶈繛
+            // 尝试重连
             if (connection.getConfig().isAutoReconnect()) {
                 scheduleReconnect(connection);
             }
@@ -536,7 +536,7 @@ public class McpManagerImpl implements McpManager {
     }
 
     /**
-     * 瀹夋帓閲嶈繛
+     * 安排重连
      */
     private void scheduleReconnect(McpConnection connection) {
         int maxRetries = connection.getConfig().getMaxRetries();
@@ -544,7 +544,7 @@ public class McpManagerImpl implements McpManager {
 
         scheduler.schedule(() -> {
             if (connection.getStatus() != McpConnectionStatus.CONNECTED) {
-                logger.info("灏濊瘯閲嶈繛: {}", connection.getName());
+                logger.info("尝试重连: {}", connection.getName());
                 disconnect(connection);
                 connection.setStatus(McpConnectionStatus.CONNECTING);
                 connection.setErrorMessage(null);

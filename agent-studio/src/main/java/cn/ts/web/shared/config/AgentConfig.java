@@ -40,6 +40,7 @@ public class AgentConfig {
     private static final Logger logger = LoggerFactory.getLogger(AgentConfig.class);
 
     private final ChatModel chatModel;
+
     private final AgentExecutionService agentExecutionService;
     private final McpManager mcpManager;
     private final McpServerConfig mcpServerConfig;

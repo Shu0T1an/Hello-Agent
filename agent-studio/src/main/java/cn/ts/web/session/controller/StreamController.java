@@ -183,9 +183,9 @@ public class StreamController {
                                 logger.info("已将 citations 添加到 metadata");
                             }
                         } else {
-                            logger.warn("引用提取条件不满足: fileContents={}, message={}",
-                                fileContents != null && !fileContents.isEmpty(),
-                                response.getMessage() != null);
+//                            logger.warn("引用提取条件不满足: fileContents={}, message={}",
+//                                fileContents != null && !fileContents.isEmpty(),
+//                                response.getMessage() != null);
                         }
                     }
                     return response;

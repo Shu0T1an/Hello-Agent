@@ -264,6 +264,9 @@ export const useChatStore = defineStore('chat', () => {
   const currentKnowledgeBaseId = ref<string>('')
   const currentLlmMessageId = ref<string | null>(null)
   const todoStore = useTodoStore()
+  const activeStreamController = ref<AbortController | null>(null)
+  const activeStreamReader = ref<ReadableStreamDefaultReader<Uint8Array> | null>(null)
+  const userStopRequested = ref<boolean>(false)
 
   // 璁＄畻灞炴€?
   const currentSession = computed(() => {
@@ -429,6 +432,43 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   // 鍙戦€佹秷鎭?
+  function finalizeStreamingStopNotice() {
+    const msgIndex = findActiveAssistantMessageIndex()
+    if (msgIndex < 0 || !currentSession.value) return
+
+    const activeMessage = currentSession.value.messages[msgIndex]
+    if (!activeMessage || activeMessage.role !== 'assistant') return
+
+    if ((activeMessage.content ?? '').trim().length === 0) {
+      activeMessage.content = '已中断本次回答。'
+    }
+
+    if (activeMessage.status === 'thinking') {
+      activeMessage.status = 'completed'
+    }
+  }
+
+  function stopStreaming() {
+    if (!isProcessing.value) return
+
+    userStopRequested.value = true
+    const reader = activeStreamReader.value
+    if (reader) {
+      void reader.cancel()
+      activeStreamReader.value = null
+    }
+
+    const controller = activeStreamController.value
+    if (controller) {
+      controller.abort()
+      activeStreamController.value = null
+    }
+
+    finalizeStreamingStopNotice()
+    currentLlmMessageId.value = null
+    isProcessing.value = false
+  }
+
   async function sendMessage(content: string, files?: File[]) {
     if ((!content.trim() && !files?.length) || isProcessing.value) return
 
@@ -476,6 +516,8 @@ export const useChatStore = defineStore('chat', () => {
     // 鍒涘缓 AbortController 鐢ㄤ簬鍙栨秷璇锋眰
     const controller = new AbortController()
     isProcessing.value = true
+    activeStreamController.value = controller
+    userStopRequested.value = false
 
     const request: AgentExecuteRequest = {
       input: content,
@@ -484,6 +526,7 @@ export const useChatStore = defineStore('chat', () => {
       initialState: currentKnowledgeBaseId.value ? { knowledgeBaseId: currentKnowledgeBaseId.value } : undefined,
       fileContents: fileContents || undefined
     }
+    let reader: ReadableStreamDefaultReader<Uint8Array> | null = null
 
     const url = `${API_BASE}/api/stream/agent/${encodeURIComponent(agentStore.currentAgent)}/execute`
     console.log('POST URL:', url)
@@ -504,13 +547,14 @@ export const useChatStore = defineStore('chat', () => {
       }
 
       // 浠庡搷搴斾綋璇诲彇 SSE 娴?
-      const reader = response.body?.getReader()
+      reader = response.body?.getReader() ?? null
       const decoder = new TextDecoder()
       let buffer = ''
 
       if (!reader) {
         throw new Error('Failed to read streaming response')
       }
+      activeStreamReader.value = reader
 
       // 璇诲彇娴?
       while (true) {
@@ -571,12 +615,24 @@ export const useChatStore = defineStore('chat', () => {
       }
     } catch (error: any) {
       if (error.name === 'AbortError') {
-        console.log('Fetch aborted')
+        if (userStopRequested.value) {
+          finalizeStreamingStopNotice()
+          currentLlmMessageId.value = null
+        } else {
+          console.log('Fetch aborted')
+        }
       } else {
         console.error('SSE 杩炴帴閿欒:', error)
         handleSSEError()
       }
     } finally {
+      if (activeStreamReader.value === reader) {
+        activeStreamReader.value = null
+      }
+      if (activeStreamController.value === controller) {
+        activeStreamController.value = null
+      }
+      userStopRequested.value = false
       isProcessing.value = false
     }
   }
@@ -1185,6 +1241,8 @@ export const useChatStore = defineStore('chat', () => {
     // 鍒涘缓 AbortController
     const controller = new AbortController()
     isProcessing.value = true
+    activeStreamController.value = controller
+    userStopRequested.value = false
 
     const feedbackData = payload.mode === 'clarification_qa'
       ? {
@@ -1201,6 +1259,7 @@ export const useChatStore = defineStore('chat', () => {
       feedbackData,
       sessionId
     }
+    let reader: ReadableStreamDefaultReader<Uint8Array> | null = null
 
     const url = `${API_BASE}/api/stream/agent/${encodeURIComponent(agentName)}/resume`
     console.log('[resumeAgent] POST URL:', url)
@@ -1217,13 +1276,14 @@ export const useChatStore = defineStore('chat', () => {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      const reader = response.body?.getReader()
+      reader = response.body?.getReader() ?? null
       const decoder = new TextDecoder()
       let buffer = ''
 
       if (!reader) {
         throw new Error('Failed to read streaming response')
       }
+      activeStreamReader.value = reader
 
       while (true) {
         const { done, value } = await reader.read()
@@ -1271,12 +1331,24 @@ export const useChatStore = defineStore('chat', () => {
       }
     } catch (error: any) {
       if (error.name === 'AbortError') {
-        console.log('[resumeAgent] Fetch aborted')
+        if (userStopRequested.value) {
+          finalizeStreamingStopNotice()
+          currentLlmMessageId.value = null
+        } else {
+          console.log('[resumeAgent] Fetch aborted')
+        }
       } else {
         console.error('[resumeAgent] SSE 杩炴帴閿欒:', error)
         handleSSEError()
       }
     } finally {
+      if (activeStreamReader.value === reader) {
+        activeStreamReader.value = null
+      }
+      if (activeStreamController.value === controller) {
+        activeStreamController.value = null
+      }
+      userStopRequested.value = false
       isProcessing.value = false
     }
   }
@@ -1296,6 +1368,7 @@ export const useChatStore = defineStore('chat', () => {
     loadSessions,
     loadSessionDetail,
     sendMessage,
+    stopStreaming,
     resumeAgent,
     switchSession,
     createNewSession,

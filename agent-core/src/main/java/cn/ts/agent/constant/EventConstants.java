@@ -80,6 +80,11 @@ public final class EventConstants {
      */
     public static final String LLM_OUTPUT = "LLM_OUTPUT";
 
+    /**
+     * 会话标题生成事件
+     */
+    public static final String TITLE_GENERATED = "TITLE_GENERATED";
+
     private EventConstants() {
         // 防止实例化
     }

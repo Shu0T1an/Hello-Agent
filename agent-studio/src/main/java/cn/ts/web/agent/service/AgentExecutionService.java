@@ -1,5 +1,6 @@
 package cn.ts.web.agent.service;
 
+import cn.ts.agent.constant.EventConstants;
 import cn.ts.agent.constant.StateKeys;
 import cn.ts.graph.*;
 import cn.ts.graph.checkpoint.CheckpointManager;
@@ -10,15 +11,19 @@ import cn.ts.web.shared.constant.SessionConstants;
 import cn.ts.web.agent.dto.AgentResponse;
 import cn.ts.web.session.service.MessageConversionService;
 import cn.ts.web.session.service.SessionService;
+import cn.ts.web.session.service.TitleGeneratorService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 
 /**
@@ -42,6 +47,7 @@ public class AgentExecutionService {
     private final MessageConversionService messageConversionService;
     private final AgentResponseBuilder responseBuilder;
     private final SubAgentProgressBus subAgentProgressBus;
+    private final TitleGeneratorService titleGeneratorService;
 
     public AgentExecutionService(AgentRegistry agentRegistry,
                                  SessionService sessionService,
@@ -50,6 +56,19 @@ public class AgentExecutionService {
                                  MessageConversionService messageConversionService,
                                  AgentResponseBuilder responseBuilder,
                                  SubAgentProgressBus subAgentProgressBus) {
+        this(agentRegistry, sessionService, checkpointManager, config,
+                messageConversionService, responseBuilder, subAgentProgressBus, null);
+    }
+
+    @Autowired
+    public AgentExecutionService(AgentRegistry agentRegistry,
+                                 SessionService sessionService,
+                                 CheckpointManager checkpointManager,
+                                 AgentExecutionConfig config,
+                                 MessageConversionService messageConversionService,
+                                 AgentResponseBuilder responseBuilder,
+                                 SubAgentProgressBus subAgentProgressBus,
+                                 TitleGeneratorService titleGeneratorService) {
         this.agentRegistry = agentRegistry;
         this.checkpointManager = checkpointManager;
         this.sessionService = sessionService;
@@ -58,6 +77,7 @@ public class AgentExecutionService {
         this.messageConversionService = messageConversionService;
         this.responseBuilder = responseBuilder;
         this.subAgentProgressBus = subAgentProgressBus;
+        this.titleGeneratorService = titleGeneratorService;
     }
 
     /**
@@ -121,13 +141,14 @@ public class AgentExecutionService {
             }
         }
 
+        Flux<AgentResponse> titleStream = generateTitleEventIfNeeded(sessionId, initialState, executionId);
         Flux<AgentResponse> subAgentStream = subAgentProgressBus.stream(executionId);
         Flux<AgentResponse> graphStream = graph.stream(stateWithExecutionId, configBuilder.timeout(timeout).build())
                 .map(response -> responseBuilder.build(response, executionId))
                 .onErrorResume(throwable -> Flux.just(responseBuilder.buildErrorResponse(throwable.getMessage(), executionId)))
                 .doFinally(signalType -> subAgentProgressBus.complete(executionId));
 
-        return Flux.merge(graphStream, subAgentStream);
+        return Flux.merge(graphStream, subAgentStream, titleStream);
     }
 
     /**
@@ -147,19 +168,84 @@ public class AgentExecutionService {
         // 保留空实现以保持二进制兼容性
     }
 
-    /**
-     * 异步生成标题（已废弃）
-     * <p>
-     * <b>已废弃：</b>标题生成逻辑已移除，会使用默认标题"新对话"
-     * </p>
-     *
-     * @param sessionId 会话ID
-     * @param userInput 用户输入
-     * @deprecated 标题生成逻辑已移除
-     */
-    @Deprecated(forRemoval = true)
-    private void generateTitleAsync(String sessionId, String userInput) {
-        // 保留空实现以保持二进制兼容性
+    private Flux<AgentResponse> generateTitleEventIfNeeded(
+            String sessionId,
+            Map<String, Object> initialState,
+            String executionId) {
+
+        if (titleGeneratorService == null || sessionId == null || sessionId.isEmpty()) {
+            return Flux.empty();
+        }
+
+        Optional<String> userInputOptional = extractUserInput(initialState);
+        if (userInputOptional.isEmpty()) {
+            return Flux.empty();
+        }
+
+        Optional<String> currentTitleOptional = sessionService.getSession(sessionId)
+                .map(session -> session.getTitle());
+        if (currentTitleOptional.isEmpty()
+                || !SessionConstants.DEFAULT_SESSION_TITLE.equals(currentTitleOptional.get())) {
+            return Flux.empty();
+        }
+
+        String userInput = userInputOptional.get();
+        return Mono.fromCallable(() -> {
+                    String generatedTitle = normalizeTitle(titleGeneratorService.generateTitle(userInput), userInput);
+                    if (generatedTitle.isEmpty()) {
+                        return null;
+                    }
+
+                    sessionService.updateSession(sessionId, generatedTitle);
+                    logger.info("Auto generated title for session {}: {}", sessionId, generatedTitle);
+
+                    Map<String, Object> metadata = new HashMap<>();
+                    metadata.put("title", generatedTitle);
+                    metadata.put("sessionId", sessionId);
+
+                    return AgentResponse.builder()
+                            .eventType(EventConstants.TITLE_GENERATED)
+                            .timestamp(Instant.now())
+                            .executionId(executionId)
+                            .metadata(metadata)
+                            .build();
+                })
+                .subscribeOn(Schedulers.boundedElastic())
+                .onErrorResume(error -> {
+                    logger.warn("Failed to auto-generate title for session {}", sessionId, error);
+                    return Mono.empty();
+                })
+                .flux()
+                .filter(Objects::nonNull);
+    }
+
+    private Optional<String> extractUserInput(Map<String, Object> initialState) {
+        if (initialState == null || initialState.isEmpty()) {
+            return Optional.empty();
+        }
+        Object input = initialState.get(StateKeys.INPUT);
+        if (!(input instanceof String inputText)) {
+            return Optional.empty();
+        }
+        String trimmed = inputText.trim();
+        return trimmed.isEmpty() ? Optional.empty() : Optional.of(trimmed);
+    }
+
+    private String normalizeTitle(String generatedTitle, String fallbackText) {
+        String title = generatedTitle == null ? "" : generatedTitle.trim();
+        if (title.isEmpty()) {
+            title = fallbackText == null ? "" : fallbackText.trim();
+        }
+        if (title.isEmpty()) {
+            return "";
+        }
+
+        title = title.replaceAll("[\\r\\n]+", " ").trim();
+        int maxLength = config.getMaxTitleLength();
+        if (maxLength > 0 && title.length() > maxLength) {
+            title = title.substring(0, maxLength);
+        }
+        return title;
     }
 
     /**

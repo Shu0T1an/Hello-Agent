@@ -82,6 +82,8 @@ api:
   keys:
     keys: {}  # API 瀵嗛挜鏄犲皠锛屽湪 application-dev.yml 涓厤缃?
 
+# LLM 手动配置（用于手动创建 OpenAI 兼容 ChatModel Bean）
+
 # 鍙娴嬫€ч厤缃?
 management:
   endpoints:

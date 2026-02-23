@@ -14,8 +14,12 @@ import java.util.concurrent.CompletableFuture;
 class NodeActionInvoker {
 
     CompletableFuture<Map<String, Object>> invoke(Node node, GraphRunnerContext context) {
-        NodeAction action = node.action();
         RunnableConfig config = context.getConfig();
+        if (node.interruptableAction() instanceof AsyncNodeActionWithConfig interruptableWithConfig) {
+            return interruptableWithConfig.applyAsync(context.getOverallState(), config);
+        }
+
+        NodeAction action = node.action();
 
         if (action instanceof AsyncNodeActionWithConfig actionWithConfig) {
             return actionWithConfig.applyAsync(context.getOverallState(), config);

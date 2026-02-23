@@ -19,7 +19,7 @@
         @click="triggerFileInput"
         class="file-upload-btn"
         title="上传文件（PDF、TXT、MD）"
-        :disabled="isSending"
+        :disabled="isSending || isStreaming"
       >
         <Paperclip :size="20" />
       </button>
@@ -43,6 +43,7 @@
         @input="autoResize"
       />
       <BaseButton
+        v-if="!isStreaming"
         variant="primary"
         :disabled="!canSend"
         :loading="isSending"
@@ -50,6 +51,16 @@
         class="send-button"
       >
         <Send :size="18" />
+      </BaseButton>
+      <BaseButton
+        v-else
+        variant="danger"
+        :disabled="!isStreaming"
+        @click="handleStop"
+        class="send-button"
+        title="停止生成"
+      >
+        <Square :size="16" />
       </BaseButton>
     </div>
 
@@ -93,7 +104,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Send, Paperclip, FileText, X } from 'lucide-vue-next'
+import { Send, Paperclip, FileText, X, Square } from 'lucide-vue-next'
 import { useChatStore } from '@/stores/chat'
 import { useAgentStore } from '@/stores/agent'
 import BaseButton from '@/components/base/BaseButton.vue'
@@ -127,6 +138,7 @@ const textareaRef = ref<HTMLTextAreaElement>()
 const fileInputRef = ref<HTMLInputElement>()
 const isSending = ref(false)
 const attachedFiles = ref<AttachedFile[]>([])
+const isStreaming = computed(() => chatStore.isProcessing)
 
 // Agent 列表
 const agents = computed(() => agentStore.agents)
@@ -161,8 +173,13 @@ const hasKnowledgeBases = computed(() => {
 
 // 是否可以发送消息
 const canSend = computed(() => {
-  return (inputContent.value.trim().length > 0 || attachedFiles.value.length > 0) && !chatStore.isProcessing
+  return (inputContent.value.trim().length > 0 || attachedFiles.value.length > 0) && !isStreaming.value
 })
+
+function handleStop(): void {
+  chatStore.stopStreaming()
+  isSending.value = false
+}
 
 // 处理 Agent 切换
 function handleAgentChange(agentName: string): void {

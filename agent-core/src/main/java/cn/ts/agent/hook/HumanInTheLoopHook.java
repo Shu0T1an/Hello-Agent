@@ -75,12 +75,14 @@ public class HumanInTheLoopHook extends ModelHook implements InterruptableAction
     @Override
     public CompletableFuture<Map<String, Object>> afterModel(State state, RunnableConfig config) {
         return CompletableFuture.supplyAsync(() -> {
-            // 检查是否有待处理的反馈
-            if (config.feedbackData() != null && !config.feedbackData().isEmpty()) {
-                return processFeedback(state, config.feedbackData());
+            Map<String, Object> feedbackData = config.feedbackData();
+            if (feedbackData != null && !feedbackData.isEmpty()) {
+                logger.debug("HumanInTheLoopHook received feedback payload, mode={}, keys={}",
+                        feedbackData.get("mode"), feedbackData.keySet());
+                return processFeedback(state, feedbackData);
             }
 
-            // 正常执行，检查是否需要中断
+            logger.debug("HumanInTheLoopHook has no feedback payload, skip feedback processing.");
             return Map.of();
         });
     }
@@ -157,6 +159,8 @@ public class HumanInTheLoopHook extends ModelHook implements InterruptableAction
         List<Map<String, Object>> feedbackList = (List<Map<String, Object>>) feedbackData.get("feedbacks");
 
         if (feedbackList == null || feedbackList.isEmpty()) {
+            logger.debug("HumanInTheLoopHook skip feedback processing because tool feedback list is empty. mode={}",
+                    feedbackData.get("mode"));
             return Map.of();
         }
 
