@@ -7,11 +7,13 @@ import cn.ts.agent.node.ToolNode;
 import cn.ts.graph.CompiledGraph;
 import cn.ts.graph.checkpoint.CheckpointManager;
 import cn.ts.graph.node.Node;
+import cn.ts.web.agent.factory.AgentFactory;
 import cn.ts.web.agent.dto.AgentConfigDTO;
 import cn.ts.web.agent.dto.ModelConfigDTO;
 import cn.ts.web.agent.dto.SubAgentMappingDTO;
 import cn.ts.web.agent.dto.SubAgentToolsPolicy;
 import cn.ts.web.agent.entity.AgentConfigEntity;
+import cn.ts.web.agent.interceptor.PromptAuditInterceptor;
 import cn.ts.web.agent.mapper.AgentConfigMapper;
 import cn.ts.web.agent.mapper.SubAgentMappingMapper;
 import cn.ts.web.agent.service.ModelConfigService;
@@ -65,6 +67,9 @@ class AgentFactorySubAgentIntegrationTest {
     @Mock
     private SubAgentProgressBus subAgentProgressBus;
 
+    @Mock
+    private PromptAuditInterceptor promptAuditInterceptor;
+
     private AgentFactory agentFactory;
 
     @BeforeEach
@@ -76,6 +81,7 @@ class AgentFactorySubAgentIntegrationTest {
                 subAgentMappingMapper,
                 checkpointManager,
                 subAgentProgressBus,
+                promptAuditInterceptor,
                 "test-agent"
 
         );

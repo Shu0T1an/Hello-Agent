@@ -5,29 +5,21 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0e294f23-af53-4e42-af50-c9a578c991d4" name="Changes" comment="fix 会话Input">
+      <change beforePath="$PROJECT_DIR$/.claude/settings.local.json" beforeDir="false" afterPath="$PROJECT_DIR$/.claude/settings.local.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Agent-Studio/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/agent/deepsearch/DeepSearchAgentBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/agent/deepsearch/DeepSearchAgentBuilder.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/agent/deepsearch/DeepSearchProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/agent/deepsearch/DeepSearchProperties.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/factory/AgentFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/factory/AgentFactory.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/SubAgentProgressBus.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/java/cn/ts/web/service/SubAgentProgressBus.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/resources/application-dev.yml" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/resources/application-dev.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/resources/application.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/main/resources/db/schema-checkpoint.sql" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/main/resources/db/schema-checkpoint.sql" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Agent-Studio/src/test/java/cn/ts/web/factory/AgentFactorySubAgentIntegrationTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Agent-Studio/src/test/java/cn/ts/web/factory/AgentFactorySubAgentIntegrationTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/extension/tools/TaskTool.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/extension/tools/TaskTool.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/mcp/McpManagerImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/mcp/McpManagerImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent-core/src/test/java/cn/ts/agent/node/LLMNodeInterceptorIntegrationTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/test/java/cn/ts/agent/node/LLMNodeInterceptorIntegrationTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent-core/src/test/java/cn/ts/agent/node/ToolNodeTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/test/java/cn/ts/agent/node/ToolNodeTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/agent/AgentTimeline.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/agent/AgentTimeline.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/stores/agentTimeline.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/stores/agentTimeline.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/stores/chat.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/stores/chat.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/types/agent.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/types/agent.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/utils/agentEvents.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/utils/agentEvents.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java" beforeDir="false" afterPath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/record/ExecutionRecords.java" beforeDir="false" afterPath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/record/ExecutionRecords.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/graph-core/src/test/java/cn/ts/graph/record/ExecutionRecordTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/graph-core/src/test/java/cn/ts/graph/record/ExecutionRecordTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/graph-core/src/test/java/cn/ts/graph/serialization/TypedStateSerializationTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/graph-core/src/test/java/cn/ts/graph/serialization/TypedStateSerializationTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/agent/deepsearch/DeepSearchAgentBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/agent/deepsearch/DeepSearchAgentBuilder.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/agent/factory/AgentFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/agent/factory/AgentFactory.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/shared/config/AgentConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/shared/config/AgentConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/shared/config/MyBatisConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/shared/config/MyBatisConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-studio/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/main/resources/application.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-studio/src/main/resources/db/schema.sql" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/main/resources/db/schema.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-studio/src/test/java/cn/ts/web/agent/deepsearch/DeepSearchAgentBuilderTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/test/java/cn/ts/web/agent/deepsearch/DeepSearchAgentBuilderTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-studio/src/test/java/cn/ts/web/factory/AgentFactorySubAgentIntegrationTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/test/java/cn/ts/web/factory/AgentFactorySubAgentIntegrationTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/api/session.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/api/session.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/chat/ChatContainer.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/chat/ChatContainer.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/execution/NodeActionInvoker.java" beforeDir="false" afterPath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/execution/NodeActionInvoker.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/node/NodeActionWithConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/node/NodeActionWithConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/graph-core/src/test/java/cn/ts/graph/NodeExecutorConfigPropagationTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/graph-core/src/test/java/cn/ts/graph/NodeExecutorConfigPropagationTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -78,58 +70,60 @@
     <option name="showMembers" value="true" />
     <option name="showScratchesAndConsoles" value="false" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Application.EmailProcessingExample.executor": "Run",
-    "Docker.docker-compose.yml.db: Compose Deployment.executor": "Run",
-    "Docker.docker-compose.yml: Compose Deployment.executor": "Run",
-    "HTTP Request.generated-requests | #8.executor": "Run",
-    "JUnit.CompiledGraphTest.executor": "Run",
-    "JUnit.CompiledGraphTest.testInvoke.executor": "Run",
-    "JUnit.HumanInTheLoopHookTest.testAgentWithHook.executor": "Run",
-    "JUnit.KeyStrategyTest.executor": "Run",
-    "JUnit.KeyStrategyTest.testAppendStrategyWithList.executor": "Run",
-    "JUnit.KeyStrategyTest.testReplaceStrategy.executor": "Run",
-    "JUnit.MermaidGraphVisualizerTest.executor": "Run",
-    "JUnit.MermaidGraphVisualizerTest.testCompiledGraph.executor": "Run",
-    "JUnit.MermaidGraphVisualizerTest.testConditionalEdges.executor": "Run",
-    "JUnit.MyBatisPostgreSQLIntegrationTest.executor": "Run",
-    "JUnit.MyBatisPostgreSQLIntegrationTest.testGetAllModelConfigs.executor": "Run",
-    "JUnit.SimpleMyBatisTest.executor": "Run",
-    "JUnit.SimpleMyBatisTest.testDatabaseConnection.executor": "Run",
-    "JUnit.TypedStateSerializationTest.executor": "Run",
-    "Maven. [org.apache.maven.plugins:maven-archetype-plugin:RELEASE:generate].executor": "Run",
-    "Maven.Hello-Agent [clean].executor": "Run",
-    "Maven.Hello-Agent [compile].executor": "Run",
-    "Maven.Hello-Agent [install].executor": "Run",
-    "RequestMappingsPanelOrder0": "0",
-    "RequestMappingsPanelOrder1": "1",
-    "RequestMappingsPanelWidth0": "75",
-    "RequestMappingsPanelWidth1": "75",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "Spring Boot.Application.executor": "Run",
-    "git-widget-placeholder": "master",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "D:/JavaProject/Hello-Agent/docs",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "project.structure.last.edited": "Modules",
-    "project.structure.proportion": "0.0",
-    "project.structure.side.proportion": "0.0",
-    "settings.editor.selected.configurable": "preferences.pluginManager",
-    "ts.external.directory.path": "D:\\JavaProject\\Hello-Agent\\frontend\\node_modules\\typescript\\lib",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Application.EmailProcessingExample.executor&quot;: &quot;Run&quot;,
+    &quot;Docker.docker-compose.yml.db: Compose Deployment.executor&quot;: &quot;Run&quot;,
+    &quot;Docker.docker-compose.yml: Compose Deployment.executor&quot;: &quot;Run&quot;,
+    &quot;HTTP Request.generated-requests | #8.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.CompiledGraphTest.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.CompiledGraphTest.testInvoke.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.HumanInTheLoopHookTest.testAgentWithHook.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.KeyStrategyTest.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.KeyStrategyTest.testAppendStrategyWithList.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.KeyStrategyTest.testReplaceStrategy.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.MermaidGraphVisualizerTest.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.MermaidGraphVisualizerTest.testCompiledGraph.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.MermaidGraphVisualizerTest.testConditionalEdges.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.MyBatisPostgreSQLIntegrationTest.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.MyBatisPostgreSQLIntegrationTest.testGetAllModelConfigs.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.SimpleMyBatisTest.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.SimpleMyBatisTest.testDatabaseConnection.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.TypedStateSerializationTest.executor&quot;: &quot;Run&quot;,
+    &quot;Maven. [org.apache.maven.plugins:maven-archetype-plugin:RELEASE:generate].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.Hello-Agent [clean].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.Hello-Agent [compile].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.Hello-Agent [install].executor&quot;: &quot;Run&quot;,
+    &quot;RequestMappingsPanelOrder0&quot;: &quot;0&quot;,
+    &quot;RequestMappingsPanelOrder1&quot;: &quot;1&quot;,
+    &quot;RequestMappingsPanelWidth0&quot;: &quot;75&quot;,
+    &quot;RequestMappingsPanelWidth1&quot;: &quot;75&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;Spring Boot.Application (1).executor&quot;: &quot;Run&quot;,
+    &quot;Spring Boot.Application .executor&quot;: &quot;Run&quot;,
+    &quot;Spring Boot.Application.executor&quot;: &quot;Run&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;D:/JavaProject/Hello-Agent/docs&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.0&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;D:\\JavaProject\\Hello-Agent\\frontend\\node_modules\\typescript\\lib&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   },
-  "keyToStringList": {
-    "DatabaseDriversLRU": [
-      "postgresql"
+  &quot;keyToStringList&quot;: {
+    &quot;DatabaseDriversLRU&quot;: [
+      &quot;postgresql&quot;
     ]
   }
-}]]></component>
+}</component>
   <component name="ReactorSettings">
     <option name="notificationShown" value="true" />
   </component>
@@ -139,7 +133,7 @@
       <recent name="D:\JavaProject\Hello-Agent\graph-core\src\main\resources" />
     </key>
   </component>
-  <component name="RunManager" selected="Spring Boot.Application">
+  <component name="RunManager" selected="Spring Boot.Application ">
     <configuration name="HumanInTheLoopHookTest.testAgentWithHook" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
       <module name="agent-core" />
       <extension name="coverage">
@@ -171,8 +165,8 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="Application" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" temporary="true" nameIsGenerated="true">
-      <module name="Agent-Studio" />
+    <configuration name="Application " type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" temporary="true">
+      <module name="agent-studio" />
       <option name="SPRING_BOOT_MAIN_CLASS" value="cn.ts.Application" />
       <extension name="coverage">
         <pattern>
@@ -198,19 +192,6 @@
       </deployment>
       <method v="2" />
     </configuration>
-    <configuration name="docker-compose.yml.db: Compose Deployment" type="docker-deploy" factoryName="docker-compose.yml" temporary="true" server-name="Docker">
-      <deployment type="docker-compose.yml">
-        <settings>
-          <option name="services">
-            <list>
-              <option value="db" />
-            </list>
-          </option>
-          <option name="sourceFilePath" value="docker-compose.yml" />
-        </settings>
-      </deployment>
-      <method v="2" />
-    </configuration>
     <configuration default="true" type="lua.app" factoryName="Lua Application">
       <option name="program" value="lua.exe" />
       <option name="file" value="" />
@@ -221,13 +202,18 @@
       <option name="showConsole" value="true" />
       <method v="2" />
     </configuration>
+    <list>
+      <item itemvalue="Docker.docker-compose.yml: Compose Deployment" />
+      <item itemvalue="JUnit.HumanInTheLoopHookTest.testAgentWithHook" />
+      <item itemvalue="JUnit.TypedStateSerializationTest" />
+      <item itemvalue="Spring Boot.Application " />
+    </list>
     <recent_temporary>
       <list>
-        <item itemvalue="Spring Boot.Application" />
+        <item itemvalue="Spring Boot.Application " />
         <item itemvalue="JUnit.TypedStateSerializationTest" />
         <item itemvalue="JUnit.HumanInTheLoopHookTest.testAgentWithHook" />
         <item itemvalue="Docker.docker-compose.yml: Compose Deployment" />
-        <item itemvalue="Docker.docker-compose.yml.db: Compose Deployment" />
       </list>
     </recent_temporary>
   </component>
@@ -291,6 +277,9 @@
       <workItem from="1771553563950" duration="19694000" />
       <workItem from="1771599162046" duration="3937000" />
       <workItem from="1771634857441" duration="15743000" />
+      <workItem from="1771766140939" duration="7598000" />
+      <workItem from="1771813319372" duration="6465000" />
+      <workItem from="1771855532167" duration="2254000" />
     </task>
     <task id="LOCAL-00001" summary="fix 会话Input">
       <option name="closed" value="true" />
@@ -331,7 +320,7 @@
         </line-breakpoint>
         <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/GraphRunner.java</url>
-          <line>518</line>
+          <line>529</line>
           <option name="timeStamp" value="92" />
         </line-breakpoint>
         <line-breakpoint type="java-line">
@@ -351,17 +340,17 @@
         </line-breakpoint>
         <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/GraphRunner.java</url>
-          <line>375</line>
+          <line>384</line>
           <option name="timeStamp" value="171" />
         </line-breakpoint>
         <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/GraphRunner.java</url>
-          <line>512</line>
+          <line>523</line>
           <option name="timeStamp" value="173" />
         </line-breakpoint>
         <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/GraphRunner.java</url>
-          <line>394</line>
+          <line>403</line>
           <option name="timeStamp" value="174" />
         </line-breakpoint>
         <line-breakpoint type="java-line">
@@ -396,12 +385,12 @@
         </line-breakpoint>
         <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/hook/HumanInTheLoopHook.java</url>
-          <line>156</line>
+          <line>158</line>
           <option name="timeStamp" value="186" />
         </line-breakpoint>
         <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/hook/HumanInTheLoopHook.java</url>
-          <line>163</line>
+          <line>167</line>
           <option name="timeStamp" value="187" />
         </line-breakpoint>
         <line-breakpoint type="java-line">
@@ -416,22 +405,22 @@
         </line-breakpoint>
         <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/hook/HumanInTheLoopHook.java</url>
-          <line>97</line>
+          <line>99</line>
           <option name="timeStamp" value="190" />
         </line-breakpoint>
         <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/hook/HumanInTheLoopHook.java</url>
-          <line>113</line>
+          <line>115</line>
           <option name="timeStamp" value="191" />
         </line-breakpoint>
         <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/hook/HumanInTheLoopHook.java</url>
-          <line>126</line>
+          <line>128</line>
           <option name="timeStamp" value="192" />
         </line-breakpoint>
         <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/hook/HumanInTheLoopHook.java</url>
-          <line>148</line>
+          <line>150</line>
           <option name="timeStamp" value="193" />
         </line-breakpoint>
         <line-breakpoint type="java-line">
@@ -521,22 +510,22 @@
         </line-breakpoint>
         <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/GraphRunner.java</url>
-          <line>378</line>
+          <line>387</line>
           <option name="timeStamp" value="240" />
         </line-breakpoint>
         <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/hook/HumanInTheLoopHook.java</url>
-          <line>102</line>
+          <line>104</line>
           <option name="timeStamp" value="241" />
         </line-breakpoint>
         <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/GraphRunner.java</url>
-          <line>500</line>
+          <line>509</line>
           <option name="timeStamp" value="242" />
         </line-breakpoint>
         <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/GraphRunner.java</url>
-          <line>506</line>
+          <line>515</line>
           <option name="timeStamp" value="243" />
         </line-breakpoint>
         <line-breakpoint type="java-line">
@@ -551,7 +540,7 @@
         </line-breakpoint>
         <line-breakpoint type="java-line">
           <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/model/ChatModelRequest.java</url>
-          <line>54</line>
+          <line>67</line>
           <option name="timeStamp" value="268" />
         </line-breakpoint>
         <line-breakpoint type="java-line">
@@ -614,20 +603,40 @@
           <line>178</line>
           <option name="timeStamp" value="306" />
         </line-breakpoint>
-        <line-breakpoint type="java-line">
-          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/node/LLMNode.java</url>
-          <line>71</line>
-          <option name="timeStamp" value="307" />
-        </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/NodeExecutor.java</url>
           <line>370</line>
           <option name="timeStamp" value="310" />
         </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/interceptor/ModelInterceptorChain.java</url>
+          <line>39</line>
+          <option name="timeStamp" value="311" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/interceptor/ModelInterceptorChain.java</url>
+          <line>41</line>
+          <option name="timeStamp" value="312" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/interceptor/ModelInterceptorChain.java</url>
+          <line>40</line>
+          <option name="timeStamp" value="313" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/agent/interceptor/PromptAuditInterceptor.java</url>
+          <line>212</line>
+          <option name="timeStamp" value="316" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/agent/interceptor/PromptAuditInterceptor.java</url>
+          <line>211</line>
+          <option name="timeStamp" value="317" />
+        </line-breakpoint>
         <line-breakpoint enabled="true" type="java-method">
           <url>file://$PROJECT_DIR$/Agent-Studio/src/test/java/cn/ts/web/mapper/SimpleMyBatisTest.java</url>
           <line>32</line>
-          <properties class="cn.ts.web.mapper.SimpleMyBatisTest" method="testDatabaseConnection">
+          <properties class="cn.ts.web.mapper.SimpleMyBatisTest">
             <option name="EMULATED" value="true" />
             <option name="WATCH_EXIT" value="false" />
           </properties>

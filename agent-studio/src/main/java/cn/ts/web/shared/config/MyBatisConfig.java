@@ -21,7 +21,8 @@ import javax.sql.DataSource;
         "cn.ts.web.rag.mapper",
         "cn.ts.web.tool.mapper",
         "cn.ts.web.infra.mcp.mapper",
-        "cn.ts.web.infra.checkpoint.mapper"
+        "cn.ts.web.infra.checkpoint.mapper",
+        "cn.ts.web.infra.audit.mapper"
 })
 public class MyBatisConfig {
 
@@ -51,7 +52,8 @@ public class MyBatisConfig {
                         "cn.ts.web.rag.entity," +
                         "cn.ts.web.tool.entity," +
                         "cn.ts.web.infra.mcp.entity," +
-                        "cn.ts.web.infra.checkpoint.entity"
+                        "cn.ts.web.infra.checkpoint.entity," +
+                        "cn.ts.web.infra.audit.entity"
         );
 
         // MyBatis 配置

@@ -30,6 +30,10 @@ class NodeActionInvoker {
             return wrapped.applyAsync(context.getOverallState(), config);
         }
 
+        if (action instanceof NodeActionWithConfig actionWithConfig) {
+            return actionWithConfig.applyAsync(context.getOverallState(), config);
+        }
+
         NodeActionWithConfig wrapped = NodeActionWithConfig.from(action);
         return wrapped.applyAsync(context.getOverallState(), config);
     }

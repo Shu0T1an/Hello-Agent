@@ -7,6 +7,7 @@ import cn.ts.agent.node.ToolNode;
 import cn.ts.graph.CompiledGraph;
 import cn.ts.graph.checkpoint.CheckpointManager;
 import cn.ts.graph.node.Node;
+import cn.ts.web.agent.interceptor.PromptAuditInterceptor;
 import cn.ts.web.agent.service.SubAgentProgressBus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,6 +37,9 @@ class DeepSearchAgentBuilderTest {
     @Mock
     private SubAgentProgressBus subAgentProgressBus;
 
+    @Mock
+    private PromptAuditInterceptor promptAuditInterceptor;
+
     private DeepSearchProperties properties;
     private DeepSearchAgentBuilder builder;
 
@@ -49,7 +53,8 @@ class DeepSearchAgentBuilderTest {
         builder = new DeepSearchAgentBuilder(
                 properties,
                 checkpointManager,
-                subAgentProgressBus
+                subAgentProgressBus,
+                promptAuditInterceptor
         );
     }
 

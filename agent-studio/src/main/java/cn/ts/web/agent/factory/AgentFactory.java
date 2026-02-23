@@ -11,6 +11,7 @@ import cn.ts.graph.checkpoint.CheckpointManager;
 import cn.ts.web.agent.dto.AgentConfigDTO;
 import cn.ts.web.agent.dto.SubAgentMappingDTO;
 import cn.ts.web.agent.dto.SubAgentToolsPolicy;
+import cn.ts.web.agent.interceptor.PromptAuditInterceptor;
 import cn.ts.web.agent.dto.ToolDefinitionDTO;
 import cn.ts.web.agent.entity.AgentConfigEntity;
 import cn.ts.web.agent.entity.SubAgentMappingEntity;
@@ -51,6 +52,7 @@ public class AgentFactory {
     private final SubAgentMappingMapper subAgentMappingMapper;
     private final CheckpointManager checkpointManager;
     private final SubAgentProgressBus subAgentProgressBus;
+    private final PromptAuditInterceptor promptAuditInterceptor;
     private final List<String> blockedToolNames;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -60,6 +62,7 @@ public class AgentFactory {
                         SubAgentMappingMapper subAgentMappingMapper,
                         CheckpointManager checkpointManager,
                         SubAgentProgressBus subAgentProgressBus,
+                        PromptAuditInterceptor promptAuditInterceptor,
                         @Value("${agent.subagent.blocked-tool-names:}") String blockedToolNamesRaw) {
         this.modelConfigService = modelConfigService;
         this.toolDefinitionService = toolDefinitionService;
@@ -67,6 +70,7 @@ public class AgentFactory {
         this.subAgentMappingMapper = subAgentMappingMapper;
         this.checkpointManager = checkpointManager;
         this.subAgentProgressBus = subAgentProgressBus;
+        this.promptAuditInterceptor = promptAuditInterceptor;
         this.blockedToolNames = parseBlockedToolNames(blockedToolNamesRaw);
     }
 
@@ -111,6 +115,7 @@ public class AgentFactory {
                     blockedToolNames
             ));
         }
+        modelInterceptors.add(promptAuditInterceptor);
         if (!modelInterceptors.isEmpty()) {
             builder.modelInterceptors(modelInterceptors);
         }

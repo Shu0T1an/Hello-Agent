@@ -8,6 +8,7 @@ DROP TABLE IF EXISTS agent_config CASCADE;
 DROP TABLE IF EXISTS mcp_connection_config CASCADE;
 DROP TABLE IF EXISTS tool_definition CASCADE;
 DROP TABLE IF EXISTS model_config CASCADE;
+DROP TABLE IF EXISTS llm_prompt_audit CASCADE;
 
 DROP TYPE IF EXISTS connection_type_enum CASCADE;
 DROP TYPE IF EXISTS tool_type_enum CASCADE;
@@ -216,6 +217,36 @@ COMMENT ON COLUMN agent_subagent_mapping.tools_policy IS '工具策略(可覆盖
 COMMENT ON COLUMN agent_subagent_mapping.custom_tool_ids IS 'CUSTOM模式下指定工具ID列表';
 COMMENT ON COLUMN agent_subagent_mapping.sort_order IS '排序';
 COMMENT ON COLUMN agent_subagent_mapping.enabled IS '是否启用';
+
+-- 7. LLM Prompt 审计日志
+CREATE TABLE IF NOT EXISTS llm_prompt_audit (
+    id BIGSERIAL PRIMARY KEY,
+    trace_id VARCHAR(64) NOT NULL,
+    session_id VARCHAR(255),
+    execution_id VARCHAR(255),
+    agent_name VARCHAR(100),
+    phase VARCHAR(20) NOT NULL,
+    request_json JSONB,
+    response_json JSONB,
+    error_message TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_llm_prompt_audit_trace_id ON llm_prompt_audit(trace_id);
+CREATE INDEX IF NOT EXISTS idx_llm_prompt_audit_session_id ON llm_prompt_audit(session_id);
+CREATE INDEX IF NOT EXISTS idx_llm_prompt_audit_created_at ON llm_prompt_audit(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_llm_prompt_audit_agent_name ON llm_prompt_audit(agent_name);
+
+COMMENT ON TABLE llm_prompt_audit IS 'LLM 调用业务层审计日志';
+COMMENT ON COLUMN llm_prompt_audit.trace_id IS '单次模型调用链路ID';
+COMMENT ON COLUMN llm_prompt_audit.session_id IS '会话ID';
+COMMENT ON COLUMN llm_prompt_audit.execution_id IS '执行ID';
+COMMENT ON COLUMN llm_prompt_audit.agent_name IS 'Agent 名称';
+COMMENT ON COLUMN llm_prompt_audit.phase IS '阶段: REQUEST/RESPONSE/ERROR';
+COMMENT ON COLUMN llm_prompt_audit.request_json IS '请求侧审计数据';
+COMMENT ON COLUMN llm_prompt_audit.response_json IS '响应侧审计数据';
+COMMENT ON COLUMN llm_prompt_audit.error_message IS '错误信息';
+COMMENT ON COLUMN llm_prompt_audit.created_at IS '创建时间';
 
 -- 创建自动更新 updated_at 的触发器函数
 CREATE OR REPLACE FUNCTION update_updated_at_column()

@@ -40,6 +40,10 @@ agent:
       initial-backoff: 1s       # 鍒濆閫€閬挎椂闂?
       backoff-multiplier: 2.0   # 閫€閬挎椂闂村€嶆暟
       max-backoff: 30s          # 鏈€澶ч€€閬挎椂闂?
+  audit:
+    enabled: true
+    include-response: true
+    max-body-size: 32768
   deep-search:
     enabled: true
     agent-name: deep-search

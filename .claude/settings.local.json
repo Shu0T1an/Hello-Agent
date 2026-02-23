@@ -54,7 +54,8 @@
       "Bash(jar:*)",
       "Bash(java:*)",
       "Bash(javap:*)",
-      "Bash(npx vue-tsc:*)"
+      "Bash(npx vue-tsc:*)",
+      "Bash(chcp:*)"
     ]
   }
 }

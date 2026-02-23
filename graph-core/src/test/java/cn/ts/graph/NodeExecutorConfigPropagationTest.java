@@ -6,6 +6,8 @@ import cn.ts.graph.execution.NodeExecutor;
 import cn.ts.graph.node.AsyncNodeActionWithConfig;
 import cn.ts.graph.node.InterruptableAction;
 import cn.ts.graph.node.Node;
+import cn.ts.graph.node.NodeAction;
+import cn.ts.graph.node.NodeActionWithConfig;
 import cn.ts.graph.state.MapState;
 import cn.ts.graph.state.State;
 import org.junit.jupiter.api.Test;
@@ -65,5 +67,53 @@ class NodeExecutorConfigPropagationTest {
         Map<String, Object> updates = (Map<String, Object>) completed.getData().getResultValue();
         assertEquals("clarification_qa", updates.get("received_mode"));
         assertEquals("thread-1", updates.get("received_thread_id"));
+    }
+
+    @Test
+    void nodeActionWithConfigShouldReceiveRuntimeConfigOnStreamPath() {
+        NodeExecutor executor = NodeExecutor.create();
+
+        class SyncConfigAwareAction implements NodeAction, NodeActionWithConfig {
+            @Override
+            public Map<String, Object> apply(State state) {
+                return Map.of(
+                        "route", "legacy",
+                        "received_thread_id", "null",
+                        "received_execution_id", "null"
+                );
+            }
+
+            @Override
+            public Map<String, Object> apply(State state, RunnableConfig config) {
+                return Map.of(
+                        "route", "config",
+                        "received_thread_id", config.threadId() == null ? "null" : config.threadId(),
+                        "received_execution_id", config.executionId() == null ? "null" : config.executionId()
+                );
+            }
+        }
+
+        Node node = Node.of("__sync_config__", new SyncConfigAwareAction());
+        RunnableConfig config = RunnableConfig.builder()
+                .threadId("thread-2")
+                .executionId("exec-2")
+                .build();
+
+        GraphRunnerContext context = GraphRunnerContext.create(new MapState(), config);
+        context.setCurrentNodeId("__sync_config__");
+
+        List<GraphResponse<NodeOutput>> responses = executor.execute(node, context).collectList().block();
+        assertNotNull(responses);
+
+        GraphResponse<NodeOutput> completed = responses.stream()
+                .filter(response -> response.getData() != null && response.getData().getStatus() == NodeStatus.COMPLETED)
+                .findFirst()
+                .orElseThrow();
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> updates = (Map<String, Object>) completed.getData().getResultValue();
+        assertEquals("config", updates.get("route"));
+        assertEquals("thread-2", updates.get("received_thread_id"));
+        assertEquals("exec-2", updates.get("received_execution_id"));
     }
 }

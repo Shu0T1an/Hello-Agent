@@ -78,6 +78,16 @@
           />
         </div>
 
+        <div v-else-if="activeTab === 'audit'" class="summary-scroll custom-scrollbar">
+          <SessionAudit
+            :session-id="chatStore.currentSessionId"
+            :loading="auditLoading"
+            :audits="auditData"
+            :error="auditError"
+            @retry="handleRetryAudit"
+          />
+        </div>
+
         <div v-else class="checkpoint-wrapper">
           <CheckpointViewer :session-id="chatStore.currentSessionId" />
         </div>
@@ -202,9 +212,11 @@ import WelcomeScreen from './WelcomeScreen.vue'
 import AgentTimeline from '@/components/agent/AgentTimeline.vue'
 import TodoSidebar from '@/components/todo/TodoSidebar.vue'
 import SessionSummary from './SessionSummary.vue'
+import SessionAudit from './SessionAudit.vue'
 import CheckpointViewer from '@/components/checkpoint/CheckpointViewer.vue'
-import { fetchSessionSummary } from '@/api/session'
+import { fetchSessionSummary, fetchSessionAudits } from '@/api/session'
 import type { SessionSummary as SessionSummaryType } from '@/types/summary'
+import type { SessionAuditData } from '@/types/session-audit'
 
 const props = defineProps<{
   knowledgeBaseId?: string
@@ -214,6 +226,7 @@ const props = defineProps<{
 const tabs = [
   { id: 'conversation' as const, label: 'Conversation' },
   { id: 'summary' as const, label: 'Summary' },
+  { id: 'audit' as const, label: 'Audit' },
   { id: 'checkpoints' as const, label: 'Checkpoints' },
 ]
 
@@ -223,10 +236,13 @@ const agentTimeline = useAgentTimelineStore()
 const todoStore = useTodoStore()
 const { isMobile } = useBreakpoints()
 
-const activeTab = ref<'conversation' | 'summary' | 'checkpoints'>('conversation')
+const activeTab = ref<'conversation' | 'summary' | 'audit' | 'checkpoints'>('conversation')
 const summaryData = ref<SessionSummaryType | null>(null)
 const summaryLoading = ref(false)
 const summaryError = ref<string | null>(null)
+const auditData = ref<SessionAuditData | null>(null)
+const auditLoading = ref(false)
+const auditError = ref<string | null>(null)
 
 function handleKnowledgeBaseChange(kbId: string) {
   chatStore.setKnowledgeBaseId(kbId)
@@ -270,15 +286,23 @@ watch(
 )
 
 watch(activeTab, async (newTab) => {
-  if (newTab === 'summary' && chatStore.currentSessionId) {
+  if (!chatStore.currentSessionId) return
+  if (newTab === 'summary') {
     await loadSummaryData()
+  } else if (newTab === 'audit') {
+    await loadAuditData()
   }
 })
 
-watch(() => chatStore.currentSessionId, () => {
+watch(() => chatStore.currentSessionId, async () => {
   if (activeTab.value === 'summary') {
     summaryData.value = null
     summaryError.value = null
+    await loadSummaryData()
+  } else if (activeTab.value === 'audit') {
+    auditData.value = null
+    auditError.value = null
+    await loadAuditData()
   }
 })
 
@@ -309,6 +333,26 @@ async function loadSummaryData() {
 
 function handleRetrySummary() {
   loadSummaryData()
+}
+
+async function loadAuditData() {
+  if (!chatStore.currentSessionId) return
+
+  auditLoading.value = true
+  auditError.value = null
+
+  try {
+    auditData.value = await fetchSessionAudits(chatStore.currentSessionId)
+  } catch (err) {
+    console.error('加载会话审计失败:', err)
+    auditError.value = err instanceof Error ? err.message : '加载失败'
+  } finally {
+    auditLoading.value = false
+  }
+}
+
+function handleRetryAudit() {
+  loadAuditData()
 }
 
 function smoothScrollToBottom() {

@@ -12,6 +12,7 @@ import cn.ts.graph.checkpoint.CheckpointManager;
 import cn.ts.graph.hook.Hook;
 import cn.ts.graph.observation.GraphObservationLifecycleListener;
 import cn.ts.web.agent.deepsearch.DeepSearchAgentBuilder;
+import cn.ts.web.agent.interceptor.PromptAuditInterceptor;
 import cn.ts.web.agent.deepsearch.DeepSearchProperties;
 import cn.ts.web.agent.service.AgentExecutionService;
 import cn.ts.web.tool.local.SimpleTools;
@@ -51,6 +52,7 @@ public class AgentConfig {
     private final GraphObservationLifecycleListener observationListener;
     private final DeepSearchProperties deepSearchProperties;
     private final DeepSearchAgentBuilder deepSearchAgentBuilder;
+    private final PromptAuditInterceptor promptAuditInterceptor;
 
     public AgentConfig(ChatModel chatModel,
                        AgentExecutionService agentExecutionService,
@@ -62,7 +64,8 @@ public class AgentConfig {
                        CheckpointManager checkpointManager,
                        GraphObservationLifecycleListener observationListener,
                        DeepSearchProperties deepSearchProperties,
-                       DeepSearchAgentBuilder deepSearchAgentBuilder) {
+                       DeepSearchAgentBuilder deepSearchAgentBuilder,
+                       PromptAuditInterceptor promptAuditInterceptor) {
         this.chatModel = chatModel;
         this.agentExecutionService = agentExecutionService;
         this.mcpManager = mcpManager;
@@ -74,6 +77,7 @@ public class AgentConfig {
         this.observationListener = observationListener;
         this.deepSearchProperties = deepSearchProperties;
         this.deepSearchAgentBuilder = deepSearchAgentBuilder;
+        this.promptAuditInterceptor = promptAuditInterceptor;
     }
 
     /**
@@ -119,6 +123,7 @@ public class AgentConfig {
                 .streaming(false)
                 .tools(tools.toArray())
                 .hooks(testAgentHooks)
+                .modelInterceptors(List.of(promptAuditInterceptor))
                 .checkpointManager(checkpointManager)
                 .addLifecycleListener(observationListener)
                 .build();
@@ -156,6 +161,7 @@ public class AgentConfig {
                 .streaming(true)
                 .tools(tools.toArray())
                 .hooks(streamingAgentHooks)
+                .modelInterceptors(List.of(promptAuditInterceptor))
                 .checkpointManager(checkpointManager)
                 .addLifecycleListener(observationListener)
                 .build();

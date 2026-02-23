@@ -53,6 +53,9 @@ public interface NodeActionWithConfig {
      * @return 带配置的节点动作
      */
     static NodeActionWithConfig from(NodeAction oldAction) {
+        if (oldAction instanceof NodeActionWithConfig withConfig) {
+            return withConfig;
+        }
         return (state, config) -> oldAction.apply(state);
     }
 
