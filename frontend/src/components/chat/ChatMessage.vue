@@ -84,6 +84,22 @@
                 </div>
                 <div class="text-xs text-zinc-600 mb-1">Result:</div>
                 <pre class="font-mono text-xs bg-white border border-zinc-200 rounded p-3 overflow-x-auto text-zinc-700">{{ response.response }}</pre>
+                <div v-if="getToolResponseSources(response, idx).length > 0" class="tool-sources">
+                  <div class="tool-sources-title">Sources:</div>
+                  <ul class="tool-sources-list">
+                    <li v-for="source in getToolResponseSources(response, idx)" :key="source.url" class="tool-source-item">
+                      <a
+                        :href="source.url"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="tool-source-link"
+                      >
+                        {{ source.title }}
+                      </a>
+                      <div class="tool-source-url">{{ source.url }}</div>
+                    </li>
+                  </ul>
+                </div>
               </div>
             </div>
           </Transition>
@@ -206,6 +222,7 @@ import ApprovalDialog from '@/components/chat/ApprovalDialog.vue'
 import type { Message } from '@/types/message'
 import { renderMarkdown, testCitationRendering, clearCache } from '@/utils/markdown'
 import { formatTime, getMessageStatusLabel, getMessageStatusVariant } from '@/utils/helpers'
+import { parseSearchToolSources, type ParsedSearchSource } from '@/utils/searchToolResultParser'
 import { useChatStore } from '@/stores/chat'
 
 const props = defineProps<{
@@ -285,6 +302,13 @@ function formatToolArguments(args: string): string {
   } catch {
     return args
   }
+}
+
+function getToolResponseSources(
+  response: { name: string; response: string },
+  _index: number
+): ParsedSearchSource[] {
+  return parseSearchToolSources(response.name, response.response).sources
 }
 
 // 检查是否有审批数据
@@ -591,6 +615,54 @@ function handleMarkdownClick(event: MouseEvent) {
   gap: 4px;
 }
 
+.tool-sources {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 8px;
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.tool-sources-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #047857;
+  margin-bottom: 6px;
+}
+
+.tool-sources-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tool-source-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tool-source-link {
+  color: #047857;
+  font-size: 12px;
+  line-height: 1.3;
+  text-decoration: none;
+}
+
+.tool-source-link:hover {
+  text-decoration: underline;
+}
+
+.tool-source-url {
+  font-size: 11px;
+  color: #0f766e;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 [data-theme="dark"] .tool-call-item code,
 [data-theme="dark"] .tool-response-item code {
   background-color: rgba(99, 102, 241, 0.2);
@@ -607,6 +679,20 @@ function handleMarkdownClick(event: MouseEvent) {
   background-color: #1a1a1a;
   border-color: #3f3f46;
   color: #d4d4d8;
+}
+
+[data-theme="dark"] .tool-sources {
+  border-color: rgba(52, 211, 153, 0.45);
+  background: rgba(16, 185, 129, 0.14);
+}
+
+[data-theme="dark"] .tool-sources-title,
+[data-theme="dark"] .tool-source-link {
+  color: #6ee7b7;
+}
+
+[data-theme="dark"] .tool-source-url {
+  color: #99f6e4;
 }
 
 .message-avatar {
