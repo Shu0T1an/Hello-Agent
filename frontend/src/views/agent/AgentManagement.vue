@@ -64,6 +64,47 @@
         </div>
       </div>
 
+      <!-- 运行时 Agent（包含内置 Agent） -->
+      <div v-if="runtimeOnlyAgents.length > 0" class="mb-6">
+        <h2 class="text-sm font-semibold text-zinc-700 mb-3">运行时 Agent（内置/未托管）</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <BaseCard
+            v-for="agent in runtimeOnlyAgents"
+            :key="agent.agentName"
+            class="border border-amber-200 bg-amber-50/40"
+          >
+            <div class="flex items-start justify-between mb-3">
+              <div class="min-w-0">
+                <h3 class="text-base font-semibold text-zinc-900 truncate">{{ agent.displayName }}</h3>
+                <p class="text-xs text-zinc-500 font-mono mt-1">{{ agent.agentName }}</p>
+              </div>
+              <span
+                v-if="agent.builtIn"
+                class="px-2 py-1 rounded-md text-[11px] font-medium bg-amber-100 text-amber-700"
+              >
+                内置
+              </span>
+            </div>
+
+            <p class="text-sm text-zinc-600 mb-3 line-clamp-2">
+              {{ agent.description || 'Runtime registered agent' }}
+            </p>
+
+            <div class="pt-3 border-t border-amber-200/70">
+              <BaseButton
+                variant="ghost"
+                size="sm"
+                class="w-full"
+                @click="handleViewRuntimeGraph(agent)"
+              >
+                <Network :size="16" />
+                可视化
+              </BaseButton>
+            </div>
+          </BaseCard>
+        </div>
+      </div>
+
       <!-- Agent 卡片网格 -->
       <div v-if="filteredAgents.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <BaseCard
@@ -183,12 +224,15 @@
     <!-- Agent 运行时图谱 -->
     <BaseModal
       v-model:visible="showGraphModal"
-      :title="graphAgent ? `${graphAgent.displayName} - 运行时图谱` : '运行时图谱'"
+      :title="graphModalTitle"
       width="full"
       class="max-w-[96vw]"
       @close="handleGraphModalClose"
     >
-      <AgentGraphCanvas :agent-id="graphAgent?.id ?? null" />
+      <AgentGraphCanvas
+        :agent-id="graphAgentId"
+        :agent-name="graphAgentName"
+      />
     </BaseModal>
   </div>
 </template>
@@ -198,6 +242,8 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useAgentConfigStore } from '@/stores/agentConfig'
 import { useToast } from '@/composables/useToast'
 import type { AgentConfig, CreateAgentDTO, UpdateAgentDTO } from '@/types/agent'
+import { fetchRuntimeAgents } from '@/api/agentGraph'
+import type { RuntimeAgentSummary } from '@/types/agent-graph'
 import AgentForm from '@/components/agent/AgentForm.vue'
 import AgentGraphCanvas from '@/components/agent-graph/AgentGraphCanvas.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
@@ -227,7 +273,10 @@ const toast = useToast()
 const showForm = ref(false)
 const editingAgent = ref<AgentConfig | null>(null)
 const showGraphModal = ref(false)
-const graphAgent = ref<AgentConfig | null>(null)
+const graphAgentId = ref<number | null>(null)
+const graphAgentName = ref<string | null>(null)
+const graphModalTitle = ref('运行时图谱')
+const runtimeAgents = ref<RuntimeAgentSummary[]>([])
 const searchQuery = ref('')
 const filterStatus = ref<'all' | 'active' | 'inactive'>('all')
 
@@ -253,6 +302,11 @@ const filteredAgents = computed(() => {
   }
 
   return result
+})
+
+const runtimeOnlyAgents = computed(() => {
+  const configuredNames = new Set(agentStore.agents.map(agent => agent.agentName))
+  return runtimeAgents.value.filter(agent => !configuredNames.has(agent.agentName))
 })
 
 // 获取下拉菜单项
@@ -281,15 +335,26 @@ const getDropdownItems = (agent: AgentConfig) => {
   ]
 }
 
-onMounted(() => {
-  agentStore.fetchAgents()
+onMounted(async () => {
+  await agentStore.fetchAgents()
+  await loadRuntimeAgents()
 })
 
 watch(showGraphModal, (visible) => {
   if (!visible) {
-    graphAgent.value = null
+    graphAgentId.value = null
+    graphAgentName.value = null
+    graphModalTitle.value = '运行时图谱'
   }
 })
+
+async function loadRuntimeAgents() {
+  try {
+    runtimeAgents.value = await fetchRuntimeAgents()
+  } catch (error) {
+    console.error('Failed to fetch runtime agents:', error)
+  }
+}
 
 function handleCreate() {
   editingAgent.value = null
@@ -297,12 +362,23 @@ function handleCreate() {
 }
 
 function handleViewGraph(agent: AgentConfig) {
-  graphAgent.value = agent
+  graphAgentId.value = agent.id
+  graphAgentName.value = agent.agentName
+  graphModalTitle.value = `${agent.displayName} - 运行时图谱`
   showGraphModal.value = true
 }
 
 function handleGraphModalClose() {
-  graphAgent.value = null
+  graphAgentId.value = null
+  graphAgentName.value = null
+  graphModalTitle.value = '运行时图谱'
+}
+
+function handleViewRuntimeGraph(agent: RuntimeAgentSummary) {
+  graphAgentId.value = null
+  graphAgentName.value = agent.agentName
+  graphModalTitle.value = `${agent.displayName} - 运行时图谱`
+  showGraphModal.value = true
 }
 
 function handleEdit(agent: AgentConfig) {

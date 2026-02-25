@@ -53,6 +53,7 @@ import {
   ConnectionLineType,
   MarkerType,
   type NodeMouseEvent,
+  Position,
   VueFlow,
   type Edge,
   type Node,
@@ -69,6 +70,7 @@ import '@vue-flow/controls/dist/style.css'
 
 const props = defineProps<{
   agentId: number | null
+  agentName?: string | null
 }>()
 
 const graphStore = useAgentGraphStore()
@@ -91,16 +93,20 @@ const defaultEdgeOptions = computed(() => ({
 }))
 
 watch(
-  () => props.agentId,
-  async (agentId) => {
-    if (!agentId) {
+  () => [props.agentId, props.agentName] as const,
+  async ([agentId, agentName]) => {
+    if (agentId == null && (!agentName || !agentName.trim())) {
       graphStore.reset()
       nodes.value = []
       edges.value = []
       return
     }
     try {
-      await graphStore.loadGraph(agentId)
+      if (agentId != null) {
+        await graphStore.loadGraph(agentId)
+      } else {
+        await graphStore.loadGraphByName((agentName ?? '').trim())
+      }
       rebuildGraphElements()
     } catch {
       nodes.value = []
@@ -134,7 +140,8 @@ function rebuildGraphElements() {
   }
 
   const baseNodes = graph.nodes.map(toFlowNode)
-  const baseEdges = graph.edges.map(toFlowEdge)
+  const mergedEdges = mergeParallelEdges(graph.edges)
+  const baseEdges = mergedEdges.map(toFlowEdge)
   const layouted = layoutWithDagre(baseNodes, baseEdges, graphStore.layoutMode)
   nodes.value = layouted.nodes
   edges.value = layouted.edges
@@ -145,12 +152,15 @@ function rebuildGraphElements() {
 }
 
 function toFlowNode(node: AgentGraphNode): Node {
+  const isHorizontal = graphStore.layoutMode === 'LR'
   return {
     id: node.id,
     type: 'default',
     position: { x: 0, y: 0 },
     draggable: false,
     selectable: true,
+    sourcePosition: isHorizontal ? Position.Right : Position.Bottom,
+    targetPosition: isHorizontal ? Position.Left : Position.Top,
     class: `node-${node.nodeType}`,
     data: {
       label: `${node.label}\n${node.id}`
@@ -158,13 +168,16 @@ function toFlowNode(node: AgentGraphNode): Node {
   }
 }
 
-function toFlowEdge(edge: AgentGraphEdge): Edge {
+function toFlowEdge(edge: AgentGraphEdge & { isBidirectional?: boolean }): Edge {
   return {
     id: edge.id,
     source: edge.source,
     target: edge.target,
     label: edge.label ?? undefined,
-    type: 'default'
+    type: 'smoothstep',
+    style: edge.isBidirectional
+      ? { stroke: '#64748b', strokeWidth: 1.5, strokeDasharray: '6 4' }
+      : undefined
   }
 }
 
@@ -172,8 +185,12 @@ function layoutWithDagre(flowNodes: Node[], flowEdges: Edge[], mode: GraphLayout
   const g = new dagre.graphlib.Graph()
   g.setGraph({
     rankdir: mode,
-    ranksep: 90,
-    nodesep: 50
+    ranksep: 150,
+    nodesep: 90,
+    edgesep: 40,
+    marginx: 24,
+    marginy: 24,
+    acyclicer: 'greedy'
   })
   g.setDefaultEdgeLabel(() => ({}))
 
@@ -197,6 +214,45 @@ function layoutWithDagre(flowNodes: Node[], flowEdges: Edge[], mode: GraphLayout
   })
 
   return { nodes: nextNodes, edges: flowEdges }
+}
+
+function mergeParallelEdges(edges: AgentGraphEdge[]): Array<AgentGraphEdge & { isBidirectional?: boolean }> {
+  const grouped = new Map<string, AgentGraphEdge[]>()
+  for (const edge of edges) {
+    const key = `${edge.source}__${edge.target}`
+    const list = grouped.get(key)
+    if (list) {
+      list.push(edge)
+    } else {
+      grouped.set(key, [edge])
+    }
+  }
+
+  const result: Array<AgentGraphEdge & { isBidirectional?: boolean }> = []
+  let seq = 1
+  for (const [, list] of grouped.entries()) {
+    const head = list[0]
+    if (!head) {
+      continue
+    }
+    const reverseKey = `${head.target}__${head.source}`
+    const labels = Array.from(
+      new Set(
+        list
+          .map(item => item.label)
+          .filter((label): label is string => Boolean(label && label.trim()))
+      )
+    )
+
+    result.push({
+      ...head,
+      id: `merged-e${seq++}`,
+      label: labels.length > 0 ? labels.join(' | ') : head.label ?? null,
+      isBidirectional: grouped.has(reverseKey)
+    })
+  }
+
+  return result
 }
 
 function onNodeClick(event: NodeMouseEvent) {

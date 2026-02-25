@@ -24,7 +24,7 @@ export interface AgentGraphStats {
 }
 
 export interface AgentGraphResponse {
-  agentId: number
+  agentId: number | null
   agentName: string
   entryPoint: string
   nodes: AgentGraphNode[]
@@ -33,3 +33,10 @@ export interface AgentGraphResponse {
   generatedAt: string
 }
 
+export interface RuntimeAgentSummary {
+  agentName: string
+  displayName: string
+  description?: string
+  builtIn: boolean
+  managed: boolean
+}

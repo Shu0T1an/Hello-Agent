@@ -56,6 +56,23 @@ public class AgentGraphQueryService {
             throw new IllegalStateException("Agent graph is not registered: " + agentName);
         }
 
+        return buildGraphDTO(agentId, agentName, graph);
+    }
+
+    public AgentGraphDTO queryByAgentName(String agentName) {
+        if (agentName == null || agentName.isBlank()) {
+            throw new IllegalArgumentException("agentName must not be blank");
+        }
+        CompiledGraph graph = agentRegistry.get(agentName);
+        if (graph == null) {
+            throw new NoSuchElementException("Agent graph is not registered: " + agentName);
+        }
+        AgentConfigDTO agentConfig = agentConfigService.getAgentByName(agentName);
+        Long agentId = agentConfig != null ? agentConfig.getId() : null;
+        return buildGraphDTO(agentId, agentName, graph);
+    }
+
+    private AgentGraphDTO buildGraphDTO(Long agentId, String agentName, CompiledGraph graph) {
         List<AgentGraphNodeDTO> nodes = buildNodes(graph.getNodes());
         List<AgentGraphEdgeDTO> edges = buildEdges(graph.getEdges());
         AgentGraphDTO.GraphStats stats = new AgentGraphDTO.GraphStats();
@@ -331,4 +348,3 @@ public class AgentGraphQueryService {
         return defaultValue;
     }
 }
-
