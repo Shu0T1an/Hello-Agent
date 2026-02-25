@@ -23,6 +23,7 @@ public class AgentExecutionConfig {
     private int defaultMaxIterations = 100;
     private boolean debugMode = false;
     private RetryConfig retry = new RetryConfig();
+    private ContextPromptConfig contextPrompt = new ContextPromptConfig();
 
     public Duration getTimeout() {
         return timeout;
@@ -70,6 +71,14 @@ public class AgentExecutionConfig {
 
     public void setRetry(RetryConfig retry) {
         this.retry = retry;
+    }
+
+    public ContextPromptConfig getContextPrompt() {
+        return contextPrompt;
+    }
+
+    public void setContextPrompt(ContextPromptConfig contextPrompt) {
+        this.contextPrompt = contextPrompt;
     }
 
     /**
@@ -120,6 +129,39 @@ public class AgentExecutionConfig {
 
         public void setMaxBackoff(Duration maxBackoff) {
             this.maxBackoff = maxBackoff;
+        }
+    }
+
+    /**
+     * Runtime context prompt config.
+     */
+    public static class ContextPromptConfig {
+        private boolean enabled = true;
+        private boolean includeTime = true;
+        private boolean includeCapabilities = true;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public boolean isIncludeTime() {
+            return includeTime;
+        }
+
+        public void setIncludeTime(boolean includeTime) {
+            this.includeTime = includeTime;
+        }
+
+        public boolean isIncludeCapabilities() {
+            return includeCapabilities;
+        }
+
+        public void setIncludeCapabilities(boolean includeCapabilities) {
+            this.includeCapabilities = includeCapabilities;
         }
     }
 }

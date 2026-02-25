@@ -1,6 +1,7 @@
 package cn.ts.web.agent.factory;
 
 import cn.ts.agent.core.ReactAgent;
+import cn.ts.agent.extension.interceptor.RuntimeContextPromptInterceptor;
 import cn.ts.agent.extension.interceptor.SubAgentInterceptor;
 import cn.ts.agent.extension.interceptor.ToolPolicyInterceptor;
 import cn.ts.agent.extension.tools.TaskTool;
@@ -19,6 +20,7 @@ import cn.ts.web.agent.mapper.AgentConfigMapper;
 import cn.ts.web.agent.mapper.SubAgentMappingMapper;
 import cn.ts.web.agent.service.ModelConfigService;
 import cn.ts.web.agent.service.SubAgentProgressBus;
+import cn.ts.web.shared.config.AgentExecutionConfig;
 import cn.ts.web.tool.service.ToolDefinitionService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -53,6 +55,7 @@ public class AgentFactory {
     private final CheckpointManager checkpointManager;
     private final SubAgentProgressBus subAgentProgressBus;
     private final PromptAuditInterceptor promptAuditInterceptor;
+    private final RuntimeContextPromptInterceptor runtimeContextPromptInterceptor;
     private final List<String> blockedToolNames;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -62,6 +65,7 @@ public class AgentFactory {
                         SubAgentMappingMapper subAgentMappingMapper,
                         CheckpointManager checkpointManager,
                         SubAgentProgressBus subAgentProgressBus,
+                        AgentExecutionConfig agentExecutionConfig,
                         PromptAuditInterceptor promptAuditInterceptor,
                         @Value("${agent.subagent.blocked-tool-names:}") String blockedToolNamesRaw) {
         this.modelConfigService = modelConfigService;
@@ -70,6 +74,7 @@ public class AgentFactory {
         this.subAgentMappingMapper = subAgentMappingMapper;
         this.checkpointManager = checkpointManager;
         this.subAgentProgressBus = subAgentProgressBus;
+        this.runtimeContextPromptInterceptor = createRuntimeContextPromptInterceptor(agentExecutionConfig);
         this.promptAuditInterceptor = promptAuditInterceptor;
         this.blockedToolNames = parseBlockedToolNames(blockedToolNamesRaw);
     }
@@ -91,7 +96,8 @@ public class AgentFactory {
         ReactAgent.Builder builder = ReactAgent.builder()
                 .name(config.getAgentName())
                 .description(config.getDescription() != null ? config.getDescription() : config.getDisplayName())
-                .chatModel(chatModel);
+                .chatModel(chatModel)
+                .systemPrompt(config.getSystemPrompt());
         builder.hooks(buildGlobalHooks());
 
         if (attachCheckpointManager) {
@@ -103,6 +109,9 @@ public class AgentFactory {
         }
 
         List<ModelInterceptor> modelInterceptors = new ArrayList<>();
+        if (runtimeContextPromptInterceptor.isEnabled()) {
+            modelInterceptors.add(runtimeContextPromptInterceptor);
+        }
         if (includeSubAgentInterceptor && Boolean.TRUE.equals(config.getEnableSubAgentInterceptor())) {
             Map<String, ReactAgent> subAgents = buildSubAgentsFor(config);
             tools = appendTaskTool(tools, subAgents);
@@ -355,5 +364,15 @@ public class AgentFactory {
                 .map(String::trim)
                 .filter(value -> !value.isEmpty())
                 .toList();
+    }
+
+    private RuntimeContextPromptInterceptor createRuntimeContextPromptInterceptor(AgentExecutionConfig executionConfig) {
+        AgentExecutionConfig.ContextPromptConfig contextPromptConfig = executionConfig != null
+                ? executionConfig.getContextPrompt()
+                : null;
+        boolean enabled = contextPromptConfig == null || contextPromptConfig.isEnabled();
+        boolean includeTime = contextPromptConfig == null || contextPromptConfig.isIncludeTime();
+        boolean includeCapabilities = contextPromptConfig == null || contextPromptConfig.isIncludeCapabilities();
+        return new RuntimeContextPromptInterceptor(enabled, includeTime, includeCapabilities);
     }
 }

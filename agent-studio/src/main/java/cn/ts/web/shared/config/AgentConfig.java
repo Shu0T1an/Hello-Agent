@@ -2,9 +2,11 @@ package cn.ts.web.shared.config;
 
 import cn.ts.agent.tool.WriteToDoTool;
 import cn.ts.agent.core.ReactAgent;
+import cn.ts.agent.extension.interceptor.RuntimeContextPromptInterceptor;
 import cn.ts.agent.hook.ClarificationQaHook;
 import cn.ts.agent.hook.HumanInTheLoopHook;
 import cn.ts.agent.hook.LoggingHook;
+import cn.ts.agent.interceptor.ModelInterceptor;
 import cn.ts.agent.mcp.McpManager;
 import cn.ts.agent.mcp.model.McpStatistics;
 import cn.ts.agent.rag.advisor.RagAdvisor;
@@ -53,6 +55,7 @@ public class AgentConfig {
     private final DeepSearchProperties deepSearchProperties;
     private final DeepSearchAgentBuilder deepSearchAgentBuilder;
     private final PromptAuditInterceptor promptAuditInterceptor;
+    private final RuntimeContextPromptInterceptor runtimeContextPromptInterceptor;
 
     public AgentConfig(ChatModel chatModel,
                        AgentExecutionService agentExecutionService,
@@ -65,6 +68,7 @@ public class AgentConfig {
                        GraphObservationLifecycleListener observationListener,
                        DeepSearchProperties deepSearchProperties,
                        DeepSearchAgentBuilder deepSearchAgentBuilder,
+                       AgentExecutionConfig agentExecutionConfig,
                        PromptAuditInterceptor promptAuditInterceptor) {
         this.chatModel = chatModel;
         this.agentExecutionService = agentExecutionService;
@@ -77,6 +81,7 @@ public class AgentConfig {
         this.observationListener = observationListener;
         this.deepSearchProperties = deepSearchProperties;
         this.deepSearchAgentBuilder = deepSearchAgentBuilder;
+        this.runtimeContextPromptInterceptor = createRuntimeContextPromptInterceptor(agentExecutionConfig);
         this.promptAuditInterceptor = promptAuditInterceptor;
     }
 
@@ -123,7 +128,7 @@ public class AgentConfig {
                 .streaming(false)
                 .tools(tools.toArray())
                 .hooks(testAgentHooks)
-                .modelInterceptors(List.of(promptAuditInterceptor))
+                .modelInterceptors(buildStandardInterceptors())
                 .checkpointManager(checkpointManager)
                 .addLifecycleListener(observationListener)
                 .build();
@@ -161,7 +166,7 @@ public class AgentConfig {
                 .streaming(true)
                 .tools(tools.toArray())
                 .hooks(streamingAgentHooks)
-                .modelInterceptors(List.of(promptAuditInterceptor))
+                .modelInterceptors(buildStandardInterceptors())
                 .checkpointManager(checkpointManager)
                 .addLifecycleListener(observationListener)
                 .build();
@@ -351,5 +356,23 @@ public class AgentConfig {
                 statistics.getErrorCount(),
                 statistics.getConnectingCount());
         logger.info("MCP 工具总数: {}", statistics.getTotalTools());
+    }
+    private List<ModelInterceptor> buildStandardInterceptors() {
+        List<ModelInterceptor> interceptors = new ArrayList<>();
+        if (runtimeContextPromptInterceptor.isEnabled()) {
+            interceptors.add(runtimeContextPromptInterceptor);
+        }
+        interceptors.add(promptAuditInterceptor);
+        return List.copyOf(interceptors);
+    }
+
+    private RuntimeContextPromptInterceptor createRuntimeContextPromptInterceptor(AgentExecutionConfig executionConfig) {
+        AgentExecutionConfig.ContextPromptConfig contextPromptConfig = executionConfig != null
+                ? executionConfig.getContextPrompt()
+                : null;
+        boolean enabled = contextPromptConfig == null || contextPromptConfig.isEnabled();
+        boolean includeTime = contextPromptConfig == null || contextPromptConfig.isIncludeTime();
+        boolean includeCapabilities = contextPromptConfig == null || contextPromptConfig.isIncludeCapabilities();
+        return new RuntimeContextPromptInterceptor(enabled, includeTime, includeCapabilities);
     }
 }

@@ -1,6 +1,7 @@
 package cn.ts.web.agent.deepsearch;
 
 import cn.ts.agent.core.ReactAgent;
+import cn.ts.agent.extension.interceptor.RuntimeContextPromptInterceptor;
 import cn.ts.agent.extension.interceptor.SubAgentInterceptor;
 import cn.ts.agent.extension.interceptor.ToolPolicyInterceptor;
 import cn.ts.agent.extension.tools.TaskTool;
@@ -14,9 +15,11 @@ import cn.ts.graph.checkpoint.CheckpointManager;
 import cn.ts.graph.hook.Hook;
 import cn.ts.web.agent.interceptor.PromptAuditInterceptor;
 import cn.ts.web.agent.service.SubAgentProgressBus;
+import cn.ts.web.shared.config.AgentExecutionConfig;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,16 +36,19 @@ public class DeepSearchAgentBuilder {
     private final SubAgentProgressBus subAgentProgressBus;
     private final SubAgentToolPolicyResolver toolPolicyResolver;
     private final PromptAuditInterceptor promptAuditInterceptor;
+    private final RuntimeContextPromptInterceptor runtimeContextPromptInterceptor;
 
     public DeepSearchAgentBuilder(DeepSearchProperties properties,
                                   CheckpointManager checkpointManager,
                                   SubAgentProgressBus subAgentProgressBus,
+                                  AgentExecutionConfig executionConfig,
                                   PromptAuditInterceptor promptAuditInterceptor) {
         this.properties = properties;
         this.checkpointManager = checkpointManager;
         this.subAgentProgressBus = subAgentProgressBus;
         this.promptAuditInterceptor = promptAuditInterceptor;
         this.toolPolicyResolver = new SubAgentToolPolicyResolver(properties);
+        this.runtimeContextPromptInterceptor = createRuntimeContextPromptInterceptor(executionConfig);
     }
 
     public ReactAgent build(ChatModel chatModel, Object[] tools) {
@@ -68,7 +74,7 @@ public class DeepSearchAgentBuilder {
                 .streaming(properties.isStreamEnabled())
                 .tools(toolsWithTask)
                 .hooks(buildGlobalHooks())
-                .modelInterceptors(List.of(
+                .modelInterceptors(withRuntimeContext(
                         subAgentInterceptor,
                         new ToolPolicyInterceptor(
                                 "DeepSearchMainToolPolicy",
@@ -105,7 +111,7 @@ public class DeepSearchAgentBuilder {
                 .streaming(false)
                 .tools(tools)
                 .hooks(buildGlobalHooks())
-                .modelInterceptors(List.of(new PromptInjectingInterceptor(
+                .modelInterceptors(withRuntimeContext(new PromptInjectingInterceptor(
                         "DeepSearchResearchPrompt",
                         DeepSearchPrompts.RESEARCH_SUBAGENT_PROMPT
                 ), toolPolicyResolver.forResearchAgent(), promptAuditInterceptor))
@@ -119,7 +125,7 @@ public class DeepSearchAgentBuilder {
                 .streaming(false)
                 .tools(tools)
                 .hooks(buildGlobalHooks())
-                .modelInterceptors(List.of(new PromptInjectingInterceptor(
+                .modelInterceptors(withRuntimeContext(new PromptInjectingInterceptor(
                         "DeepSearchCritiquePrompt",
                         DeepSearchPrompts.CRITIQUE_SUBAGENT_PROMPT
                 ), toolPolicyResolver.forCritiqueAgent(), promptAuditInterceptor))
@@ -134,7 +140,7 @@ public class DeepSearchAgentBuilder {
                     .streaming(false)
                     .tools(tools)
                     .hooks(buildGlobalHooks())
-                    .modelInterceptors(List.of(new PromptInjectingInterceptor(
+                    .modelInterceptors(withRuntimeContext(new PromptInjectingInterceptor(
                             "DeepSearchGeneralPrompt",
                             DeepSearchPrompts.GENERAL_PURPOSE_SUBAGENT_PROMPT
                     ), toolPolicyResolver.forGeneralAgent(), promptAuditInterceptor))
@@ -147,6 +153,25 @@ public class DeepSearchAgentBuilder {
 
     private List<Hook> buildGlobalHooks() {
         return List.of(ClarificationQaHook.builder().build());
+    }
+
+    private List<ModelInterceptor> withRuntimeContext(ModelInterceptor... interceptors) {
+        List<ModelInterceptor> all = new ArrayList<>();
+        if (runtimeContextPromptInterceptor.isEnabled()) {
+            all.add(runtimeContextPromptInterceptor);
+        }
+        all.addAll(List.of(interceptors));
+        return List.copyOf(all);
+    }
+
+    private RuntimeContextPromptInterceptor createRuntimeContextPromptInterceptor(AgentExecutionConfig executionConfig) {
+        AgentExecutionConfig.ContextPromptConfig contextPromptConfig = executionConfig != null
+                ? executionConfig.getContextPrompt()
+                : null;
+        boolean enabled = contextPromptConfig == null || contextPromptConfig.isEnabled();
+        boolean includeTime = contextPromptConfig == null || contextPromptConfig.isIncludeTime();
+        boolean includeCapabilities = contextPromptConfig == null || contextPromptConfig.isIncludeCapabilities();
+        return new RuntimeContextPromptInterceptor(enabled, includeTime, includeCapabilities);
     }
 
     static class PromptInjectingInterceptor implements ModelInterceptor {
