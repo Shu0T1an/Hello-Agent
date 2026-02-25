@@ -2,7 +2,10 @@ package cn.ts.web.tool.local;
 
 import cn.ts.agent.tool.shell.ShellCommandResult;
 import cn.ts.agent.tool.shell.ShellSessionManager;
+import cn.ts.agent.tool.shell.ShellToolException;
 import cn.ts.graph.state.State;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
@@ -14,6 +17,8 @@ import static cn.ts.agent.tool.ToolContextConstants.TOOL_STATE_CONTEXT_KEY;
 
 @Component
 public class ShellCommandTool {
+
+    private static final Logger logger = LoggerFactory.getLogger(ShellCommandTool.class);
 
     private final ShellToolProperties properties;
     private final ShellSessionManager sessionManager;
@@ -44,14 +49,22 @@ public class ShellCommandTool {
         String workingDirectory = request == null ? null : request.workingDirectory();
 
         String sessionKey = resolveSessionKey(toolContext);
-        ShellCommandResult result = sessionManager.executeCommand(
-                sessionKey,
-                command,
-                timeoutSeconds,
-                workingDirectory,
-                restart
-        );
-        return formatResult(result, sessionKey);
+        try {
+            ShellCommandResult result = sessionManager.executeCommand(
+                    sessionKey,
+                    command,
+                    timeoutSeconds,
+                    workingDirectory,
+                    restart
+            );
+            return formatResult(result, sessionKey);
+        } catch (ShellToolException e) {
+            logger.warn("Shell command rejected, session={}, code={}, message={}", sessionKey, e.getErrorCode(), e.getMessage());
+            return formatError(sessionKey, e.getErrorCode(), e.getMessage());
+        } catch (Exception e) {
+            logger.error("Shell command execution failed unexpectedly, session={}", sessionKey, e);
+            return formatError(sessionKey, "SHELL_EXEC_FAILED", e.getMessage());
+        }
     }
 
     private String resolveSessionKey(ToolContext toolContext) {
@@ -122,6 +135,23 @@ public class ShellCommandTool {
         return out.toString();
     }
 
+    private String formatError(String sessionKey, String errorCode, String message) {
+        StringBuilder out = new StringBuilder();
+        out.append("status=error")
+                .append(", session=").append(sessionKey)
+                .append(", exitCode=-1")
+                .append(", timedOut=false")
+                .append(", truncated=false")
+                .append(", restarted=false");
+        if (errorCode != null && !errorCode.isBlank()) {
+            out.append(", errorCode=").append(errorCode);
+        }
+        if (message != null && !message.isBlank()) {
+            out.append("\n\n[stderr]\n").append(message.trim());
+        }
+        return out.toString();
+    }
+
     public record ShellCommandRequest(
             String command,
             Boolean restart,
@@ -130,4 +160,3 @@ public class ShellCommandTool {
     ) {
     }
 }
-

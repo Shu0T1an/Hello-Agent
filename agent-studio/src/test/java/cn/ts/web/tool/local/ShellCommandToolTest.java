@@ -49,5 +49,23 @@ class ShellCommandToolTest {
 
         assertTrue(result.contains("session=exec-test-1"));
     }
-}
 
+    @Test
+    void returnsStructuredErrorWhenCommandIsBlocked() {
+        ShellToolProperties properties = new ShellToolProperties();
+        properties.setEnabled(true);
+        properties.setAllowedWorkingDirectories(List.of(System.getProperty("user.dir")));
+        properties.setBlockedCommandPatterns(List.of("(?i)\\becho\\b"));
+        ShellToolRuntime runtime = new ShellToolRuntime(properties);
+        ShellCommandTool tool = new ShellCommandTool(properties, runtime);
+
+        String result = tool.executeShellCommand(
+                new ShellCommandTool.ShellCommandRequest("echo blocked", false, null, null),
+                new ToolContext(new HashMap<>())
+        );
+        runtime.sessionManager().closeAll();
+
+        assertTrue(result.contains("status=error"));
+        assertTrue(result.contains("SHELL_BLOCKED_COMMAND"));
+    }
+}

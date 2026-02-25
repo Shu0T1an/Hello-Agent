@@ -45,7 +45,7 @@ agent:
       include-time: true
       include-capabilities: true
   shelltool:
-    enabled: true
+    enabled: false
     default-timeout-seconds: 30
     max-timeout-seconds: 120
     max-output-lines: 400
