@@ -60,6 +60,7 @@ public class ReactAgent implements Agent {
         private List<ModelInterceptor> modelInterceptors;
         private CheckpointManager checkpointManager;
         private List<GraphLifecycleListener> lifecycleListeners;
+        private String systemPrompt;
 
         public Builder name(String name) {
             this.name = name;
@@ -106,6 +107,11 @@ public class ReactAgent implements Agent {
             return this;
         }
 
+        public Builder systemPrompt(String systemPrompt) {
+            this.systemPrompt = systemPrompt;
+            return this;
+        }
+
         public Builder checkpointManager(CheckpointManager checkpointManager) {
             this.checkpointManager = checkpointManager;
             return this;
@@ -129,6 +135,7 @@ public class ReactAgent implements Agent {
             this.graph = graphFactory.build(
                     chatModel,
                     advisors,
+                    systemPrompt,
                     streaming,
                     tools,
                     hooks,

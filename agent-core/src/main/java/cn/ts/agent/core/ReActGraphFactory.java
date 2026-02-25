@@ -1,6 +1,7 @@
 package cn.ts.agent.core;
 
 import cn.ts.agent.constant.StateKeys;
+import cn.ts.agent.constant.AgentConstants;
 import cn.ts.agent.interceptor.ModelInterceptor;
 import cn.ts.agent.node.LLMNode;
 import cn.ts.agent.node.ToolNode;
@@ -44,6 +45,7 @@ class ReActGraphFactory {
     CompiledGraph build(
             ChatModel chatModel,
             List<Advisor> advisors,
+            String systemPrompt,
             boolean streaming,
             Object[] tools,
             List<Hook> hooks,
@@ -68,9 +70,10 @@ class ReActGraphFactory {
         List<ModelInterceptor> safeInterceptors = modelInterceptors != null
                 ? new ArrayList<>(modelInterceptors)
                 : new ArrayList<>();
+        String effectiveSystemPrompt = resolveSystemPrompt(systemPrompt);
 
         LLMNode llmNode = LLMNode.builder(chatModel)
-                .systemPrompt(cn.ts.agent.constant.AgentConstants.DEFAULT_SYSTEM_PROMPT)
+                .systemPrompt(effectiveSystemPrompt)
                 .streaming(streaming)
                 .tools(safeTools)
                 .advisors(advisors != null ? advisors : new ArrayList<>())
@@ -190,5 +193,12 @@ class ReActGraphFactory {
                 NodeNames.MODEL, NodeNames.MODEL,
                 NodeNames.END, NodeNames.END
         );
+    }
+
+    private String resolveSystemPrompt(String systemPrompt) {
+        if (systemPrompt == null || systemPrompt.isBlank()) {
+            return AgentConstants.DEFAULT_SYSTEM_PROMPT;
+        }
+        return systemPrompt;
     }
 }

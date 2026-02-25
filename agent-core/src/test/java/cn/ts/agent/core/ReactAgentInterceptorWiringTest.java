@@ -1,5 +1,6 @@
 package cn.ts.agent.core;
 
+import cn.ts.agent.constant.AgentConstants;
 import cn.ts.agent.interceptor.ModelInterceptor;
 import cn.ts.agent.interceptor.ModelInvocationResult;
 import cn.ts.agent.node.LLMNode;
@@ -59,5 +60,49 @@ class ReactAgentInterceptorWiringTest {
 
         assertEquals(1, wired.size());
         assertEquals("test-interceptor", wired.get(0).getName());
+    }
+
+    @Test
+    void builderInjectsConfiguredSystemPromptIntoLlmNode() throws Exception {
+        String configuredSystemPrompt = "Business system prompt for routing and safety.";
+
+        ReactAgent agent = ReactAgent.builder()
+                .name("test")
+                .chatModel(chatModel)
+                .systemPrompt(configuredSystemPrompt)
+                .build();
+
+        CompiledGraph graph = agent.getGraph();
+        Node modelNode = graph.getNodes().get("_AGENT_MODEL_");
+        assertNotNull(modelNode);
+
+        LLMNode llmNode = assertInstanceOf(LLMNode.class, modelNode.action());
+
+        Field systemPromptField = LLMNode.class.getDeclaredField("systemPrompt");
+        systemPromptField.setAccessible(true);
+        String actualPrompt = (String) systemPromptField.get(llmNode);
+
+        assertEquals(configuredSystemPrompt, actualPrompt);
+    }
+
+    @Test
+    void builderFallsBackToDefaultSystemPromptWhenConfiguredPromptBlank() throws Exception {
+        ReactAgent agent = ReactAgent.builder()
+                .name("test")
+                .chatModel(chatModel)
+                .systemPrompt("   ")
+                .build();
+
+        CompiledGraph graph = agent.getGraph();
+        Node modelNode = graph.getNodes().get("_AGENT_MODEL_");
+        assertNotNull(modelNode);
+
+        LLMNode llmNode = assertInstanceOf(LLMNode.class, modelNode.action());
+
+        Field systemPromptField = LLMNode.class.getDeclaredField("systemPrompt");
+        systemPromptField.setAccessible(true);
+        String actualPrompt = (String) systemPromptField.get(llmNode);
+
+        assertEquals(AgentConstants.DEFAULT_SYSTEM_PROMPT, actualPrompt);
     }
 }
