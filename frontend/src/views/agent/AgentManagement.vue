@@ -121,6 +121,16 @@
                 variant="ghost"
                 size="sm"
                 class="flex-1"
+                @click="handleViewGraph(agent)"
+              >
+                <Network :size="16" />
+                可视化
+              </BaseButton>
+
+              <BaseButton
+                variant="ghost"
+                size="sm"
+                class="flex-1"
                 @click="handleEdit(agent)"
               >
                 <Edit :size="16" />
@@ -169,15 +179,27 @@
         @save="handleSave"
       />
     </BaseModal>
+
+    <!-- Agent 运行时图谱 -->
+    <BaseModal
+      v-model:visible="showGraphModal"
+      :title="graphAgent ? `${graphAgent.displayName} - 运行时图谱` : '运行时图谱'"
+      width="full"
+      class="max-w-[96vw]"
+      @close="handleGraphModalClose"
+    >
+      <AgentGraphCanvas :agent-id="graphAgent?.id ?? null" />
+    </BaseModal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useAgentConfigStore } from '@/stores/agentConfig'
 import { useToast } from '@/composables/useToast'
 import type { AgentConfig, CreateAgentDTO, UpdateAgentDTO } from '@/types/agent'
 import AgentForm from '@/components/agent/AgentForm.vue'
+import AgentGraphCanvas from '@/components/agent-graph/AgentGraphCanvas.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
@@ -191,6 +213,7 @@ import {
   Edit,
   Cpu,
   Wrench,
+  Network,
   MoreVertical,
   AlertCircle,
   Power,
@@ -203,6 +226,8 @@ const toast = useToast()
 
 const showForm = ref(false)
 const editingAgent = ref<AgentConfig | null>(null)
+const showGraphModal = ref(false)
+const graphAgent = ref<AgentConfig | null>(null)
 const searchQuery = ref('')
 const filterStatus = ref<'all' | 'active' | 'inactive'>('all')
 
@@ -260,9 +285,24 @@ onMounted(() => {
   agentStore.fetchAgents()
 })
 
+watch(showGraphModal, (visible) => {
+  if (!visible) {
+    graphAgent.value = null
+  }
+})
+
 function handleCreate() {
   editingAgent.value = null
   showForm.value = true
+}
+
+function handleViewGraph(agent: AgentConfig) {
+  graphAgent.value = agent
+  showGraphModal.value = true
+}
+
+function handleGraphModalClose() {
+  graphAgent.value = null
 }
 
 function handleEdit(agent: AgentConfig) {
