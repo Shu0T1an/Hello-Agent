@@ -288,7 +288,8 @@ public class SearchService {
         Path root = pathPolicyService.getDefaultReadRoot();
         Path normalizedPath = path.toAbsolutePath().normalize();
         if (normalizedPath.startsWith(root)) {
-            return root.relativize(normalizedPath).toString().replace('\\', '/');
+            String relative = root.relativize(normalizedPath).toString().replace('\\', '/');
+            return relative.isBlank() ? "." : relative;
         }
         return normalizedPath.toString().replace('\\', '/');
     }

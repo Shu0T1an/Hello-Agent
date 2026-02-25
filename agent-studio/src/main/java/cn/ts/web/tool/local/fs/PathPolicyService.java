@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -76,12 +78,27 @@ public class PathPolicyService {
 
     private Path resolveRealPathForWrite(Path path) {
         try {
-            Path parent = path.getParent();
-            if (parent == null) {
+            Path absolute = path.toAbsolutePath().normalize();
+            Path current = absolute;
+            List<String> missingSegments = new ArrayList<>();
+
+            while (current != null && !Files.exists(current, LinkOption.NOFOLLOW_LINKS)) {
+                if (current.getFileName() != null) {
+                    missingSegments.add(current.getFileName().toString());
+                }
+                current = current.getParent();
+            }
+
+            if (current == null) {
                 throw new FileToolException(ToolErrorCodes.INVALID_ARGUMENT, "Path parent is required: " + path);
             }
-            Path realParent = parent.toRealPath(LinkOption.NOFOLLOW_LINKS);
-            return realParent.resolve(path.getFileName()).normalize();
+
+            Path resolved = current.toRealPath(LinkOption.NOFOLLOW_LINKS);
+            Collections.reverse(missingSegments);
+            for (String segment : missingSegments) {
+                resolved = resolved.resolve(segment);
+            }
+            return resolved.normalize();
         } catch (FileToolException ex) {
             throw ex;
         } catch (IOException ex) {
@@ -102,4 +119,3 @@ public class PathPolicyService {
         }
     }
 }
-
