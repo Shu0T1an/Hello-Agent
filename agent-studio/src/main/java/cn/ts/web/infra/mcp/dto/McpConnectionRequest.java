@@ -50,6 +50,8 @@ public class McpConnectionRequest {
 
     // SSE 配置
     private String sseUrl;
+    private String sseBaseUrl;
+    private String sseEndpoint;
     private Map<String, String> sseHeaders = new HashMap<>();
 
     // HTTP 配置
@@ -105,6 +107,8 @@ public class McpConnectionRequest {
 
             case SSE -> builder.sseConfig(McpConnectionConfig.SseConfig.builder()
                     .url(sseUrl)
+                    .baseUrl(sseBaseUrl)
+                    .sseEndpoint(sseEndpoint)
                     .headers(sseHeaders)
                     .build());
 

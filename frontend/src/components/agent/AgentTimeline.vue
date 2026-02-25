@@ -140,6 +140,16 @@
                       </div>
                       <div v-if="step.metadata?.summary" class="text-zinc-600 mt-1 whitespace-pre-wrap">{{ step.metadata?.summary }}</div>
                       <div v-if="step.metadata?.errorMessage" class="text-rose-700 mt-1 whitespace-pre-wrap">{{ step.metadata?.errorMessage }}</div>
+                      <div v-if="isFailedSubAgentStep(step)" class="mt-2 rounded border border-rose-200 bg-rose-50 p-2 text-rose-800">
+                        <div><span class="font-medium">Node:</span> {{ getFailedNodeId(step) || 'unknown' }}</div>
+                        <div><span class="font-medium">Type:</span> {{ getFailedNodeType(step) || 'unknown' }}</div>
+                        <div><span class="font-medium">Error:</span> {{ getSubAgentStepErrorMessage(step) || 'unknown error' }}</div>
+                        <div v-if="step.metadata?.errorCode"><span class="font-medium">Code:</span> {{ String(step.metadata?.errorCode) }}</div>
+                        <details v-if="getSubAgentStepStackTrace(step)" class="mt-2">
+                          <summary class="cursor-pointer select-none text-xs font-medium text-rose-700">Stack Trace</summary>
+                          <pre class="mt-1 font-mono text-xs bg-white border border-rose-100 rounded p-2 overflow-x-auto whitespace-pre-wrap text-rose-900">{{ getSubAgentStepStackTrace(step) }}</pre>
+                        </details>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -348,6 +358,40 @@ function getSubAgentSteps(event: AgentEvent): AgentEvent[] {
 }
 
 // 切换原始数据显示
+function asNonEmptyString(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : undefined
+}
+
+function isFailedSubAgentStep(step: AgentEvent): boolean {
+  const phase = asNonEmptyString(step.metadata?.phase)?.toLowerCase()
+  return step.eventType === 'SUBAGENT_FAILED' || phase === 'failed'
+}
+
+function getFailedNodeId(step: AgentEvent): string | undefined {
+  return asNonEmptyString(step.metadata?.failedNodeId)
+    ?? asNonEmptyString(step.metadata?.stepNodeId)
+    ?? asNonEmptyString(step.nodeId)
+}
+
+function getFailedNodeType(step: AgentEvent): string | undefined {
+  return asNonEmptyString(step.metadata?.failedNodeType)
+    ?? asNonEmptyString(step.metadata?.stepNodeType)
+    ?? asNonEmptyString(step.nodeType)
+}
+
+function getSubAgentStepErrorMessage(step: AgentEvent): string | undefined {
+  return asNonEmptyString(step.metadata?.errorMessage)
+    ?? asNonEmptyString(step.metadata?.summary)
+    ?? asNonEmptyString(step.nodeErrorMessage)
+    ?? asNonEmptyString(step.message)
+}
+
+function getSubAgentStepStackTrace(step: AgentEvent): string | undefined {
+  return asNonEmptyString(step.metadata?.stackTrace)
+}
+
 function toggleRawData(eventId: string): void {
   showRawData.value[eventId] = !showRawData.value[eventId]
 }

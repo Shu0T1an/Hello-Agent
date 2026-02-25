@@ -33,9 +33,26 @@ public class SubAgentInterceptor implements ModelInterceptor {
             Delegate an isolated task to a subagent.
             Available subagent types:
             %s
-            Input must include:
-            - description: full task details
-            - subagent_type: one of the available subagent types
+
+            STRICT ARGUMENT FORMAT (MUST FOLLOW):
+            - The tool arguments MUST be a JSON object with top-level field `request`.
+            - `request` MUST be a JSON object (NOT a string).
+            - `request` MUST include:
+              - description: full task details
+              - subagent_type: one of the available subagent types
+
+            VALID EXAMPLE:
+            {
+              "request": {
+                "description": "research X comprehensively",
+                "subagent_type": "research-agent"
+              }
+            }
+
+            INVALID EXAMPLES (DO NOT USE):
+            - {"request": "research X comprehensively"}
+            - {"description": "research X comprehensively", "subagent_type": "research-agent"}
+            - Any malformed JSON
             """;
 
     private final String systemPrompt;

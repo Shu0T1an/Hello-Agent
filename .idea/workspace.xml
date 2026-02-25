@@ -5,21 +5,20 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0e294f23-af53-4e42-af50-c9a578c991d4" name="Changes" comment="fix 会话Input">
-      <change beforePath="$PROJECT_DIR$/.claude/settings.local.json" beforeDir="false" afterPath="$PROJECT_DIR$/.claude/settings.local.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/claude-code-tools-guide.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/agent/deepsearch/DeepSearchAgentBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/agent/deepsearch/DeepSearchAgentBuilder.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/agent/factory/AgentFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/agent/factory/AgentFactory.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/shared/config/AgentConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/shared/config/AgentConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/shared/config/MyBatisConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/shared/config/MyBatisConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent-studio/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/main/resources/application.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent-studio/src/main/resources/db/schema.sql" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/main/resources/db/schema.sql" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent-studio/src/test/java/cn/ts/web/agent/deepsearch/DeepSearchAgentBuilderTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/test/java/cn/ts/web/agent/deepsearch/DeepSearchAgentBuilderTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent-studio/src/test/java/cn/ts/web/factory/AgentFactorySubAgentIntegrationTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/test/java/cn/ts/web/factory/AgentFactorySubAgentIntegrationTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/api/session.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/api/session.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/chat/ChatContainer.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/chat/ChatContainer.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/execution/NodeActionInvoker.java" beforeDir="false" afterPath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/execution/NodeActionInvoker.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/node/NodeActionWithConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/graph-core/src/main/java/cn/ts/graph/node/NodeActionWithConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/graph-core/src/test/java/cn/ts/graph/NodeExecutorConfigPropagationTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/graph-core/src/test/java/cn/ts/graph/NodeExecutorConfigPropagationTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/extension/interceptor/SubAgentInterceptor.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/extension/interceptor/SubAgentInterceptor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/extension/progress/SubAgentStreamMapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/extension/progress/SubAgentStreamMapper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/extension/tools/TaskTool.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/extension/tools/TaskTool.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/mcp/McpManagerImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/mcp/McpManagerImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/mcp/model/McpConnectionConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/mcp/model/McpConnectionConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/prompt/PromptTemplete.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/main/java/cn/ts/agent/prompt/PromptTemplete.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-core/src/test/java/cn/ts/agent/extension/tools/TaskToolTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-core/src/test/java/cn/ts/agent/extension/tools/TaskToolTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/infra/mcp/controller/McpController.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/infra/mcp/controller/McpController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/infra/mcp/dto/McpConnectionRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/infra/mcp/dto/McpConnectionRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/shared/config/McpServerConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/shared/config/McpServerConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/agent/AgentTimeline.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/agent/AgentTimeline.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/types/agent.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/types/agent.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -279,7 +278,12 @@
       <workItem from="1771634857441" duration="15743000" />
       <workItem from="1771766140939" duration="7598000" />
       <workItem from="1771813319372" duration="6465000" />
-      <workItem from="1771855532167" duration="2254000" />
+      <workItem from="1771855532167" duration="4416000" />
+      <workItem from="1771914659890" duration="5805000" />
+      <workItem from="1771926502005" duration="779000" />
+      <workItem from="1771985462801" duration="251000" />
+      <workItem from="1771987807742" duration="12848000" />
+      <workItem from="1772031528867" duration="1545000" />
     </task>
     <task id="LOCAL-00001" summary="fix 会话Input">
       <option name="closed" value="true" />

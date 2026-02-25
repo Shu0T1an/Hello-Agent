@@ -233,7 +233,7 @@ public class McpController {
             if (config.getStdioConfig() != null) {
                 command = config.getStdioConfig().getCommand();
             } else if (config.getSseConfig() != null) {
-                url = config.getSseConfig().getUrl();
+                url = buildSseDisplayUrl(config.getSseConfig());
             } else if (config.getHttpConfig() != null) {
                 url = config.getHttpConfig().getUrl();
             }
@@ -265,5 +265,25 @@ public class McpController {
                 .config(configSummary)
                 .statistics(statsSummary)
                 .build();
+    }
+
+    private String buildSseDisplayUrl(McpConnectionConfig.SseConfig sseConfig) {
+        if (sseConfig == null) {
+            return null;
+        }
+        if (sseConfig.getUrl() != null && !sseConfig.getUrl().isBlank()) {
+            return sseConfig.getUrl();
+        }
+        if (sseConfig.getBaseUrl() == null || sseConfig.getBaseUrl().isBlank()) {
+            return null;
+        }
+        String endpoint = (sseConfig.getSseEndpoint() == null || sseConfig.getSseEndpoint().isBlank())
+                ? "/sse"
+                : sseConfig.getSseEndpoint();
+        String normalizedBase = sseConfig.getBaseUrl().endsWith("/")
+                ? sseConfig.getBaseUrl().substring(0, sseConfig.getBaseUrl().length() - 1)
+                : sseConfig.getBaseUrl();
+        String normalizedEndpoint = endpoint.startsWith("/") ? endpoint : "/" + endpoint;
+        return normalizedBase + normalizedEndpoint;
     }
 }

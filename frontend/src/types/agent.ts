@@ -56,6 +56,11 @@ export interface SubAgentMetadata {
   stepTitle?: string
   toolName?: string
   toolCallId?: string
+  stepNodeId?: string
+  stepNodeType?: string
+  failedNodeId?: string
+  failedNodeType?: string
+  stackTrace?: string
   [key: string]: unknown
 }
 

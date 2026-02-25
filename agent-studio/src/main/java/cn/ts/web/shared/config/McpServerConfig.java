@@ -109,6 +109,8 @@ public class McpServerConfig {
         @Data
         public static class SseConfigProperties {
             private String url;
+            private String baseUrl;
+            private String sseEndpoint;
             private Map<String, String> headers;
         }
 
@@ -145,6 +147,8 @@ public class McpServerConfig {
             if (this.sse != null) {
                 McpConnectionConfig.SseConfig sseConfig = McpConnectionConfig.SseConfig.builder()
                         .url(this.sse.getUrl())
+                        .baseUrl(this.sse.getBaseUrl())
+                        .sseEndpoint(this.sse.getSseEndpoint())
                         .headers(this.sse.getHeaders() != null ? this.sse.getHeaders() : new HashMap<>())
                         .build();
                 builder.sseConfig(sseConfig);

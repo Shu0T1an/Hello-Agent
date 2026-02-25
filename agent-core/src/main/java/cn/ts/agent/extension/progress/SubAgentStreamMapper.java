@@ -6,6 +6,8 @@ import cn.ts.graph.NodeStatus;
 import cn.ts.graph.StreamingOutput;
 import cn.ts.graph.constant.GraphConstants;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,6 +17,7 @@ import java.util.Map;
  */
 public class SubAgentStreamMapper {
 
+    private static final int MAX_STACK_TRACE_CHARS = 12 * 1024;
     private static final String PHASE_PLANNING = "planning";
     private static final String PHASE_RUNNING = "running";
     private static final String PHASE_TOOL_CALL = "tool_call";
@@ -30,14 +33,20 @@ public class SubAgentStreamMapper {
         }
         if (response.hasError()) {
             String message = response.getError() != null ? response.getError().getMessage() : "Subagent stream error";
-            return MappedProgress.failed(seq, message);
+            String nodeId = response.getNodeId();
+            String nodeType = resolveNodeType(nodeId);
+            String stackTrace = buildStackTrace(response.getError());
+            return MappedProgress.failed(seq, message, nodeId, nodeType, stackTrace);
         }
 
         String phase = resolvePhase(response);
         String summary = resolveSummary(response);
         String toolName = resolveToolName(response);
+        String nodeId = resolveNodeId(response);
+        String nodeType = resolveNodeType(nodeId);
+        String errorMessage = resolveErrorMessage(response, phase);
 
-        return new MappedProgress(phase, summary, toolName, seq);
+        return new MappedProgress(phase, summary, toolName, seq, nodeId, nodeType, errorMessage, null);
     }
 
     private String resolvePhase(GraphResponse<NodeOutput> response) {
@@ -116,6 +125,64 @@ public class SubAgentStreamMapper {
         return null;
     }
 
+    private String resolveErrorMessage(GraphResponse<NodeOutput> response, String phase) {
+        if (!PHASE_FAILED.equals(phase) || response == null) {
+            return null;
+        }
+        if (response.hasError()) {
+            Throwable throwable = response.getError();
+            return throwable != null ? throwable.getMessage() : null;
+        }
+        NodeOutput output = response.getData();
+        if (output == null) {
+            return null;
+        }
+        String errorMessage = output.getErrorMessage();
+        if (errorMessage != null && !errorMessage.isBlank()) {
+            return errorMessage;
+        }
+        Object result = output.getResultValue();
+        if (result instanceof String resultText && !resultText.isBlank()) {
+            return resultText;
+        }
+        return null;
+    }
+
+    private String resolveNodeId(GraphResponse<NodeOutput> response) {
+        if (response == null) {
+            return null;
+        }
+        NodeOutput output = response.getData();
+        if (output != null && output.getNodeId() != null && !output.getNodeId().isBlank()) {
+            return output.getNodeId();
+        }
+        return response.getNodeId();
+    }
+
+    private String resolveNodeType(String nodeId) {
+        if (nodeId == null || nodeId.isBlank()) {
+            return "unknown";
+        }
+        return switch (nodeId) {
+            case GraphConstants.AGENT_MODEL -> "llm";
+            case GraphConstants.AGENT_TOOL -> "tool";
+            default -> "custom";
+        };
+    }
+
+    private String buildStackTrace(Throwable throwable) {
+        if (throwable == null) {
+            return null;
+        }
+        StringWriter writer = new StringWriter();
+        throwable.printStackTrace(new PrintWriter(writer));
+        String stackTrace = writer.toString();
+        if (stackTrace.length() <= MAX_STACK_TRACE_CHARS) {
+            return stackTrace;
+        }
+        return stackTrace.substring(0, MAX_STACK_TRACE_CHARS) + "\n...[truncated]";
+    }
+
     private String resolveToolName(GraphResponse<NodeOutput> response) {
         NodeOutput output = response.getData();
         if (output == null || output.getState() == null) {
@@ -165,6 +232,18 @@ public class SubAgentStreamMapper {
         if (mapped.summary() != null && !mapped.summary().isBlank()) {
             metadata.put("summary", mapped.summary());
         }
+        if (mapped.nodeId() != null && !mapped.nodeId().isBlank()) {
+            metadata.put("stepNodeId", mapped.nodeId());
+        }
+        if (mapped.nodeType() != null && !mapped.nodeType().isBlank()) {
+            metadata.put("stepNodeType", mapped.nodeType());
+        }
+        if (mapped.errorMessage() != null && !mapped.errorMessage().isBlank()) {
+            metadata.put("errorMessage", mapped.errorMessage());
+        }
+        if (mapped.stackTrace() != null && !mapped.stackTrace().isBlank()) {
+            metadata.put("stackTrace", mapped.stackTrace());
+        }
         return metadata;
     }
 
@@ -187,10 +266,14 @@ public class SubAgentStreamMapper {
             String phase,
             String summary,
             String toolName,
-            long seq
+            long seq,
+            String nodeId,
+            String nodeType,
+            String errorMessage,
+            String stackTrace
     ) {
-        public static MappedProgress failed(long seq, String message) {
-            return new MappedProgress(PHASE_FAILED, message, null, seq);
+        public static MappedProgress failed(long seq, String message, String nodeId, String nodeType, String stackTrace) {
+            return new MappedProgress(PHASE_FAILED, message, null, seq, nodeId, nodeType, message, stackTrace);
         }
     }
 }

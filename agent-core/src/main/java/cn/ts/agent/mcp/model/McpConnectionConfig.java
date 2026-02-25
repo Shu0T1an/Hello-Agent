@@ -117,9 +117,19 @@ public class McpConnectionConfig {
     @AllArgsConstructor
     public static class SseConfig {
         /**
-         * SSE 服务端点 URL
+         * 兼容字段：完整 SSE URL（例如 http://host:18080/mcp/sse）
          */
         private String url;
+
+        /**
+         * 推荐字段：网关基础地址（例如 http://host:18080）
+         */
+        private String baseUrl;
+
+        /**
+         * 推荐字段：SSE 端点路径（例如 /mcp/sse）
+         */
+        private String sseEndpoint;
 
         /**
          * 请求头

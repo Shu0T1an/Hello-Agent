@@ -22,6 +22,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.util.StringUtils;
 
 import java.io.File;
+import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -40,6 +41,7 @@ import java.util.stream.Collectors;
 public class McpManagerImpl implements McpManager {
 
     private static final Logger logger = LoggerFactory.getLogger(McpManagerImpl.class);
+    private static final String DEFAULT_SSE_ENDPOINT = "/sse";
 
     private final McpManagerConfig config;
     private final Map<String, McpConnection> connections = new ConcurrentHashMap<>();
@@ -48,6 +50,9 @@ public class McpManagerImpl implements McpManager {
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final ApplicationEventPublisher eventPublisher;
     private ScheduledFuture<?> healthCheckTask;
+
+    record SseTarget(String baseUrl, String sseEndpoint) {
+    }
 
     public McpManagerImpl(McpManagerConfig config, ApplicationEventPublisher eventPublisher) {
         this.config = config;
@@ -360,7 +365,11 @@ public class McpManagerImpl implements McpManager {
     }
 
     private Duration resolveConnectionTimeout(McpConnection connection) {
-        Duration timeout = connection.getConfig().getTimeout();
+        return resolveConnectionTimeout(connection.getConfig());
+    }
+
+    private Duration resolveConnectionTimeout(McpConnectionConfig connectionConfig) {
+        Duration timeout = connectionConfig.getTimeout();
         if (timeout == null || timeout.isNegative() || timeout.isZero()) {
             timeout = config.getDefaultTimeout();
         }
@@ -415,11 +424,12 @@ public class McpManagerImpl implements McpManager {
      */
     private McpSyncClient createMcpClient(McpConnectionConfig config) {
         ObjectMapper objectMapper = new ObjectMapper();
+        Duration timeout = resolveConnectionTimeout(config);
 
         return switch (config.getType()) {
             case STDIO -> {
                 if (config.getStdioConfig() == null) {
-                    throw new IllegalArgumentException("STDIO 配置不能为空");
+                    throw new IllegalArgumentException("STDIO configuration must not be null");
                 }
                 ServerParameters params = ServerParameters
                         .builder(config.getStdioConfig().getCommand())
@@ -427,42 +437,122 @@ public class McpManagerImpl implements McpManager {
                         .env(config.getStdioConfig().getEnv())
                         .build();
                 McpClientTransport transport = new StdioClientTransport(params, new JacksonMcpJsonMapper(objectMapper));
-                yield McpClient.sync(transport).build();
+                yield buildSyncClient(transport, timeout);
             }
 
             case SSE -> {
                 if (config.getSseConfig() == null) {
-                    throw new IllegalArgumentException("SSE 配置不能为空");
+                    throw new IllegalArgumentException("SSE configuration must not be null");
                 }
-                String url = config.getSseConfig().getUrl();
-                if (url == null || url.isBlank()) {
-                    throw new IllegalArgumentException("SSE URL 不能为空");
-                }
+
+                SseTarget target = resolveSseTarget(config.getSseConfig());
+                Map<String, String> headers = config.getSseConfig().getHeaders() != null
+                        ? config.getSseConfig().getHeaders()
+                        : Collections.emptyMap();
+
                 try {
-                    logger.info("鍒涘缓 SSE 瀹㈡埛绔紝URL: {}", url);
-                    // 使用 Builder 方式创建 SSE 传输层
-                    McpClientTransport transport = HttpClientSseClientTransport.builder(url)
+                    Set<String> headerKeys = headers.entrySet().stream()
+                            .filter(entry -> StringUtils.hasText(entry.getKey()) && entry.getValue() != null)
+                            .map(Map.Entry::getKey)
+                            .collect(Collectors.toCollection(LinkedHashSet::new));
+
+                    logger.info("Creating SSE client, name={}, baseUrl={}, sseEndpoint={}, timeout={}s, headerKeys={}",
+                            config.getName(), target.baseUrl(), target.sseEndpoint(), timeout.toSeconds(), headerKeys);
+
+                    HttpClientSseClientTransport.Builder transportBuilder = HttpClientSseClientTransport
+                            .builder(target.baseUrl())
+                            .sseEndpoint(target.sseEndpoint())
+                            .connectTimeout(timeout)
                             .jsonMapper(new JacksonMcpJsonMapper(objectMapper))
-                            .build();
-                    McpSyncClient client = McpClient.sync(transport).build();
+                            .customizeRequest(requestBuilder -> headers.forEach((key, value) -> {
+                                if (StringUtils.hasText(key) && value != null) {
+                                    requestBuilder.header(key, value);
+                                }
+                            }));
+
+                    McpClientTransport transport = transportBuilder.build();
+                    McpSyncClient client = buildSyncClient(transport, timeout);
                     logger.info("SSE client created successfully");
                     yield client;
                 } catch (Exception e) {
-                    logger.error("鍒涘缓 SSE 瀹㈡埛绔け璐? {}", url, e);
-                    throw new RuntimeException("鍒涘缓 SSE 瀹㈡埛绔け璐? " + e.getMessage(), e);
+                    logger.error("Failed to create SSE client for name={}, baseUrl={}, sseEndpoint={}",
+                            config.getName(), target.baseUrl(), target.sseEndpoint(), e);
+                    throw new RuntimeException("Failed to create SSE client: " + e.getMessage(), e);
                 }
             }
 
             case HTTP -> {
-                logger.warn("HTTP 绫诲瀷鏆備笉鏀寔锛岃浣跨敤 SSE 绫诲瀷");
+                logger.warn("HTTP transport is not implemented yet, please use SSE");
                 yield null;
             }
         };
     }
 
-    /**
-     * 鏂紑杩炴帴
-     */
+    McpSyncClient buildSyncClient(McpClientTransport transport, Duration timeout) {
+        return McpClient.sync(transport)
+                .requestTimeout(timeout)
+                .initializationTimeout(timeout)
+                .build();
+    }
+
+    SseTarget resolveSseTarget(McpConnectionConfig.SseConfig sseConfig) {
+        if (sseConfig == null) {
+            throw new IllegalArgumentException("SSE config must not be null");
+        }
+
+        if (StringUtils.hasText(sseConfig.getBaseUrl())) {
+            String baseUrl = trimTrailingSlash(sseConfig.getBaseUrl().trim());
+            String endpoint = normalizeSseEndpoint(sseConfig.getSseEndpoint());
+            return new SseTarget(baseUrl, endpoint);
+        }
+
+        if (!StringUtils.hasText(sseConfig.getUrl())) {
+            throw new IllegalArgumentException("SSE URL or baseUrl must not be empty");
+        }
+
+        try {
+            URI uri = URI.create(sseConfig.getUrl().trim());
+            if (!uri.isAbsolute() || !StringUtils.hasText(uri.getScheme()) || !StringUtils.hasText(uri.getAuthority())) {
+                throw new IllegalArgumentException("SSE URL must be absolute");
+            }
+
+            String baseUrl = trimTrailingSlash(new URI(uri.getScheme(), uri.getAuthority(), null, null, null).toString());
+            String path = StringUtils.hasText(uri.getPath()) ? uri.getPath() : DEFAULT_SSE_ENDPOINT;
+            String endpoint = StringUtils.hasText(uri.getQuery()) ? path + "?" + uri.getQuery() : path;
+            return new SseTarget(baseUrl, normalizeSseEndpoint(endpoint));
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid SSE URL: " + sseConfig.getUrl(), e);
+        }
+    }
+
+    private String normalizeSseEndpoint(String endpoint) {
+        if (!StringUtils.hasText(endpoint)) {
+            return DEFAULT_SSE_ENDPOINT;
+        }
+
+        String normalized = endpoint.trim();
+        if (normalized.startsWith("?")) {
+            return DEFAULT_SSE_ENDPOINT + normalized;
+        }
+        if (normalized.startsWith("/") || normalized.startsWith("http://") || normalized.startsWith("https://")) {
+            return normalized;
+        }
+        return "/" + normalized;
+    }
+
+    private String trimTrailingSlash(String value) {
+        if (!StringUtils.hasText(value)) {
+            return value;
+        }
+
+        String normalized = value;
+        while (normalized.endsWith("/") && normalized.length() > 1) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        return normalized;
+    }
     private void disconnect(McpConnection connection) {
         if (connection.getClient() != null) {
             try {

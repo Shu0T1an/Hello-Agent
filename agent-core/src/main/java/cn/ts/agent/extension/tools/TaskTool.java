@@ -149,8 +149,14 @@ public class TaskTool {
             }
             emitMappedProgress(taskContext, mapped);
             appendOutputChunk(outputBuilder, response);
-            if ("failed".equals(mapped.phase()) && mapped.summary() != null && !mapped.summary().isBlank()) {
-                errorMessages.add(mapped.summary());
+            if ("failed".equals(mapped.phase())) {
+                String stepErrorMessage = mapped.errorMessage();
+                if (stepErrorMessage == null || stepErrorMessage.isBlank()) {
+                    stepErrorMessage = mapped.summary();
+                }
+                if (stepErrorMessage != null && !stepErrorMessage.isBlank()) {
+                    errorMessages.add(stepErrorMessage);
+                }
             }
             appendOutputFromState(finalStateOutput, response);
         });
@@ -178,9 +184,23 @@ public class TaskTool {
         Map<String, Object> enriched = streamMapper.enrichMetadata(metadata, mapped, taskContext.subagentTaskId());
         int progress = estimateProgress(mapped.phase());
         enriched.put("progress", progress);
-        if ("failed".equals(mapped.phase()) && mapped.summary() != null && !mapped.summary().isBlank()) {
+        if ("failed".equals(mapped.phase())) {
             enriched.put("errorCode", "SUBAGENT_STREAM_FAILED");
-            enriched.put("errorMessage", mapped.summary());
+            String errorMessage = mapped.errorMessage() != null && !mapped.errorMessage().isBlank()
+                    ? mapped.errorMessage()
+                    : mapped.summary();
+            if (errorMessage != null && !errorMessage.isBlank()) {
+                enriched.put("errorMessage", errorMessage);
+            }
+            if (mapped.nodeId() != null && !mapped.nodeId().isBlank()) {
+                enriched.put("failedNodeId", mapped.nodeId());
+            }
+            if (mapped.nodeType() != null && !mapped.nodeType().isBlank()) {
+                enriched.put("failedNodeType", mapped.nodeType());
+            }
+            if (mapped.stackTrace() != null && !mapped.stackTrace().isBlank()) {
+                enriched.put("stackTrace", mapped.stackTrace());
+            }
         }
         String message = "Subagent " + mapped.phase();
         progressReporter.emit(
