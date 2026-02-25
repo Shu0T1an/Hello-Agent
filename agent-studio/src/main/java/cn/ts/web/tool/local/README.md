@@ -211,3 +211,20 @@ public class DatabaseTools {
 - å­—ç¬¦ä¸²å·¥å…·ï¼ˆå¤§å°å†™è½¬æ¢ã€åè½¬ï¼‰
 - æ•°å­¦å·¥å…·ï¼ˆå¹³æ–¹ã€å¹³æ–¹æ ¹ã€å¹‚è¿ç®—ï¼‰
 - æ—¶é—´å·¥å…·ï¼ˆè·å–æ—¶é—´æˆ³ã€ä¼‘çœ ï¼‰
+
+## 10. FileSystemTools (Read/Write/Edit/Glob/Grep)
+
+`FileSystemTools` Ìá¹©ÁËÓë Claude Code ·ç¸ñÒ»ÖÂµÄ 5 ¸öÎÄ¼ş¹¤¾ß£º
+
+- `Read(file_path, offset?, limit?, pages?)`
+- `Write(file_path, content)`
+- `Edit(file_path, old_string, new_string, replace_all?)`
+- `Glob(pattern, path?)`
+- `Grep(pattern, path?, glob?, output_mode?, type?, ignore_case?, context?, after_context?, before_context?, multiline?)`
+
+Ä¬ÈÏ°²È«²ßÂÔ£º
+
+- ¶Á°×Ãûµ¥£º`D:/JavaProject/Hello-Agent`
+- Ğ´°×Ãûµ¥£º`D:/JavaProject/Hello-Agent/docs`¡¢`D:/JavaProject/Hello-Agent/uploads`
+
+Ä¬ÈÏÅäÖÃÎ»ÓÚ `application.yml` µÄ `agent.filetool` ½Úµã¡£

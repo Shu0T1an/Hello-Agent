@@ -17,6 +17,7 @@ import cn.ts.web.agent.deepsearch.DeepSearchAgentBuilder;
 import cn.ts.web.agent.interceptor.PromptAuditInterceptor;
 import cn.ts.web.agent.deepsearch.DeepSearchProperties;
 import cn.ts.web.agent.service.AgentExecutionService;
+import cn.ts.web.tool.local.FileSystemTools;
 import cn.ts.web.tool.local.ShellCommandTool;
 import cn.ts.web.tool.local.SimpleTools;
 import org.slf4j.Logger;
@@ -58,6 +59,7 @@ public class AgentConfig {
     private final PromptAuditInterceptor promptAuditInterceptor;
     private final RuntimeContextPromptInterceptor runtimeContextPromptInterceptor;
     private final ShellCommandTool shellCommandTool;
+    private final FileSystemTools fileSystemTools;
 
     public AgentConfig(ChatModel chatModel,
                        AgentExecutionService agentExecutionService,
@@ -72,7 +74,8 @@ public class AgentConfig {
                        DeepSearchAgentBuilder deepSearchAgentBuilder,
                        AgentExecutionConfig agentExecutionConfig,
                        PromptAuditInterceptor promptAuditInterceptor,
-                       ShellCommandTool shellCommandTool) {
+                       ShellCommandTool shellCommandTool,
+                       FileSystemTools fileSystemTools) {
         this.chatModel = chatModel;
         this.agentExecutionService = agentExecutionService;
         this.mcpManager = mcpManager;
@@ -87,6 +90,7 @@ public class AgentConfig {
         this.runtimeContextPromptInterceptor = createRuntimeContextPromptInterceptor(agentExecutionConfig);
         this.promptAuditInterceptor = promptAuditInterceptor;
         this.shellCommandTool = shellCommandTool;
+        this.fileSystemTools = fileSystemTools;
     }
 
     /**
@@ -104,6 +108,7 @@ public class AgentConfig {
         tools.add(new SimpleTools());
         tools.add(new WriteToDoTool());
         tools.add(shellCommandTool);
+        tools.add(fileSystemTools);
 
         // 添加所有 MCP 客户端作为工具
         tools.addAll(mcpManager.getAllMcpClients());

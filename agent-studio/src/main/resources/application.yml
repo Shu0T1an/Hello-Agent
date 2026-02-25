@@ -62,6 +62,16 @@ agent:
       - "(?i)\\bformat-volume\\b"
       - "(?i)\\bdiskpart\\b"
       - "(?i)\\breg\\s+delete\\b"
+  filetool:
+    enabled: true
+    max-read-bytes: 2097152
+    max-read-lines: 2000
+    max-search-results: 5000
+    read-allowed-roots:
+      - D:/JavaProject/Hello-Agent
+    write-allowed-roots:
+      - D:/JavaProject/Hello-Agent/docs
+      - D:/JavaProject/Hello-Agent/uploads
   audit:
     enabled: true
     include-response: true
