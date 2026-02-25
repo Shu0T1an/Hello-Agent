@@ -18,6 +18,7 @@ import cn.ts.web.agent.mapper.AgentConfigMapper;
 import cn.ts.web.agent.mapper.SubAgentMappingMapper;
 import cn.ts.web.agent.service.ModelConfigService;
 import cn.ts.web.agent.service.SubAgentProgressBus;
+import cn.ts.web.shared.config.AgentExecutionConfig;
 import cn.ts.web.tool.service.ToolDefinitionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -81,6 +82,7 @@ class AgentFactorySubAgentIntegrationTest {
                 subAgentMappingMapper,
                 checkpointManager,
                 subAgentProgressBus,
+                defaultExecutionConfig(),
                 promptAuditInterceptor,
                 "test-agent"
 
@@ -104,9 +106,19 @@ class AgentFactorySubAgentIntegrationTest {
         List<ModelInterceptor> interceptors = getLlmInterceptors(agent);
 
         assertFalse(interceptors.isEmpty());
-        assertEquals("SubAgent", interceptors.get(0).getName());
+        assertTrue(interceptors.stream().anyMatch(i -> "SubAgent".equals(i.getName())));
+        assertTrue(interceptors.stream().anyMatch(i -> "RuntimeContextPrompt".equals(i.getName())));
         assertTrue(agent.getGraph().getNodes().containsKey("__hook_ClarificationQaHook_after"));
         assertTrue(getToolNodeCallbacks(agent).stream().anyMatch(tc -> "task".equals(tc.getToolDefinition().name())));
+    }
+
+    @Test
+    void appliesConfiguredSystemPromptToMainAgent() throws Exception {
+        AgentConfigDTO main = mainConfig();
+        main.setSystemPrompt("business system prompt");
+
+        ReactAgent agent = agentFactory.createAgent(main);
+        assertEquals("business system prompt", getLlmSystemPrompt(agent));
     }
 
     @Test
@@ -235,6 +247,25 @@ class AgentFactorySubAgentIntegrationTest {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         return field.get(target);
+    }
+
+    private String getLlmSystemPrompt(ReactAgent agent) throws Exception {
+        CompiledGraph graph = agent.getGraph();
+        Node modelNode = graph.getNodes().get("_AGENT_MODEL_");
+        LLMNode llmNode = assertInstanceOf(LLMNode.class, modelNode.action());
+        Field promptField = LLMNode.class.getDeclaredField("systemPrompt");
+        promptField.setAccessible(true);
+        return (String) promptField.get(llmNode);
+    }
+
+    private AgentExecutionConfig defaultExecutionConfig() {
+        AgentExecutionConfig config = new AgentExecutionConfig();
+        AgentExecutionConfig.ContextPromptConfig contextPrompt = new AgentExecutionConfig.ContextPromptConfig();
+        contextPrompt.setEnabled(true);
+        contextPrompt.setIncludeTime(true);
+        contextPrompt.setIncludeCapabilities(true);
+        config.setContextPrompt(contextPrompt);
+        return config;
     }
 
 }

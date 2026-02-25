@@ -9,6 +9,7 @@ import cn.ts.graph.checkpoint.CheckpointManager;
 import cn.ts.graph.node.Node;
 import cn.ts.web.agent.interceptor.PromptAuditInterceptor;
 import cn.ts.web.agent.service.SubAgentProgressBus;
+import cn.ts.web.shared.config.AgentExecutionConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -54,6 +55,7 @@ class DeepSearchAgentBuilderTest {
                 properties,
                 checkpointManager,
                 subAgentProgressBus,
+                defaultExecutionConfig(),
                 promptAuditInterceptor
         );
     }
@@ -63,6 +65,7 @@ class DeepSearchAgentBuilderTest {
         ReactAgent agent = builder.build(chatModel, new Object[0]);
         List<ModelInterceptor> interceptors = getLlmInterceptors(agent);
         assertFalse(interceptors.isEmpty());
+        assertTrue(interceptors.stream().anyMatch(i -> "RuntimeContextPrompt".equals(i.getName())));
         assertTrue(agent.getGraph().getNodes().containsKey("__hook_ClarificationQaHook_after"));
         assertTrue(getToolNodeCallbacks(agent).stream().anyMatch(tc -> "task".equals(tc.getToolDefinition().name())));
 
@@ -149,5 +152,15 @@ class DeepSearchAgentBuilderTest {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         return field.get(target);
+    }
+
+    private AgentExecutionConfig defaultExecutionConfig() {
+        AgentExecutionConfig config = new AgentExecutionConfig();
+        AgentExecutionConfig.ContextPromptConfig contextPrompt = new AgentExecutionConfig.ContextPromptConfig();
+        contextPrompt.setEnabled(true);
+        contextPrompt.setIncludeTime(true);
+        contextPrompt.setIncludeCapabilities(true);
+        config.setContextPrompt(contextPrompt);
+        return config;
     }
 }
