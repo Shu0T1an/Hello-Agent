@@ -44,6 +44,24 @@ agent:
       enabled: true
       include-time: true
       include-capabilities: true
+  shelltool:
+    enabled: true
+    default-timeout-seconds: 30
+    max-timeout-seconds: 120
+    max-output-lines: 400
+    max-output-bytes: 131072
+    idle-ttl-seconds: 900
+    cleanup-interval: 60s
+    auto-restart-on-timeout: true
+    allowed-working-directories:
+      - ${SHELLTOOL_ALLOWED_ROOT:${user.dir}}
+    blocked-command-patterns:
+      - "(?i)\\brm\\s+-rf\\s+/"
+      - "(?i)\\bshutdown\\b"
+      - "(?i)\\breboot\\b"
+      - "(?i)\\bformat-volume\\b"
+      - "(?i)\\bdiskpart\\b"
+      - "(?i)\\breg\\s+delete\\b"
   audit:
     enabled: true
     include-response: true

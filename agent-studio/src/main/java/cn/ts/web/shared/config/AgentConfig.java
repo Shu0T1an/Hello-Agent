@@ -17,6 +17,7 @@ import cn.ts.web.agent.deepsearch.DeepSearchAgentBuilder;
 import cn.ts.web.agent.interceptor.PromptAuditInterceptor;
 import cn.ts.web.agent.deepsearch.DeepSearchProperties;
 import cn.ts.web.agent.service.AgentExecutionService;
+import cn.ts.web.tool.local.ShellCommandTool;
 import cn.ts.web.tool.local.SimpleTools;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,6 +57,7 @@ public class AgentConfig {
     private final DeepSearchAgentBuilder deepSearchAgentBuilder;
     private final PromptAuditInterceptor promptAuditInterceptor;
     private final RuntimeContextPromptInterceptor runtimeContextPromptInterceptor;
+    private final ShellCommandTool shellCommandTool;
 
     public AgentConfig(ChatModel chatModel,
                        AgentExecutionService agentExecutionService,
@@ -69,7 +71,8 @@ public class AgentConfig {
                        DeepSearchProperties deepSearchProperties,
                        DeepSearchAgentBuilder deepSearchAgentBuilder,
                        AgentExecutionConfig agentExecutionConfig,
-                       PromptAuditInterceptor promptAuditInterceptor) {
+                       PromptAuditInterceptor promptAuditInterceptor,
+                       ShellCommandTool shellCommandTool) {
         this.chatModel = chatModel;
         this.agentExecutionService = agentExecutionService;
         this.mcpManager = mcpManager;
@@ -83,6 +86,7 @@ public class AgentConfig {
         this.deepSearchAgentBuilder = deepSearchAgentBuilder;
         this.runtimeContextPromptInterceptor = createRuntimeContextPromptInterceptor(agentExecutionConfig);
         this.promptAuditInterceptor = promptAuditInterceptor;
+        this.shellCommandTool = shellCommandTool;
     }
 
     /**
@@ -99,6 +103,7 @@ public class AgentConfig {
         List<Object> tools = new ArrayList<>();
         tools.add(new SimpleTools());
         tools.add(new WriteToDoTool());
+        tools.add(shellCommandTool);
 
         // 添加所有 MCP 客户端作为工具
         tools.addAll(mcpManager.getAllMcpClients());
@@ -116,6 +121,7 @@ public class AgentConfig {
         testAgentHooks.add(HumanInTheLoopHook.builder()
                 .approvalOn("delete_todo", "删除待办事项，不可逆操作")
                 .approvalOn("clear_todos", "清空所有待办事项")
+                .approvalOn("execute_shell_command", "执行 shell 命令，可能影响环境或数据")
                 .approvalMessage("⚠️ 需要人工审批：以下操作可能影响数据，请确认是否继续")
                 .build());
         testAgentHooks.add(ClarificationQaHook.builder().build());
@@ -152,6 +158,7 @@ public class AgentConfig {
         // 添加人工审批 Hook - 流式模式下也支持审批
         streamingAgentHooks.add(HumanInTheLoopHook.builder()
                 .approvalOn("add", "两数相加")
+                .approvalOn("execute_shell_command", "执行 shell 命令")
                 .requireApprovalForAll(false)  // 只对指定工具审批
                 .approvalMessage("🤖 请审批：Agent 请求执行以下工具调用")
                 .build());

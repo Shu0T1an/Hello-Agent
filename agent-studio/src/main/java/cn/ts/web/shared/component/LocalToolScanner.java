@@ -30,7 +30,7 @@ public class LocalToolScanner {
 
     private static final Logger logger = LoggerFactory.getLogger(LocalToolScanner.class);
 
-    private static final String SCAN_PACKAGE = "cn.ts.web.tools";
+    private static final List<String> SCAN_PACKAGES = List.of("cn.ts.web.tool", "cn.ts.web.tools");
 
     private final ApplicationContext applicationContext;
     private final ToolDefinitionService toolDefinitionService;
@@ -49,7 +49,7 @@ public class LocalToolScanner {
 
     @EventListener(ApplicationReadyEvent.class)
     public void scanAndRegisterTools() {
-        logger.info("Starting local tool scanning in package: {}", SCAN_PACKAGE);
+        logger.info("Starting local tool scanning in package(s): {}", SCAN_PACKAGES);
 
         int scannedCount = 0;
         int registeredCount = 0;
@@ -128,7 +128,11 @@ public class LocalToolScanner {
      */
     private boolean isFromTargetPackage(Class<?> clazz) {
         Package pkg = clazz.getPackage();
-        return pkg != null && pkg.getName().startsWith(SCAN_PACKAGE);
+        if (pkg == null) {
+            return false;
+        }
+        String packageName = pkg.getName();
+        return SCAN_PACKAGES.stream().anyMatch(packageName::startsWith);
     }
 
     /**
