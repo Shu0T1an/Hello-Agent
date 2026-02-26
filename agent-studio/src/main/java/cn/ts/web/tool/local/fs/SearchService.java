@@ -27,9 +27,26 @@ import java.util.regex.Pattern;
 public class SearchService {
 
     private static final Set<String> OUTPUT_MODES = Set.of("content", "files_with_matches", "count");
+    private static final Map<String, String> OUTPUT_MODE_ALIASES;
+    private static final String OUTPUT_MODE_HINT =
+            "Supported output_mode: content(matches,match,lines,text,standard,normal,detailed), files_with_matches(files), count";
     private static final Map<String, String> TYPE_EXTENSION_MAP;
 
     static {
+        Map<String, String> outputAliases = new HashMap<>();
+        outputAliases.put("content", "content");
+        outputAliases.put("matches", "content");
+        outputAliases.put("match", "content");
+        outputAliases.put("lines", "content");
+        outputAliases.put("text", "content");
+        outputAliases.put("standard", "content");
+        outputAliases.put("normal", "content");
+        outputAliases.put("detailed", "content");
+        outputAliases.put("files_with_matches", "files_with_matches");
+        outputAliases.put("files", "files_with_matches");
+        outputAliases.put("count", "count");
+        OUTPUT_MODE_ALIASES = Collections.unmodifiableMap(outputAliases);
+
         Map<String, String> map = new HashMap<>();
         map.put("java", ".java");
         map.put("ts", ".ts");
@@ -176,9 +193,13 @@ public class SearchService {
     }
 
     private String normalizeOutputMode(String outputMode) {
-        String mode = outputMode == null || outputMode.isBlank() ? "content" : outputMode.toLowerCase(Locale.ROOT);
-        if (!OUTPUT_MODES.contains(mode)) {
-            throw new FileToolException(ToolErrorCodes.UNSUPPORTED_OUTPUT_MODE, "Unsupported output_mode: " + outputMode);
+        String requested = outputMode == null || outputMode.isBlank() ? "content" : outputMode.toLowerCase(Locale.ROOT);
+        String mode = OUTPUT_MODE_ALIASES.get(requested);
+        if (mode == null || !OUTPUT_MODES.contains(mode)) {
+            throw new FileToolException(
+                    ToolErrorCodes.UNSUPPORTED_OUTPUT_MODE,
+                    "Unsupported output_mode: " + outputMode + ". " + OUTPUT_MODE_HINT
+            );
         }
         return mode;
     }
