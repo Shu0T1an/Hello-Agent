@@ -23,6 +23,6 @@ echo - 健康检查: http://localhost:8080/actuator/health
 echo - 按 Ctrl+C 停止服务
 echo.
 
-mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dfile.encoding=UTF-8 -Dconsole.encoding=UTF-8"
+mvn spring-boot:run -Dmaven.test.skip=true -Dspring-boot.run.jvmArguments="-Dfile.encoding=UTF-8 -Dconsole.encoding=UTF-8"
 
 pause

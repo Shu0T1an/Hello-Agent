@@ -49,7 +49,7 @@ class PromptAuditInterceptorTest {
     }
 
     @Test
-    void writesRequestAndResponseAuditRecords() {
+    void writesRequestAndResponseAuditRecords() throws Exception {
         ModelInvocationContext context = buildContext("session-1", "exec-1");
 
         interceptor.intercept(context, ctx -> CompletableFuture.completedFuture(
@@ -62,6 +62,12 @@ class PromptAuditInterceptorTest {
         assertEquals("RESPONSE", captor.getAllValues().get(1).getPhase());
         assertEquals("session-1", captor.getAllValues().get(0).getSessionId());
         assertEquals("exec-1", captor.getAllValues().get(0).getExecutionId());
+
+        JsonNode requestJson = objectMapper.readTree(captor.getAllValues().get(0).getRequestJson());
+        assertTrue(requestJson.has("messageCount"));
+        assertTrue(requestJson.has("rolesSequence"));
+        assertTrue(requestJson.has("toolCallCount"));
+        assertTrue(requestJson.has("toolResponseCount"));
     }
 
     @Test
@@ -70,7 +76,7 @@ class PromptAuditInterceptorTest {
 
         CompletionException exception = assertThrows(CompletionException.class, () ->
                 interceptor.intercept(context, ctx -> CompletableFuture.failedFuture(
-                                new IllegalStateException("model failed")))
+                                new IllegalStateException("400 - {\"error\":{\"code\":\"1214\",\"message\":\"messages 参数非法\"}}")))
                         .join());
         assertTrue(exception.getCause() instanceof IllegalStateException);
 
@@ -78,7 +84,8 @@ class PromptAuditInterceptorTest {
         verify(auditService, times(2)).save(captor.capture());
         assertEquals("REQUEST", captor.getAllValues().get(0).getPhase());
         assertEquals("ERROR", captor.getAllValues().get(1).getPhase());
-        assertTrue(captor.getAllValues().get(1).getErrorMessage().contains("model failed"));
+        assertTrue(captor.getAllValues().get(1).getErrorMessage().contains("messages 参数非法"));
+        assertTrue(captor.getAllValues().get(1).getErrorMessage().contains("[code=1214]"));
     }
 
     @Test

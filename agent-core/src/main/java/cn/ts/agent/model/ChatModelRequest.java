@@ -6,14 +6,17 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
+import org.springframework.ai.chat.messages.ToolResponseMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.model.tool.ToolCallingChatOptions;
 import org.springframework.ai.tool.ToolCallback;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * 聊天模型请求构建器
@@ -68,8 +71,9 @@ public class ChatModelRequest implements ModelRequest {
         }
 
         // 添加对话消息
-        if (!messages.isEmpty()) {
-            totalMessages.addAll(messages);
+        List<Message> normalizedMessages = normalizeMessagesForProvider(messages);
+        if (!normalizedMessages.isEmpty()) {
+            totalMessages.addAll(normalizedMessages);
         }
 
         spec.messages(totalMessages);
@@ -199,6 +203,108 @@ public class ChatModelRequest implements ModelRequest {
         }
 
         return null;
+    }
+
+    /**
+     * Normalize message sequence before invoking provider endpoints.
+     */
+    private List<Message> normalizeMessagesForProvider(List<Message> original) {
+        if (original == null || original.isEmpty()) {
+            return original != null ? new ArrayList<>(original) : new ArrayList<>();
+        }
+
+        List<Message> normalized = new ArrayList<>();
+        Set<String> seenToolCallIds = new LinkedHashSet<>();
+
+        for (Message message : original) {
+            if (message == null) {
+                continue;
+            }
+            if (message instanceof UserMessage userMessage) {
+                if (isBlank(userMessage.getText())) {
+                    logger.warn("Drop blank user message before model invocation");
+                    continue;
+                }
+                normalized.add(userMessage);
+                continue;
+            }
+            if (message instanceof SystemMessage systemMessage) {
+                if (isBlank(systemMessage.getText())) {
+                    logger.warn("Drop blank system message before model invocation");
+                    continue;
+                }
+                normalized.add(systemMessage);
+                continue;
+            }
+            if (message instanceof org.springframework.ai.chat.messages.AssistantMessage assistantMessage) {
+                if (!assistantMessage.hasToolCalls() && isBlank(assistantMessage.getText())) {
+                    logger.warn("Drop blank assistant message without tool calls before model invocation");
+                    continue;
+                }
+                if (assistantMessage.hasToolCalls() && assistantMessage.getToolCalls() != null) {
+                    for (org.springframework.ai.chat.messages.AssistantMessage.ToolCall toolCall : assistantMessage.getToolCalls()) {
+                        if (toolCall != null && !isBlank(toolCall.id())) {
+                            seenToolCallIds.add(toolCall.id());
+                        }
+                    }
+                }
+                normalized.add(assistantMessage);
+                continue;
+            }
+            if (message instanceof ToolResponseMessage toolResponseMessage) {
+                List<ToolResponseMessage.ToolResponse> responses = toolResponseMessage.getResponses();
+                if (responses == null || responses.isEmpty()) {
+                    logger.warn("Drop empty tool response message before model invocation");
+                    continue;
+                }
+                List<ToolResponseMessage.ToolResponse> filtered = new ArrayList<>();
+                for (ToolResponseMessage.ToolResponse response : responses) {
+                    if (response == null || isBlank(response.id())) {
+                        logger.warn("Drop tool response with blank tool_call_id before model invocation");
+                        continue;
+                    }
+                    if (!seenToolCallIds.isEmpty() && !seenToolCallIds.contains(response.id())) {
+                        logger.warn("Drop tool response whose tool_call_id={} does not match known assistant tool calls",
+                                response.id());
+                        continue;
+                    }
+                    filtered.add(response);
+                }
+                if (filtered.isEmpty()) {
+                    logger.warn("Drop tool response message because no valid responses remain after normalization");
+                    continue;
+                }
+                if (filtered.size() == responses.size()) {
+                    normalized.add(toolResponseMessage);
+                } else {
+                    normalized.add(ToolResponseMessage.builder().responses(filtered).build());
+                }
+                continue;
+            }
+            if (isBlank(message.getText())) {
+                logger.warn("Drop blank message of type {} before model invocation",
+                        message.getClass().getSimpleName());
+                continue;
+            }
+            normalized.add(message);
+        }
+
+        boolean hasUser = normalized.stream().anyMatch(UserMessage.class::isInstance);
+        if (!hasUser) {
+            Optional<String> input = state.value("input");
+            if (input.isPresent() && !isBlank(input.get())) {
+                normalized.add(0, new UserMessage(input.get()));
+                logger.warn("Injected fallback user message from state input to keep request payload valid");
+            } else {
+                logger.warn("No user message and no input available after normalization; request may be rejected by provider");
+            }
+        }
+
+        return normalized;
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     public static Builder builder(State state) {

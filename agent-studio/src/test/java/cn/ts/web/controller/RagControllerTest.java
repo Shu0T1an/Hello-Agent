@@ -1,5 +1,6 @@
 package cn.ts.web.controller;
 
+import cn.ts.web.rag.controller.RagController;
 import cn.ts.web.rag.service.DocumentLoaderService;
 import cn.ts.web.rag.service.KnowledgeBaseService;
 import cn.ts.web.rag.service.RagQueryService;

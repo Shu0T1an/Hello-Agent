@@ -1,5 +1,6 @@
 package cn.ts.web.service;
 
+import cn.ts.web.session.service.MessageConversionService;
 import cn.ts.web.shared.constant.ApiConstants;
 import cn.ts.web.session.service.strategy.*;
 import org.junit.jupiter.api.BeforeEach;

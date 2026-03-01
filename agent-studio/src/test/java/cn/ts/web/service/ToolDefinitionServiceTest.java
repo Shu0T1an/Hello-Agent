@@ -4,6 +4,7 @@ import cn.ts.web.agent.dto.ToolDefinitionDTO;
 import cn.ts.web.agent.dto.ToolType;
 import cn.ts.web.tool.entity.ToolDefinitionEntity;
 import cn.ts.web.tool.mapper.ToolDefinitionMapper;
+import cn.ts.web.tool.service.ToolDefinitionService;
 import cn.ts.web.tool.service.impl.ToolDefinitionServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

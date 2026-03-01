@@ -1,13 +1,16 @@
 package cn.ts.web.tool.controller;
 
-import cn.ts.web.shared.response.Result;
 import cn.ts.web.agent.dto.ToolDefinitionDTO;
 import cn.ts.web.agent.dto.ToolType;
+import cn.ts.web.infra.mcp.service.McpToolSyncService;
+import cn.ts.web.shared.component.LocalToolScanner;
+import cn.ts.web.shared.response.Result;
 import cn.ts.web.tool.service.ToolDefinitionService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 工具管理 Controller
@@ -17,9 +20,16 @@ import java.util.List;
 public class ToolManagementController {
 
     private final ToolDefinitionService toolDefinitionService;
+    private final LocalToolScanner localToolScanner;
+    private final McpToolSyncService mcpToolSyncService;
 
-    public ToolManagementController(ToolDefinitionService toolDefinitionService) {
+    public ToolManagementController(
+            ToolDefinitionService toolDefinitionService,
+            LocalToolScanner localToolScanner,
+            McpToolSyncService mcpToolSyncService) {
         this.toolDefinitionService = toolDefinitionService;
+        this.localToolScanner = localToolScanner;
+        this.mcpToolSyncService = mcpToolSyncService;
     }
 
     /**
@@ -84,21 +94,21 @@ public class ToolManagementController {
     }
 
     /**
-     * 手动触发本地工具扫描
+     * 手动触发本地工具扫描，返回当前本地工具总数
      */
     @PostMapping("/scan-local")
-    public Result<List<ToolDefinitionDTO>> scanLocalTools() {
-        // TODO: 实现本地工具扫描逻辑
-        return Result.success();
+    public Result<Map<String, Integer>> scanLocalTools() {
+        localToolScanner.rescan();
+        int count = toolDefinitionService.getToolsByType(ToolType.LOCAL).size();
+        return Result.success(Map.of("count", count));
     }
 
     /**
      * 手动触发 MCP 工具同步
      */
     @PostMapping("/sync-mcp/{connectionName}")
-    public Result<List<ToolDefinitionDTO>> syncMcpTools(@PathVariable String connectionName) {
-        // TODO: 实现 MCP 工具同步逻辑
-        // 这个功能需要 McpToolSyncService 组件支持
-        return Result.success();
+    public Result<Map<String, Integer>> syncMcpTools(@PathVariable String connectionName) {
+        int count = mcpToolSyncService.syncTools(connectionName);
+        return Result.success(Map.of("count", count));
     }
 }

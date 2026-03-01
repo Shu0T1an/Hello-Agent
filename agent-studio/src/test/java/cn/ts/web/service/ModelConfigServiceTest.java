@@ -4,6 +4,7 @@ import cn.ts.web.agent.dto.ModelConfigDTO;
 import cn.ts.web.agent.entity.ModelConfigEntity;
 import cn.ts.web.agent.mapper.ModelConfigMapper;
 import cn.ts.web.agent.service.impl.ModelConfigServiceImpl;
+import cn.ts.web.shared.service.ApiKeyEncryptionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

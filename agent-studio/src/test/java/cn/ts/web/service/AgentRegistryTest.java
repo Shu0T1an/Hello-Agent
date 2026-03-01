@@ -1,6 +1,7 @@
 package cn.ts.web.service;
 
 import cn.ts.graph.CompiledGraph;
+import cn.ts.web.agent.service.AgentRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

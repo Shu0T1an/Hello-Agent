@@ -14,7 +14,7 @@ if not exist "Agent-Studio" (
 
 echo [1/4] 启动后端服务...
 echo.
-start "Hello-Agent Backend" cmd /k "chcp 65001 >nul && cd /d %~dp0Agent-Studio && set MAVEN_OPTS=-Dfile.encoding=UTF-8 -Dconsole.encoding=UTF-8 && mvn spring-boot:run -Dspring-boot.run.jvmArguments=-Dfile.encoding=UTF-8"
+start "Hello-Agent Backend" cmd /k "chcp 65001 >nul && cd /d %~dp0Agent-Studio && set MAVEN_OPTS=-Dfile.encoding=UTF-8 -Dconsole.encoding=UTF-8 && mvn spring-boot:run -Dmaven.test.skip=true -Dspring-boot.run.jvmArguments=-Dfile.encoding=UTF-8"
 
 echo [后端] 已在新窗口启动，请等待服务启动...
 echo.

@@ -1,5 +1,6 @@
 package cn.ts.web.controller;
 
+import cn.ts.web.agent.controller.AgentManagementController;
 import cn.ts.web.agent.dto.AgentConfigDTO;
 import cn.ts.web.agent.dto.CreateAgentDTO;
 import cn.ts.web.agent.dto.UpdateAgentDTO;

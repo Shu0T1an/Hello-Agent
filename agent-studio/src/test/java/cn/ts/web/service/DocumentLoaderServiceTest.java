@@ -1,5 +1,6 @@
 package cn.ts.web.service;
 
+import cn.ts.web.rag.service.DocumentLoaderService;
 import cn.ts.web.service.rag.FileSystemTestUtils;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;

@@ -1,6 +1,7 @@
 package cn.ts.web.service;
 
 import cn.ts.agent.rag.advisor.RagAdvisorConfig;
+import cn.ts.web.rag.service.RagQueryService;
 import cn.ts.web.service.rag.RagTestDataFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

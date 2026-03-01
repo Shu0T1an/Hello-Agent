@@ -75,7 +75,7 @@ Write-Host ""
 $backendScriptBlock = {
     param($backendDir)
     cd $backendDir
-    mvn.cmd spring-boot:run
+    mvn.cmd spring-boot:run -Dmaven.test.skip=true
 }
 
 $backendJob = Start-Job -Name "HelloAgent-Backend" -ScriptBlock $backendScriptBlock -ArgumentList $backendDir

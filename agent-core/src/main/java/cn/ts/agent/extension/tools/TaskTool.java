@@ -16,6 +16,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import reactor.core.publisher.Flux;
@@ -130,6 +131,8 @@ public class TaskTool {
         State initialState = StateTemplates.createAgentInitialState(description, defaultConfig.getMaxIterations());
         Map<String, Object> stateData = new LinkedHashMap<>(initialState.data());
         stateData.put("executionId", taskContext.executionId());
+        // Ensure subagent first-turn request always starts with a concrete user message.
+        stateData.put("messages", new ArrayList<>(List.of(new UserMessage(description))));
 
         RunnableConfig runnableConfig = RunnableConfig.builder()
                 .executionId(taskContext.executionId() + ":sub:" + taskContext.subagentTaskId())

@@ -14,6 +14,8 @@ import cn.ts.graph.node.NodeAction;
 import cn.ts.graph.state.MapState;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ToolContext;
 import reactor.core.publisher.Flux;
 
@@ -28,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class TaskToolTest {
@@ -69,6 +72,14 @@ class TaskToolTest {
 
         String result = tool.task(request, null);
         assertEquals("done", result);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Map<String, Object>> stateCaptor = ArgumentCaptor.forClass(Map.class);
+        verify(subGraph).stream(stateCaptor.capture(), any(RunnableConfig.class));
+        Object messagesObj = stateCaptor.getValue().get("messages");
+        assertTrue(messagesObj instanceof List<?> messages && !messages.isEmpty());
+        assertTrue(messagesObj instanceof List<?> messages && messages.get(0) instanceof UserMessage);
+        assertEquals("summarize this", ((UserMessage) ((List<?>) messagesObj).get(0)).getText());
     }
 
     @Test

@@ -31,6 +31,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import reactor.core.publisher.Flux;
 
@@ -45,6 +47,7 @@ public class PromptAuditInterceptor implements ModelInterceptor {
     static final String PHASE_REQUEST = "REQUEST";
     static final String PHASE_RESPONSE = "RESPONSE";
     static final String PHASE_ERROR = "ERROR";
+    private static final Pattern PROVIDER_ERROR_CODE_PATTERN = Pattern.compile("\"code\"\\s*:\\s*\"?(\\d+)\"?");
 
     @Resource
     private LlmPromptAuditService auditService;
@@ -166,10 +169,15 @@ public class PromptAuditInterceptor implements ModelInterceptor {
 
     private void writeRequestAudit(ModelInvocationContext context, String traceId) {
         ChatModelRequest request = context.request();
+        List<Message> requestMessages = request.getMessages();
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("streaming", context.streaming());
         payload.put("systemPrompt", request.getSystemPrompt());
-        payload.put("messages", summarizeMessages(request.getMessages()));
+        payload.put("messages", summarizeMessages(requestMessages));
+        payload.put("messageCount", requestMessages.size());
+        payload.put("rolesSequence", summarizeRoles(requestMessages));
+        payload.put("toolCallCount", countToolCalls(requestMessages));
+        payload.put("toolResponseCount", countToolResponses(requestMessages));
         payload.put("toolNames", summarizeToolNames(request.getToolCallbacks()));
         payload.put("baseOptions", summarizeObject(request.getBaseOptions()));
         save(buildBaseEntity(context, traceId, PHASE_REQUEST)
@@ -201,8 +209,11 @@ public class PromptAuditInterceptor implements ModelInterceptor {
             ModelInvocationContext context,
             String traceId,
             Throwable throwable) {
+        String rawError = throwable == null ? "unknown error" : throwable.toString();
+        String errorCode = extractProviderErrorCode(rawError);
+        String formatted = errorCode != null ? "[code=" + errorCode + "] " + rawError : rawError;
         save(buildBaseEntity(context, traceId, PHASE_ERROR)
-                .setErrorMessage(truncate(throwable == null ? "unknown error" : throwable.toString())));
+                .setErrorMessage(truncate(formatted)));
     }
 
     private LlmPromptAuditEntity buildBaseEntity(ModelInvocationContext context, String traceId, String phase) {
@@ -242,6 +253,66 @@ public class PromptAuditInterceptor implements ModelInterceptor {
             result.add(row);
         }
         return result;
+    }
+
+    private List<String> summarizeRoles(List<Message> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return List.of();
+        }
+        List<String> roles = new ArrayList<>(messages.size());
+        for (Message message : messages) {
+            if (message == null) {
+                roles.add("UNKNOWN");
+                continue;
+            }
+            roles.add(message.getMessageType().name());
+        }
+        return roles;
+    }
+
+    private int countToolCalls(List<Message> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return 0;
+        }
+        int count = 0;
+        for (Message message : messages) {
+            if (!(message instanceof org.springframework.ai.chat.messages.AssistantMessage assistantMessage)) {
+                continue;
+            }
+            if (!assistantMessage.hasToolCalls() || assistantMessage.getToolCalls() == null) {
+                continue;
+            }
+            count += assistantMessage.getToolCalls().size();
+        }
+        return count;
+    }
+
+    private int countToolResponses(List<Message> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return 0;
+        }
+        int count = 0;
+        for (Message message : messages) {
+            if (!(message instanceof org.springframework.ai.chat.messages.ToolResponseMessage toolResponseMessage)) {
+                continue;
+            }
+            if (toolResponseMessage.getResponses() == null) {
+                continue;
+            }
+            count += toolResponseMessage.getResponses().size();
+        }
+        return count;
+    }
+
+    private String extractProviderErrorCode(String errorMessage) {
+        if (errorMessage == null || errorMessage.isBlank()) {
+            return null;
+        }
+        Matcher matcher = PROVIDER_ERROR_CODE_PATTERN.matcher(errorMessage);
+        if (!matcher.find()) {
+            return null;
+        }
+        return matcher.group(1);
     }
 
     private List<String> summarizeToolNames(List<ToolCallback> callbacks) {

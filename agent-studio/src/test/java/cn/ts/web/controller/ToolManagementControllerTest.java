@@ -2,6 +2,9 @@ package cn.ts.web.controller;
 
 import cn.ts.web.agent.dto.ToolDefinitionDTO;
 import cn.ts.web.agent.dto.ToolType;
+import cn.ts.web.infra.mcp.service.McpToolSyncService;
+import cn.ts.web.shared.component.LocalToolScanner;
+import cn.ts.web.tool.controller.ToolManagementController;
 import cn.ts.web.tool.service.ToolDefinitionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,6 +38,12 @@ class ToolManagementControllerTest {
 
     @MockBean(name = "toolDefinitionService")
     private ToolDefinitionService toolDefinitionService;
+
+    @MockBean
+    private LocalToolScanner localToolScanner;
+
+    @MockBean
+    private McpToolSyncService mcpToolSyncService;
 
     @Autowired
     private WebApplicationContext webApplicationContext;
@@ -228,16 +237,39 @@ class ToolManagementControllerTest {
 
     @Test
     void testScanLocalTools_ReturnsOk() throws Exception {
+        // Arrange
+        ToolDefinitionDTO localTool1 = new ToolDefinitionDTO();
+        localTool1.setId(1L);
+        localTool1.setToolName("local-tool-1");
+        localTool1.setToolType(ToolType.LOCAL);
+
+        ToolDefinitionDTO localTool2 = new ToolDefinitionDTO();
+        localTool2.setId(2L);
+        localTool2.setToolName("local-tool-2");
+        localTool2.setToolType(ToolType.LOCAL);
+
+        when(toolDefinitionService.getToolsByType(ToolType.LOCAL)).thenReturn(Arrays.asList(localTool1, localTool2));
+
         // Act
         mockMvc.perform(post("/api/tools/scan-local"))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.count").value(2));
+
+        verify(localToolScanner).rescan();
+        verify(toolDefinitionService).getToolsByType(ToolType.LOCAL);
     }
 
     @Test
     void testSyncMcpTools_ReturnsOk() throws Exception {
+        // Arrange
+        when(mcpToolSyncService.syncTools("test-connection")).thenReturn(3);
+
         // Act
         mockMvc.perform(post("/api/tools/sync-mcp/test-connection"))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.count").value(3));
+
+        verify(mcpToolSyncService).syncTools("test-connection");
     }
 
     @Test

@@ -1,6 +1,7 @@
 package cn.ts.web.service;
 
 import cn.ts.web.shared.config.EncryptionConfig;
+import cn.ts.web.shared.service.ApiKeyEncryptionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
