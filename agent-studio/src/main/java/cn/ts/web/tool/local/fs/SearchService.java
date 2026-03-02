@@ -26,6 +26,7 @@ import java.util.regex.Pattern;
 @Service
 public class SearchService {
 
+    private static final boolean WINDOWS_FILE_SYSTEM = "\\".equals(FileSystems.getDefault().getSeparator());
     private static final Set<String> OUTPUT_MODES = Set.of("content", "files_with_matches", "count");
     private static final Map<String, String> OUTPUT_MODE_ALIASES;
     private static final String OUTPUT_MODE_HINT =
@@ -218,9 +219,37 @@ public class SearchService {
 
     private PathMatcher compileGlobMatcher(String pattern) {
         try {
-            return FileSystems.getDefault().getPathMatcher("glob:" + pattern);
+            PathMatcher primary = FileSystems.getDefault().getPathMatcher("glob:" + pattern);
+            return withWindowsSlashFallback(pattern, primary);
         } catch (IllegalArgumentException ex) {
+            PathMatcher fallback = tryCompileWindowsSlashMatcher(pattern);
+            if (fallback != null) {
+                return fallback;
+            }
             throw new FileToolException(ToolErrorCodes.INVALID_GLOB_PATTERN, "Invalid glob pattern: " + pattern, ex);
+        }
+    }
+
+    private PathMatcher withWindowsSlashFallback(String pattern, PathMatcher primary) {
+        PathMatcher fallback = tryCompileWindowsSlashMatcher(pattern);
+        if (fallback == null) {
+            return primary;
+        }
+        return path -> primary.matches(path) || fallback.matches(path);
+    }
+
+    private PathMatcher tryCompileWindowsSlashMatcher(String pattern) {
+        if (!WINDOWS_FILE_SYSTEM || pattern.indexOf('\\') < 0) {
+            return null;
+        }
+        String normalized = pattern.replace('\\', '/');
+        if (normalized.equals(pattern)) {
+            return null;
+        }
+        try {
+            return FileSystems.getDefault().getPathMatcher("glob:" + normalized);
+        } catch (IllegalArgumentException ex) {
+            return null;
         }
     }
 
