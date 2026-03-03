@@ -266,6 +266,20 @@ CREATE TABLE IF NOT EXISTS channel_config (
 CREATE INDEX IF NOT EXISTS idx_channel_config_type ON channel_config(channel_type);
 CREATE INDEX IF NOT EXISTS idx_channel_config_enabled ON channel_config(enabled);
 
+-- 9. Channel session mapping
+CREATE TABLE IF NOT EXISTS channel_session_mapping (
+    id BIGSERIAL PRIMARY KEY,
+    channel_type VARCHAR(50) NOT NULL,
+    external_session_id VARCHAR(255) NOT NULL,
+    internal_session_id VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_channel_session_mapping UNIQUE (channel_type, external_session_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_channel_session_mapping_internal
+    ON channel_session_mapping(internal_session_id);
+
 COMMENT ON TABLE channel_config IS '渠道接入配置';
 COMMENT ON COLUMN channel_config.channel_name IS '渠道配置唯一名称';
 COMMENT ON COLUMN channel_config.channel_type IS '渠道类型';
@@ -362,6 +376,12 @@ CREATE TRIGGER update_agent_config_updated_at
 DROP TRIGGER IF EXISTS update_channel_config_updated_at ON channel_config;
 CREATE TRIGGER update_channel_config_updated_at
     BEFORE UPDATE ON channel_config
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_channel_session_mapping_updated_at ON channel_session_mapping;
+CREATE TRIGGER update_channel_session_mapping_updated_at
+    BEFORE UPDATE ON channel_session_mapping
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 

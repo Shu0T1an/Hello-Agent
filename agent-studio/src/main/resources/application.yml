@@ -27,7 +27,7 @@ server:
 # Agent 鎵ц閰嶇疆
 agent:
   channel:
-    default-agent: general-purpose
+    default-agent: StreamingTestAgent
   subagent:
     progress-buffer-size: 1024
   execution:

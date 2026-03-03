@@ -1,0 +1,267 @@
+package cn.ts.web.channel.runtime;
+
+import cn.ts.agent.constant.StateKeys;
+import cn.ts.web.agent.dto.AgentResponse;
+import cn.ts.web.agent.service.AgentExecutionService;
+import cn.ts.web.channel.dto.ChannelInboundMessage;
+import cn.ts.web.channel.entity.ChannelSessionMappingEntity;
+import cn.ts.web.channel.mapper.ChannelSessionMappingMapper;
+import cn.ts.web.session.dto.GraphStateVO;
+import cn.ts.web.session.service.GraphStateService;
+import cn.ts.web.session.service.MessageConversionService;
+import cn.ts.web.session.dto.SessionDetailDTO;
+import cn.ts.web.session.service.SessionService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.UserMessage;
+import reactor.core.publisher.Flux;
+
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class ChannelMessageDispatcherTest {
+
+    @Mock
+    private AgentExecutionService agentExecutionService;
+
+    @Mock
+    private SessionService sessionService;
+
+    @Mock
+    private ChannelSessionMappingMapper channelSessionMappingMapper;
+
+    @Mock
+    private GraphStateService graphStateService;
+
+    @Mock
+    private MessageConversionService messageConversionService;
+
+    @InjectMocks
+    private ChannelMessageDispatcher dispatcher;
+
+    @BeforeEach
+    void setUp() {
+        setDefaultAgent("general-purpose");
+    }
+
+    @Test
+    void dispatchWithReply_ShouldCollectLlmChunksAndInvokeCallback() {
+        ChannelInboundMessage inbound = new ChannelInboundMessage();
+        inbound.setChannelType("dingtalk");
+        inbound.setText("你好");
+        inbound.setChannelSessionId("conversation-1");
+
+        ChannelSessionMappingEntity mapping = new ChannelSessionMappingEntity();
+        mapping.setInternalSessionId("session-1");
+        when(channelSessionMappingMapper.selectByExternal("dingtalk", "conversation-1")).thenReturn(mapping);
+        when(sessionService.sessionExists("session-1")).thenReturn(true);
+        when(agentExecutionService.executeAgentStreamWithSession(anyString(), anyMap(), anyString(), any(Duration.class)))
+                .thenReturn(Flux.just(
+                        chunkResponse("你"),
+                        chunkResponse("好")
+                ));
+
+        List<String> replies = new ArrayList<>();
+        dispatcher.dispatch(inbound, replies::add);
+
+        assertEquals(List.of("你好"), replies);
+
+        ArgumentCaptor<Map<String, Object>> stateCaptor = ArgumentCaptor.forClass(Map.class);
+        verify(agentExecutionService).executeAgentStreamWithSession(
+                eq("general-purpose"),
+                stateCaptor.capture(),
+                eq("session-1"),
+                eq(Duration.ofSeconds(120))
+        );
+        assertStateWithUserInput(stateCaptor.getValue(), "你好");
+    }
+
+    @Test
+    void dispatchWithReply_ShouldUseFallbackMessageWhenNoChunk() {
+        ChannelInboundMessage inbound = new ChannelInboundMessage();
+        inbound.setChannelType("dingtalk");
+        inbound.setText("help");
+        inbound.setChannelSessionId("conversation-2");
+
+        ChannelSessionMappingEntity mapping = new ChannelSessionMappingEntity();
+        mapping.setInternalSessionId("session-2");
+        when(channelSessionMappingMapper.selectByExternal("dingtalk", "conversation-2")).thenReturn(mapping);
+        when(sessionService.sessionExists("session-2")).thenReturn(true);
+        when(agentExecutionService.executeAgentStreamWithSession(anyString(), anyMap(), anyString(), any(Duration.class)))
+                .thenReturn(Flux.just(
+                        AgentResponse.builder()
+                                .message("系统繁忙，请稍后重试")
+                                .build()
+                ));
+
+        List<String> replies = new ArrayList<>();
+        dispatcher.dispatch(inbound, replies::add);
+
+        assertEquals(List.of("系统繁忙，请稍后重试"), replies);
+    }
+
+    @Test
+    void dispatch_ShouldCreateSessionAndPersistMapping_WhenNoMappingExists() {
+        ChannelInboundMessage inbound = new ChannelInboundMessage();
+        inbound.setChannelType("dingtalk");
+        inbound.setText("create session");
+        inbound.setChannelSessionId("conversation-3");
+
+        SessionDetailDTO sessionDetail = new SessionDetailDTO();
+        sessionDetail.setId("session-new-1");
+
+        when(channelSessionMappingMapper.selectByExternal("dingtalk", "conversation-3")).thenReturn(null);
+        when(sessionService.sessionExists("conversation-3")).thenReturn(false);
+        when(sessionService.createSession(anyString(), anyString())).thenReturn(sessionDetail);
+        when(agentExecutionService.executeAgentStreamWithSession(anyString(), anyMap(), anyString(), any(Duration.class)))
+                .thenReturn(Flux.empty());
+
+        dispatcher.dispatch(inbound);
+
+        verify(sessionService).createSession("general-purpose", "Channel Session");
+
+        ArgumentCaptor<ChannelSessionMappingEntity> mappingCaptor = ArgumentCaptor.forClass(ChannelSessionMappingEntity.class);
+        verify(channelSessionMappingMapper).insert(mappingCaptor.capture());
+        assertEquals("dingtalk", mappingCaptor.getValue().getChannelType());
+        assertEquals("conversation-3", mappingCaptor.getValue().getExternalSessionId());
+        assertEquals("session-new-1", mappingCaptor.getValue().getInternalSessionId());
+
+        ArgumentCaptor<Map<String, Object>> stateCaptor = ArgumentCaptor.forClass(Map.class);
+        verify(agentExecutionService).executeAgentStreamWithSession(
+                eq("general-purpose"),
+                stateCaptor.capture(),
+                eq("session-new-1"),
+                eq(Duration.ofSeconds(120))
+        );
+        assertStateWithUserInput(stateCaptor.getValue(), "create session");
+    }
+
+    @Test
+    void dispatch_ShouldRefreshMapping_WhenMappedSessionMissing() {
+        ChannelInboundMessage inbound = new ChannelInboundMessage();
+        inbound.setChannelType("dingtalk");
+        inbound.setText("refresh session");
+        inbound.setChannelSessionId("conversation-4");
+
+        ChannelSessionMappingEntity mapping = new ChannelSessionMappingEntity();
+        mapping.setInternalSessionId("session-old-1");
+        SessionDetailDTO sessionDetail = new SessionDetailDTO();
+        sessionDetail.setId("session-new-2");
+
+        when(channelSessionMappingMapper.selectByExternal("dingtalk", "conversation-4")).thenReturn(mapping);
+        when(sessionService.sessionExists("session-old-1")).thenReturn(false);
+        when(sessionService.createSession(anyString(), anyString())).thenReturn(sessionDetail);
+        when(agentExecutionService.executeAgentStreamWithSession(anyString(), anyMap(), anyString(), any(Duration.class)))
+                .thenReturn(Flux.empty());
+
+        dispatcher.dispatch(inbound);
+
+        verify(channelSessionMappingMapper).updateInternalSessionId("dingtalk", "conversation-4", "session-new-2");
+        verify(channelSessionMappingMapper, never()).insert(any());
+        verify(agentExecutionService).executeAgentStreamWithSession(
+                eq("general-purpose"),
+                anyMap(),
+                eq("session-new-2"),
+                eq(Duration.ofSeconds(120))
+        );
+    }
+
+    @Test
+    void dispatch_ShouldAppendToExistingMessages_WhenHistoryExists() {
+        ChannelInboundMessage inbound = new ChannelInboundMessage();
+        inbound.setChannelType("dingtalk");
+        inbound.setText("new question");
+        inbound.setChannelSessionId("conversation-5");
+
+        ChannelSessionMappingEntity mapping = new ChannelSessionMappingEntity();
+        mapping.setInternalSessionId("session-5");
+
+        GraphStateVO graphStateVO = new GraphStateVO();
+        Map<String, Object> stateData = new LinkedHashMap<>();
+        stateData.put(StateKeys.MESSAGES, List.of(Map.of(
+                "messageType", "USER",
+                "text", "old question"
+        )));
+        graphStateVO.setStateData(stateData);
+
+        when(channelSessionMappingMapper.selectByExternal("dingtalk", "conversation-5")).thenReturn(mapping);
+        when(sessionService.sessionExists("session-5")).thenReturn(true);
+        when(graphStateService.sessionExists("session-5")).thenReturn(true);
+        when(graphStateService.getGraphState("session-5")).thenReturn(graphStateVO);
+        when(messageConversionService.convertStateToMessages(any(List.class)))
+                .thenReturn(new ArrayList<>(List.of(new UserMessage("old question"))));
+        when(agentExecutionService.executeAgentStreamWithSession(anyString(), anyMap(), anyString(), any(Duration.class)))
+                .thenReturn(Flux.empty());
+
+        dispatcher.dispatch(inbound);
+
+        verify(agentExecutionService).executeAgentStreamWithSession(
+                eq("general-purpose"),
+                argThat(state -> {
+                    Object messagesObj = state.get(StateKeys.MESSAGES);
+                    if (!(messagesObj instanceof List<?> list) || list.size() != 2) {
+                        return false;
+                    }
+                    if (!(list.get(0) instanceof UserMessage first) || !(list.get(1) instanceof UserMessage second)) {
+                        return false;
+                    }
+                    return "old question".equals(first.getText())
+                            && "new question".equals(second.getText())
+                            && "new question".equals(state.get(StateKeys.INPUT));
+                }),
+                eq("session-5"),
+                eq(Duration.ofSeconds(120))
+        );
+    }
+
+    private AgentResponse chunkResponse(String chunk) {
+        return AgentResponse.builder()
+                .message(chunk)
+                .metadata(Map.of("chunk", chunk))
+                .build();
+    }
+
+    @SuppressWarnings("unchecked")
+    private void assertStateWithUserInput(Map<String, Object> state, String input) {
+        assertEquals(input, state.get(StateKeys.INPUT));
+        Object messagesObj = state.get(StateKeys.MESSAGES);
+        assertInstanceOf(List.class, messagesObj);
+        List<?> messages = (List<?>) messagesObj;
+        assertEquals(1, messages.size());
+        assertInstanceOf(UserMessage.class, messages.get(0));
+        assertEquals(input, ((UserMessage) messages.get(0)).getText());
+        assertTrue(((UserMessage) messages.get(0)).getText() != null);
+    }
+
+    private void setDefaultAgent(String value) {
+        try {
+            var field = ChannelMessageDispatcher.class.getDeclaredField("defaultAgent");
+            field.setAccessible(true);
+            field.set(dispatcher, value);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+}
