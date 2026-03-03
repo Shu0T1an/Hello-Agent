@@ -9,6 +9,9 @@ DROP TABLE IF EXISTS mcp_connection_config CASCADE;
 DROP TABLE IF EXISTS tool_definition CASCADE;
 DROP TABLE IF EXISTS model_config CASCADE;
 DROP TABLE IF EXISTS llm_prompt_audit CASCADE;
+DROP TABLE IF EXISTS channel_config CASCADE;
+DROP TABLE IF EXISTS cron_job_run CASCADE;
+DROP TABLE IF EXISTS cron_job CASCADE;
 
 DROP TYPE IF EXISTS connection_type_enum CASCADE;
 DROP TYPE IF EXISTS tool_type_enum CASCADE;
@@ -248,6 +251,80 @@ COMMENT ON COLUMN llm_prompt_audit.response_json IS '响应侧审计数据';
 COMMENT ON COLUMN llm_prompt_audit.error_message IS '错误信息';
 COMMENT ON COLUMN llm_prompt_audit.created_at IS '创建时间';
 
+-- 8. Channel 配置表
+CREATE TABLE IF NOT EXISTS channel_config (
+    id BIGSERIAL PRIMARY KEY,
+    channel_name VARCHAR(100) NOT NULL UNIQUE,
+    channel_type VARCHAR(50) NOT NULL,
+    config_json JSONB,
+    enabled BOOLEAN DEFAULT TRUE,
+    status VARCHAR(20) DEFAULT 'stopped',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_channel_config_type ON channel_config(channel_type);
+CREATE INDEX IF NOT EXISTS idx_channel_config_enabled ON channel_config(enabled);
+
+COMMENT ON TABLE channel_config IS '渠道接入配置';
+COMMENT ON COLUMN channel_config.channel_name IS '渠道配置唯一名称';
+COMMENT ON COLUMN channel_config.channel_type IS '渠道类型';
+COMMENT ON COLUMN channel_config.config_json IS '渠道配置JSON';
+COMMENT ON COLUMN channel_config.enabled IS '是否启用';
+COMMENT ON COLUMN channel_config.status IS '运行状态';
+
+-- 9. Cron 作业表
+CREATE TABLE IF NOT EXISTS cron_job (
+    id BIGSERIAL PRIMARY KEY,
+    job_name VARCHAR(120) NOT NULL UNIQUE,
+    cron_expression VARCHAR(120) NOT NULL,
+    zone_id VARCHAR(64) DEFAULT 'Asia/Shanghai',
+    agent_name VARCHAR(100) NOT NULL,
+    session_id VARCHAR(255),
+    input_text TEXT,
+    enabled BOOLEAN DEFAULT TRUE,
+    max_retry_count INT DEFAULT 1,
+    retry_interval_seconds INT DEFAULT 10,
+    last_run_at TIMESTAMP,
+    next_run_at TIMESTAMP,
+    last_status VARCHAR(20),
+    last_error TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_cron_job_enabled ON cron_job(enabled);
+CREATE INDEX IF NOT EXISTS idx_cron_job_next_run ON cron_job(next_run_at);
+
+COMMENT ON TABLE cron_job IS 'cron任务配置';
+COMMENT ON COLUMN cron_job.job_name IS '任务名';
+COMMENT ON COLUMN cron_job.cron_expression IS 'cron表达式';
+COMMENT ON COLUMN cron_job.zone_id IS '时区';
+COMMENT ON COLUMN cron_job.agent_name IS '执行目标agent';
+COMMENT ON COLUMN cron_job.session_id IS '目标会话id';
+COMMENT ON COLUMN cron_job.input_text IS '任务输入';
+COMMENT ON COLUMN cron_job.last_status IS '最近一次状态';
+
+-- 10. Cron 作业运行记录
+CREATE TABLE IF NOT EXISTS cron_job_run (
+    id BIGSERIAL PRIMARY KEY,
+    job_id BIGINT NOT NULL,
+    trigger_type VARCHAR(20) NOT NULL,
+    status VARCHAR(20) NOT NULL,
+    started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    finished_at TIMESTAMP,
+    execution_id VARCHAR(255),
+    error_message TEXT,
+    CONSTRAINT fk_cron_job_run_job FOREIGN KEY (job_id) REFERENCES cron_job(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_cron_job_run_job_id ON cron_job_run(job_id);
+CREATE INDEX IF NOT EXISTS idx_cron_job_run_started_at ON cron_job_run(started_at DESC);
+
+COMMENT ON TABLE cron_job_run IS 'cron任务运行记录';
+COMMENT ON COLUMN cron_job_run.trigger_type IS '触发类型:auto/manual';
+COMMENT ON COLUMN cron_job_run.status IS '运行状态';
+
 -- 创建自动更新 updated_at 的触发器函数
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -279,5 +356,17 @@ CREATE TRIGGER update_mcp_connection_config_updated_at
 DROP TRIGGER IF EXISTS update_agent_config_updated_at ON agent_config;
 CREATE TRIGGER update_agent_config_updated_at
     BEFORE UPDATE ON agent_config
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_channel_config_updated_at ON channel_config;
+CREATE TRIGGER update_channel_config_updated_at
+    BEFORE UPDATE ON channel_config
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_cron_job_updated_at ON cron_job;
+CREATE TRIGGER update_cron_job_updated_at
+    BEFORE UPDATE ON cron_job
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();

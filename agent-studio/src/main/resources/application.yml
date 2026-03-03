@@ -26,6 +26,8 @@ server:
 
 # Agent 鎵ц閰嶇疆
 agent:
+  channel:
+    default-agent: general-purpose
   subagent:
     progress-buffer-size: 1024
   execution:
@@ -72,6 +74,23 @@ agent:
     write-allowed-roots:
       - D:/JavaProject/Hello-Agent/docs
       - D:/JavaProject/Hello-Agent/uploads
+  skills:
+    enabled: true
+    roots:
+      - ${SKILLS_ROOT:${user.dir}/skills}
+      - ${SKILLS_ROOT_FALLBACK:${user.dir}/../skills}
+    max-list-items: 500
+    max-detail-chars: 20000
+    max-reference-bytes: 1048576
+    prompt-injection-enabled: true
+    tool-enabled: true
+    prompt-max-skills: 20
+  memory:
+    enabled: true
+    file: ${MEMORY_FILE:${user.dir}/memory.md}
+    max-chars: 12000
+    inject-header: true
+    fail-open: true
   audit:
     enabled: true
     include-response: true
@@ -89,6 +108,10 @@ agent:
     critique-tool-allowlist: []
     general-tool-allowlist: []
     blocked-tool-names: []
+
+cron:
+  scheduler:
+    pool-size: 4
 # MCP 绠＄悊鍣ㄩ厤缃?
 mcp:
   manager:
