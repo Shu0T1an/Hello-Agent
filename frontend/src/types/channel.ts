@@ -5,6 +5,8 @@ export interface ChannelConfig {
   config?: Record<string, unknown>
   enabled?: boolean
   status?: string
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface CreateChannelRequest {
@@ -12,4 +14,7 @@ export interface CreateChannelRequest {
   channelType: string
   config?: Record<string, unknown>
   enabled?: boolean
+  status?: string
 }
+
+export interface UpdateChannelRequest extends CreateChannelRequest {}
