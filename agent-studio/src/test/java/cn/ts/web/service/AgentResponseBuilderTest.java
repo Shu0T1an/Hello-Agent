@@ -163,4 +163,33 @@ class AgentResponseBuilderTest {
         Map<String, Object> meta = (Map<String, Object>) payload.get(StateKeys.TODOS_META);
         assertEquals(3L, ((Number) meta.get("version")).longValue());
     }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void testBuild_ExtractsSkillsTriggerMetadata() {
+        Map<String, Object> stateData = Map.of(
+                "execution_record", Map.of(
+                        "executions", List.of(
+                                Map.of(
+                                        "id", "call-1",
+                                        "name", "get_skill_detail",
+                                        "arguments", "{\"skill_id\":\"abc\"}"
+                                )
+                        )
+                )
+        );
+        NodeOutput output = NodeOutput.of("_AGENT_TOOL_", null, new MapState(stateData));
+        GraphResponse<NodeOutput> response = GraphResponse.of("_AGENT_TOOL_", output);
+
+        AgentResponse result = builder.build(response, "exec-2");
+        Map<String, Object> metadata = result.getMetadata();
+
+        assertNotNull(metadata);
+        assertEquals(Boolean.TRUE, metadata.get("skillsTriggered"));
+        assertEquals(1, ((Number) metadata.get("skillsTriggeredCount")).intValue());
+        List<Map<String, Object>> calls = (List<Map<String, Object>>) metadata.get("skillToolCalls");
+        assertEquals(1, calls.size());
+        assertEquals("get_skill_detail", calls.get(0).get("toolName"));
+        assertEquals("abc", calls.get(0).get("skillId"));
+    }
 }

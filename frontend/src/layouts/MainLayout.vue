@@ -65,6 +65,10 @@
         <div v-else class="content-pane">
           <AgentManagement v-if="currentView === 'agents'" />
           <ToolMarket v-else-if="currentView === 'tools'" />
+          <SkillManagement v-else-if="currentView === 'skills'" />
+          <ChannelManagement v-else-if="currentView === 'channels'" />
+          <CronManagement v-else-if="currentView === 'cron'" />
+          <MemoryManagement v-else-if="currentView === 'memory'" />
           <ModelManagement v-else-if="currentView === 'models'" />
           <McpManagement v-else-if="currentView === 'mcp'" />
           <RagQueryView v-else-if="currentView === 'rag'" />
@@ -83,6 +87,10 @@ import Sidebar from '@/components/sidebar/Sidebar.vue'
 import ChatContainer from '@/components/chat/ChatContainer.vue'
 import AgentManagement from '@/views/agent/AgentManagement.vue'
 import ToolMarket from '@/views/agent/ToolMarket.vue'
+import SkillManagement from '@/views/agent/SkillManagement.vue'
+import ChannelManagement from '@/views/agent/ChannelManagement.vue'
+import CronManagement from '@/views/agent/CronManagement.vue'
+import MemoryManagement from '@/views/agent/MemoryManagement.vue'
 import ModelManagement from '@/views/agent/ModelManagement.vue'
 import McpManagement from '@/views/agent/McpManagement.vue'
 import RagQueryView from '@/views/RagQueryView.vue'
@@ -91,13 +99,15 @@ import {
   MessageSquare,
   Bot,
   Wrench,
+  BookMarked,
+  NotebookPen,
   Settings,
   Network,
   FileText,
   Menu,
 } from 'lucide-vue-next'
 
-type ViewId = 'chat' | 'agents' | 'tools' | 'models' | 'mcp' | 'rag'
+type ViewId = 'chat' | 'agents' | 'tools' | 'skills' | 'channels' | 'cron' | 'memory' | 'models' | 'mcp' | 'rag'
 
 interface Tab {
   id: ViewId
@@ -132,6 +142,10 @@ const tabs: Tab[] = [
   { id: 'chat', label: '聊天', icon: MessageSquare },
   { id: 'agents', label: 'Agent 管理', icon: Bot },
   { id: 'tools', label: '工具市场', icon: Wrench },
+  { id: 'skills', label: 'Skills 管理', icon: BookMarked },
+  { id: 'channels', label: '渠道管理', icon: Network },
+  { id: 'cron', label: 'Cron 任务', icon: Settings },
+  { id: 'memory', label: 'Memory 规则', icon: NotebookPen },
   { id: 'models', label: '模型配置', icon: Settings },
   { id: 'mcp', label: 'MCP 连接', icon: Network },
   { id: 'rag', label: '知识库', icon: FileText }

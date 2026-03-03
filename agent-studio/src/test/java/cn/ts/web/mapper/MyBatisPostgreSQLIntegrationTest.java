@@ -39,6 +39,7 @@ class MyBatisPostgreSQLIntegrationTest {
     private static final String TEST_DB_URL = "jdbc:postgresql://127.0.0.1:5432/agent_studio_db?currentSchema=public&useSSL=false";
     private static final String TEST_DB_USER = "admin";
     private static final String TEST_DB_PASSWORD = "123456";
+    private final String runId = String.valueOf(System.currentTimeMillis());
 
     @Autowired
     private ModelConfigMapper modelConfigMapper;
@@ -85,7 +86,8 @@ class MyBatisPostgreSQLIntegrationTest {
     void testCreateModelConfig() {
         // Arrange
         ModelConfigEntity entity = new ModelConfigEntity();
-        entity.setModelName("test-gpt4");
+        String modelName = testName("test-gpt4");
+        entity.setModelName(modelName);
         entity.setDisplayName("GPT-4 Test Model");
         entity.setProvider("openai");
         entity.setModelId("gpt-4-turbo");
@@ -102,7 +104,7 @@ class MyBatisPostgreSQLIntegrationTest {
 
         ModelConfigEntity saved = modelConfigMapper.selectById(entity.getId());
         assertNotNull(saved);
-        assertEquals("test-gpt4", saved.getModelName());
+        assertEquals(modelName, saved.getModelName());
         assertEquals("GPT-4 Test Model", saved.getDisplayName());
         assertEquals("openai", saved.getProvider());
 
@@ -114,7 +116,7 @@ class MyBatisPostgreSQLIntegrationTest {
     @DisplayName("11. 查询所有模型配置")
     void testGetAllModelConfigs() {
         // Arrange
-        ModelConfigEntity entity = createTestModelConfig("query-all-test");
+        ModelConfigEntity entity = createTestModelConfig(testName("query-all-test"));
 
         // Act
         List<ModelConfigEntity> list = modelConfigMapper.selectAll();
@@ -130,7 +132,7 @@ class MyBatisPostgreSQLIntegrationTest {
     @DisplayName("12. 根据模型名称查询")
     void testGetModelByName() {
         // Arrange
-        String modelName = "get-by-name-test";
+        String modelName = testName("get-by-name-test");
         createTestModelConfig(modelName);
 
         // Act
@@ -147,7 +149,7 @@ class MyBatisPostgreSQLIntegrationTest {
     @DisplayName("13. 更新模型配置")
     void testUpdateModelConfig() {
         // Arrange
-        ModelConfigEntity entity = createTestModelConfig("update-test");
+        ModelConfigEntity entity = createTestModelConfig(testName("update-test"));
         Long id = entity.getId();
 
         // Act
@@ -167,7 +169,7 @@ class MyBatisPostgreSQLIntegrationTest {
     @DisplayName("14. 删除模型配置")
     void testDeleteModelConfig() {
         // Arrange
-        ModelConfigEntity entity = createTestModelConfig("delete-test");
+        ModelConfigEntity entity = createTestModelConfig(testName("delete-test"));
         Long id = entity.getId();
 
         // Act
@@ -188,7 +190,7 @@ class MyBatisPostgreSQLIntegrationTest {
     void testCreateLocalToolDefinition() {
         // Arrange
         ToolDefinitionEntity entity = new ToolDefinitionEntity();
-        entity.setToolName("test-local-tool");
+        entity.setToolName(testName("test-local-tool"));
         entity.setDisplayName("Test Local Tool");
         entity.setDescription("A test local tool");
         entity.setToolType("LOCAL");
@@ -210,7 +212,7 @@ class MyBatisPostgreSQLIntegrationTest {
     void testCreateMcpToolDefinition() {
         // Arrange
         ToolDefinitionEntity entity = new ToolDefinitionEntity();
-        entity.setToolName("test-mcp-tool");
+        entity.setToolName(testName("test-mcp-tool"));
         entity.setDisplayName("Test MCP Tool");
         entity.setDescription("A test MCP tool");
         entity.setToolType("MCP");
@@ -232,8 +234,8 @@ class MyBatisPostgreSQLIntegrationTest {
     @DisplayName("22. 根据工具类型查询")
     void testGetToolsByType() {
         // Arrange
-        createTestToolDefinition("local-tool-1", "LOCAL");
-        createTestToolDefinition("mcp-tool-1", "MCP");
+        createTestToolDefinition(testName("local-tool-1"), "LOCAL");
+        createTestToolDefinition(testName("mcp-tool-1"), "MCP");
 
         // Act
         List<ToolDefinitionEntity> localTools = toolDefinitionMapper.selectByType("LOCAL");
@@ -254,9 +256,9 @@ class MyBatisPostgreSQLIntegrationTest {
     @DisplayName("30. 创建 Agent 配置")
     void testCreateAgentConfig() {
         // Arrange
-        ModelConfigEntity model = createTestModelConfig("agent-model-ref");
+        ModelConfigEntity model = createTestModelConfig(testName("agent-model-ref"));
         AgentConfigEntity entity = new AgentConfigEntity();
-        entity.setAgentName("test-agent");
+        entity.setAgentName(testName("test-agent"));
         entity.setDisplayName("Test Agent");
         entity.setDescription("A test agent");
         entity.setModelId(model.getId());
@@ -281,7 +283,7 @@ class MyBatisPostgreSQLIntegrationTest {
     @DisplayName("31. 根据 Agent 名称查询")
     void testGetAgentByName() {
         // Arrange
-        String agentName = "get-agent-by-name";
+        String agentName = testName("get-agent-by-name");
         createTestAgentConfig(agentName);
 
         // Act
@@ -300,9 +302,9 @@ class MyBatisPostgreSQLIntegrationTest {
     @DisplayName("40. 创建 Agent-工具关联")
     void testCreateAgentToolMapping() {
         // Arrange
-        ModelConfigEntity model = createTestModelConfig("mapping-model");
-        AgentConfigEntity agent = createTestAgentConfig("mapping-agent", model.getId());
-        ToolDefinitionEntity tool = createTestToolDefinition("mapping-tool", "LOCAL");
+        ModelConfigEntity model = createTestModelConfig(testName("mapping-model"));
+        AgentConfigEntity agent = createTestAgentConfig(testName("mapping-agent"), model.getId());
+        ToolDefinitionEntity tool = createTestToolDefinition(testName("mapping-tool"), "LOCAL");
 
         AgentToolMappingEntity entity = new AgentToolMappingEntity();
         entity.setAgentConfigId(agent.getId());
@@ -322,10 +324,10 @@ class MyBatisPostgreSQLIntegrationTest {
     @DisplayName("41. 查询 Agent 的工具列表")
     void testGetAgentTools() {
         // Arrange
-        ModelConfigEntity model = createTestModelConfig("query-tools-model");
-        AgentConfigEntity agent = createTestAgentConfig("query-tools-agent", model.getId());
-        ToolDefinitionEntity tool1 = createTestToolDefinition("query-tool-1", "LOCAL");
-        ToolDefinitionEntity tool2 = createTestToolDefinition("query-tool-2", "MCP");
+        ModelConfigEntity model = createTestModelConfig(testName("query-tools-model"));
+        AgentConfigEntity agent = createTestAgentConfig(testName("query-tools-agent"), model.getId());
+        ToolDefinitionEntity tool1 = createTestToolDefinition(testName("query-tool-1"), "LOCAL");
+        ToolDefinitionEntity tool2 = createTestToolDefinition(testName("query-tool-2"), "MCP");
 
         createAgentToolMapping(agent.getId(), tool1.getId());
         createAgentToolMapping(agent.getId(), tool2.getId());
@@ -349,7 +351,7 @@ class MyBatisPostgreSQLIntegrationTest {
     void testCreateMcpConnectionConfig() {
         // Arrange
         McpConnectionConfigEntity entity = new McpConnectionConfigEntity();
-        entity.setConnectionName("test-mcp-connection");
+        entity.setConnectionName(testName("test-mcp-connection"));
         entity.setDescription("Test MCP Connection");
         entity.setConnectionType("STDIO");
         entity.setCommand("npx");
@@ -375,8 +377,8 @@ class MyBatisPostgreSQLIntegrationTest {
     @DisplayName("51. 根据连接类型查询 MCP 配置")
     void testGetMcpConnectionsByType() {
         // Arrange
-        createTestMcpConnectionConfig("stdio-conn", "STDIO");
-        createTestMcpConnectionConfig("sse-conn", "SSE");
+        createTestMcpConnectionConfig(testName("stdio-conn"), "STDIO");
+        createTestMcpConnectionConfig(testName("sse-conn"), "SSE");
 
         // Act
         List<McpConnectionConfigEntity> stdioConns = mcpConnectionConfigMapper.selectByType("STDIO");
@@ -399,19 +401,20 @@ class MyBatisPostgreSQLIntegrationTest {
         System.out.println("\n========== 开始完整流程测试 ==========");
 
         // 1. 创建模型配置
-        ModelConfigEntity model = createTestModelConfig("workflow-model");
+        ModelConfigEntity model = createTestModelConfig(testName("workflow-model"));
         assertNotNull(model.getId());
         System.out.println("✓ 步骤 1: 创建模型配置");
 
         // 2. 创建工具定义
-        ToolDefinitionEntity tool1 = createTestToolDefinition("workflow-tool-1", "LOCAL");
-        ToolDefinitionEntity tool2 = createTestToolDefinition("workflow-tool-2", "MCP");
+        ToolDefinitionEntity tool1 = createTestToolDefinition(testName("workflow-tool-1"), "LOCAL");
+        ToolDefinitionEntity tool2 = createTestToolDefinition(testName("workflow-tool-2"), "MCP");
         assertNotNull(tool1.getId());
         assertNotNull(tool2.getId());
         System.out.println("✓ 步骤 2: 创建工具定义");
 
         // 3. 创建 Agent 配置
-        AgentConfigEntity agent = createTestAgentConfig("workflow-agent", model.getId());
+        String workflowAgentName = testName("workflow-agent");
+        AgentConfigEntity agent = createTestAgentConfig(workflowAgentName, model.getId());
         assertNotNull(agent.getId());
         System.out.println("✓ 步骤 3: 创建 Agent 配置");
 
@@ -421,7 +424,7 @@ class MyBatisPostgreSQLIntegrationTest {
         System.out.println("✓ 步骤 4: 关联工具");
 
         // 5. 验证查询
-        Optional<AgentConfigEntity> agentResult = agentConfigMapper.selectByAgentName("workflow-agent");
+        Optional<AgentConfigEntity> agentResult = agentConfigMapper.selectByAgentName(workflowAgentName);
         assertTrue(agentResult.isPresent());
         assertEquals(model.getId(), agentResult.get().getModelId());
         System.out.println("✓ 步骤 5: 验证 Agent 配置");
@@ -437,7 +440,7 @@ class MyBatisPostgreSQLIntegrationTest {
         System.out.println("✓ 步骤 7: 更新 Agent 配置");
 
         // 8. 验证更新
-        Optional<AgentConfigEntity> updatedAgent = agentConfigMapper.selectByAgentName("workflow-agent");
+        Optional<AgentConfigEntity> updatedAgent = agentConfigMapper.selectByAgentName(workflowAgentName);
         assertTrue(updatedAgent.isPresent());
         assertEquals("Updated Workflow Agent", updatedAgent.get().getDisplayName());
         System.out.println("✓ 步骤 8: 验证更新结果");
@@ -521,5 +524,9 @@ class MyBatisPostgreSQLIntegrationTest {
         entity.setIsActive(true);
         mcpConnectionConfigMapper.insert(entity);
         return entity;
+    }
+
+    private String testName(String base) {
+        return base + "-" + runId;
     }
 }

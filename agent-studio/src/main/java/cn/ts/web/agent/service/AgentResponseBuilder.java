@@ -8,12 +8,14 @@ import cn.ts.graph.state.State;
 import cn.ts.web.shared.constant.ApiConstants;
 import cn.ts.web.agent.dto.AgentResponse;
 import cn.ts.web.session.service.MessageConversionService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,8 +50,10 @@ public class AgentResponseBuilder {
     private static final String THINK_DELTA = "think_delta";
     private static final String REASONING_CONTENT = "reasoningContent";
     private static final String REASONING_CONTENT_SNAKE = "reasoning_content";
+    private static final Set<String> SKILL_TOOL_NAMES = Set.of("list_skills", "get_skill_detail", "get_skill_reference");
 
     private final MessageConversionService messageConversionService;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * 创建 Agent 响应构建器
@@ -230,6 +234,8 @@ public class AgentResponseBuilder {
         if (!finalStateData.isEmpty()) {
             builder.stateData(finalStateData);
         }
+
+        enrichSkillsMetadata(finalStateData, metadata);
 
         // 处理使用信息
         if (output.getUsage() != null) {
@@ -477,5 +483,87 @@ public class AgentResponseBuilder {
         metadata.put(THINK, value);
         metadata.put(REASONING_CONTENT, value);
         metadata.put(REASONING_CONTENT_SNAKE, value);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void enrichSkillsMetadata(Map<String, Object> stateData, Map<String, Object> metadata) {
+        if (stateData == null || stateData.isEmpty()) {
+            return;
+        }
+        Object executionRecordObj = stateData.get("execution_record");
+        if (!(executionRecordObj instanceof Map<?, ?> executionRecord)) {
+            return;
+        }
+        Object executionsObj = executionRecord.get("executions");
+        if (!(executionsObj instanceof List<?> executions) || executions.isEmpty()) {
+            metadata.put("skillsTriggered", false);
+            return;
+        }
+
+        List<Map<String, Object>> skillToolCalls = new ArrayList<>();
+        for (Object item : executions) {
+            if (!(item instanceof Map<?, ?> executionMap)) {
+                continue;
+            }
+            String toolName = stringValue(executionMap.get("name"));
+            if (!SKILL_TOOL_NAMES.contains(toolName)) {
+                continue;
+            }
+            Map<String, Object> toolCall = new HashMap<>();
+            toolCall.put("toolName", toolName);
+            toolCall.put("id", stringValue(executionMap.get("id")));
+            Map<String, Object> argumentsMap = parseArguments(stringValue(executionMap.get("arguments")));
+            if (!argumentsMap.isEmpty()) {
+                Object skillId = firstNonNull(argumentsMap, "skill_id", "skillId");
+                Object refId = firstNonNull(argumentsMap, "ref_id", "refId");
+                if (skillId != null) {
+                    toolCall.put("skillId", skillId.toString());
+                }
+                if (refId != null) {
+                    toolCall.put("refId", refId.toString());
+                }
+            }
+            skillToolCalls.add(toolCall);
+        }
+
+        metadata.put("skillsTriggered", !skillToolCalls.isEmpty());
+        if (!skillToolCalls.isEmpty()) {
+            metadata.put("skillToolCalls", skillToolCalls);
+            metadata.put("skillsTriggeredCount", skillToolCalls.size());
+        }
+    }
+
+    private String stringValue(Object value) {
+        return value == null ? "" : value.toString();
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> parseArguments(String arguments) {
+        if (arguments == null || arguments.isBlank()) {
+            return Map.of();
+        }
+        try {
+            Object parsed = objectMapper.readValue(arguments, Object.class);
+            if (parsed instanceof Map<?, ?> map) {
+                Map<String, Object> result = new HashMap<>();
+                for (Map.Entry<?, ?> entry : map.entrySet()) {
+                    result.put(String.valueOf(entry.getKey()), entry.getValue());
+                }
+                return result;
+            }
+        } catch (Exception ignored) {
+            return Map.of();
+        }
+        return Map.of();
+    }
+
+    private Object firstNonNull(Map<String, Object> map, String key1, String key2) {
+        if (map.containsKey(key1) && map.get(key1) != null) {
+            return map.get(key1);
+        }
+        if (map.containsKey(key2) && map.get(key2) != null) {
+            return map.get(key2);
+        }
+        return null;
     }
 }

@@ -1,0 +1,41 @@
+# Example Commands and Code Samples
+
+This file contains useful command examples and code samples for skill development.
+
+## Shell Commands
+
+# List all files in a directory
+ls -la
+
+# Search for a pattern in files
+grep -r "pattern" /path/to/directory
+
+# Find files by name
+find . -name "*.md"
+
+## Python Examples
+
+# Basic file reading
+with open('file.txt', 'r') as f:
+    content = f.read()
+
+# JSON processing
+import json
+data = json.loads(json_string)
+
+## JavaScript Examples
+
+# Fetch API
+fetch('https://api.example.com/data')
+  .then(response => response.json())
+  .then(data => console.log(data))
+
+## Skill Testing Commands
+
+# Test a skill by triggering it
+User: "demo skill"
+
+# Verify skill response
+- Check if skill is activated
+- Verify correct workflow execution
+- Confirm progressive disclosure works

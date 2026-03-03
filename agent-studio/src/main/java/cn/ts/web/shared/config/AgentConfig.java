@@ -15,9 +15,12 @@ import cn.ts.graph.hook.Hook;
 import cn.ts.graph.observation.GraphObservationLifecycleListener;
 import cn.ts.web.agent.deepsearch.DeepSearchAgentBuilder;
 import cn.ts.web.agent.interceptor.PromptAuditInterceptor;
+import cn.ts.web.memory.interceptor.MemoryPromptInterceptor;
+import cn.ts.web.skills.interceptor.SkillsPromptInterceptor;
 import cn.ts.web.agent.deepsearch.DeepSearchProperties;
 import cn.ts.web.agent.service.AgentExecutionService;
 import cn.ts.web.tool.local.FileSystemTools;
+import cn.ts.web.tool.local.SkillReadTool;
 import cn.ts.web.tool.local.ShellCommandTool;
 import cn.ts.web.tool.local.SimpleTools;
 import org.slf4j.Logger;
@@ -60,6 +63,9 @@ public class AgentConfig {
     private final RuntimeContextPromptInterceptor runtimeContextPromptInterceptor;
     private final ShellCommandTool shellCommandTool;
     private final FileSystemTools fileSystemTools;
+    private final SkillReadTool skillReadTool;
+    private final MemoryPromptInterceptor memoryPromptInterceptor;
+    private final SkillsPromptInterceptor skillsPromptInterceptor;
 
     public AgentConfig(ChatModel chatModel,
                        AgentExecutionService agentExecutionService,
@@ -75,7 +81,10 @@ public class AgentConfig {
                        AgentExecutionConfig agentExecutionConfig,
                        PromptAuditInterceptor promptAuditInterceptor,
                        ShellCommandTool shellCommandTool,
-                       FileSystemTools fileSystemTools) {
+                       FileSystemTools fileSystemTools,
+                       SkillReadTool skillReadTool,
+                       MemoryPromptInterceptor memoryPromptInterceptor,
+                       SkillsPromptInterceptor skillsPromptInterceptor) {
         this.chatModel = chatModel;
         this.agentExecutionService = agentExecutionService;
         this.mcpManager = mcpManager;
@@ -91,6 +100,9 @@ public class AgentConfig {
         this.promptAuditInterceptor = promptAuditInterceptor;
         this.shellCommandTool = shellCommandTool;
         this.fileSystemTools = fileSystemTools;
+        this.skillReadTool = skillReadTool;
+        this.memoryPromptInterceptor = memoryPromptInterceptor;
+        this.skillsPromptInterceptor = skillsPromptInterceptor;
     }
 
     /**
@@ -109,6 +121,7 @@ public class AgentConfig {
         tools.add(new WriteToDoTool());
         tools.add(shellCommandTool);
         tools.add(fileSystemTools);
+        tools.add(skillReadTool);
 
         // 添加所有 MCP 客户端作为工具
         tools.addAll(mcpManager.getAllMcpClients());
@@ -374,6 +387,8 @@ public class AgentConfig {
         if (runtimeContextPromptInterceptor.isEnabled()) {
             interceptors.add(runtimeContextPromptInterceptor);
         }
+        interceptors.add(memoryPromptInterceptor);
+        interceptors.add(skillsPromptInterceptor);
         interceptors.add(promptAuditInterceptor);
         return List.copyOf(interceptors);
     }

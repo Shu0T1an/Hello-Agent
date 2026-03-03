@@ -56,10 +56,11 @@ class SimpleMyBatisTest {
     @Test
     void testInsertAndSelect() {
         assertNotNull(modelConfigMapper);
+        String modelName = "test-simple-connection-" + System.currentTimeMillis();
 
         // 创建测试数据
         ModelConfigEntity entity = new ModelConfigEntity();
-        entity.setModelName("test-simple-connection");
+        entity.setModelName(modelName);
         entity.setDisplayName("Simple Test Model");
         entity.setProvider("test-provider");
         entity.setModelId("test-model-id");
@@ -76,11 +77,11 @@ class SimpleMyBatisTest {
         // 查询
         ModelConfigEntity selected = modelConfigMapper.selectById(entity.getId());
         assertNotNull(selected);
-        assertEquals("test-simple-connection", selected.getModelName());
+        assertEquals(modelName, selected.getModelName());
         System.out.println("✓ 查询成功，模型名称: " + selected.getModelName());
 
         // 按名称查询
-        var byName = modelConfigMapper.selectByModelName("test-simple-connection");
+        var byName = modelConfigMapper.selectByModelName(modelName);
         assertTrue(byName.isPresent());
         System.out.println("✓ 按名称查询成功");
     }

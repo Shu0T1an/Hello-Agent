@@ -1,0 +1,4 @@
+mvn clean install
+mvn -pl Agent-Studio spring-boot:run
+cd frontend && npm install
+cd frontend && npm run dev

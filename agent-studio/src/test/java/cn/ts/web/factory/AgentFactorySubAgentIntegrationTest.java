@@ -18,6 +18,8 @@ import cn.ts.web.agent.mapper.AgentConfigMapper;
 import cn.ts.web.agent.mapper.SubAgentMappingMapper;
 import cn.ts.web.agent.service.ModelConfigService;
 import cn.ts.web.agent.service.SubAgentProgressBus;
+import cn.ts.web.memory.interceptor.MemoryPromptInterceptor;
+import cn.ts.web.skills.interceptor.SkillsPromptInterceptor;
 import cn.ts.web.shared.config.AgentExecutionConfig;
 import cn.ts.web.tool.service.ToolDefinitionService;
 import org.junit.jupiter.api.BeforeEach;
@@ -71,6 +73,12 @@ class AgentFactorySubAgentIntegrationTest {
     @Mock
     private PromptAuditInterceptor promptAuditInterceptor;
 
+    @Mock
+    private SkillsPromptInterceptor skillsPromptInterceptor;
+
+    @Mock
+    private MemoryPromptInterceptor memoryPromptInterceptor;
+
     private AgentFactory agentFactory;
 
     @BeforeEach
@@ -84,6 +92,8 @@ class AgentFactorySubAgentIntegrationTest {
                 subAgentProgressBus,
                 defaultExecutionConfig(),
                 promptAuditInterceptor,
+                memoryPromptInterceptor,
+                skillsPromptInterceptor,
                 "test-agent"
 
         );
@@ -108,6 +118,7 @@ class AgentFactorySubAgentIntegrationTest {
         assertFalse(interceptors.isEmpty());
         assertTrue(interceptors.stream().anyMatch(i -> "SubAgent".equals(i.getName())));
         assertTrue(interceptors.stream().anyMatch(i -> "RuntimeContextPrompt".equals(i.getName())));
+        assertTrue(interceptors.contains(memoryPromptInterceptor));
         assertTrue(agent.getGraph().getNodes().containsKey("__hook_ClarificationQaHook_after"));
         assertTrue(getToolNodeCallbacks(agent).stream().anyMatch(tc -> "task".equals(tc.getToolDefinition().name())));
     }
@@ -146,7 +157,10 @@ class AgentFactorySubAgentIntegrationTest {
 
         ReactAgent agent = agentFactory.createAgent(main);
         List<ModelInterceptor> mainInterceptors = getLlmInterceptors(agent);
-        Object subAgentInterceptor = mainInterceptors.get(0);
+        Object subAgentInterceptor = mainInterceptors.stream()
+                .filter(i -> "SubAgent".equals(i.getName()))
+                .findFirst()
+                .orElseThrow();
 
         Field subAgentsField = subAgentInterceptor.getClass().getDeclaredField("subAgents");
         subAgentsField.setAccessible(true);

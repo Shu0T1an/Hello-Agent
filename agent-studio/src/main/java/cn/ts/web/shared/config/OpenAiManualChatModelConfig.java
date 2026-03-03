@@ -17,7 +17,7 @@ import org.springframework.context.annotation.Primary;
         prefix = "app.llm.openai-manual",
         name = "enabled",
         havingValue = "true",
-        matchIfMissing = true
+        matchIfMissing = false
 )
 public class OpenAiManualChatModelConfig {
 

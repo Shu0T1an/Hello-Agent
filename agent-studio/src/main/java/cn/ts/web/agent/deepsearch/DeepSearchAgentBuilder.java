@@ -15,6 +15,8 @@ import cn.ts.graph.checkpoint.CheckpointManager;
 import cn.ts.graph.hook.Hook;
 import cn.ts.web.agent.interceptor.PromptAuditInterceptor;
 import cn.ts.web.agent.service.SubAgentProgressBus;
+import cn.ts.web.memory.interceptor.MemoryPromptInterceptor;
+import cn.ts.web.skills.interceptor.SkillsPromptInterceptor;
 import cn.ts.web.shared.config.AgentExecutionConfig;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.stereotype.Component;
@@ -37,16 +39,22 @@ public class DeepSearchAgentBuilder {
     private final SubAgentToolPolicyResolver toolPolicyResolver;
     private final PromptAuditInterceptor promptAuditInterceptor;
     private final RuntimeContextPromptInterceptor runtimeContextPromptInterceptor;
+    private final MemoryPromptInterceptor memoryPromptInterceptor;
+    private final SkillsPromptInterceptor skillsPromptInterceptor;
 
     public DeepSearchAgentBuilder(DeepSearchProperties properties,
                                   CheckpointManager checkpointManager,
                                   SubAgentProgressBus subAgentProgressBus,
                                   AgentExecutionConfig executionConfig,
-                                  PromptAuditInterceptor promptAuditInterceptor) {
+                                  PromptAuditInterceptor promptAuditInterceptor,
+                                  MemoryPromptInterceptor memoryPromptInterceptor,
+                                  SkillsPromptInterceptor skillsPromptInterceptor) {
         this.properties = properties;
         this.checkpointManager = checkpointManager;
         this.subAgentProgressBus = subAgentProgressBus;
         this.promptAuditInterceptor = promptAuditInterceptor;
+        this.memoryPromptInterceptor = memoryPromptInterceptor;
+        this.skillsPromptInterceptor = skillsPromptInterceptor;
         this.toolPolicyResolver = new SubAgentToolPolicyResolver(properties);
         this.runtimeContextPromptInterceptor = createRuntimeContextPromptInterceptor(executionConfig);
     }
@@ -81,6 +89,8 @@ public class DeepSearchAgentBuilder {
                                 List.of(),
                                 toolPolicyResolver.blockedToolNames()
                         ),
+                        memoryPromptInterceptor,
+                        skillsPromptInterceptor,
                         promptAuditInterceptor
                 ))
                 .checkpointManager(checkpointManager)
@@ -114,7 +124,7 @@ public class DeepSearchAgentBuilder {
                 .modelInterceptors(withRuntimeContext(new PromptInjectingInterceptor(
                         "DeepSearchResearchPrompt",
                         DeepSearchPrompts.RESEARCH_SUBAGENT_PROMPT
-                ), toolPolicyResolver.forResearchAgent(), promptAuditInterceptor))
+                ), toolPolicyResolver.forResearchAgent(), memoryPromptInterceptor, skillsPromptInterceptor, promptAuditInterceptor))
                 .build();
         subAgents.put("research-agent", researchAgent);
 
@@ -128,7 +138,7 @@ public class DeepSearchAgentBuilder {
                 .modelInterceptors(withRuntimeContext(new PromptInjectingInterceptor(
                         "DeepSearchCritiquePrompt",
                         DeepSearchPrompts.CRITIQUE_SUBAGENT_PROMPT
-                ), toolPolicyResolver.forCritiqueAgent(), promptAuditInterceptor))
+                ), toolPolicyResolver.forCritiqueAgent(), memoryPromptInterceptor, skillsPromptInterceptor, promptAuditInterceptor))
                 .build();
         subAgents.put("critique-agent", critiqueAgent);
 
@@ -143,7 +153,7 @@ public class DeepSearchAgentBuilder {
                     .modelInterceptors(withRuntimeContext(new PromptInjectingInterceptor(
                             "DeepSearchGeneralPrompt",
                             DeepSearchPrompts.GENERAL_PURPOSE_SUBAGENT_PROMPT
-                    ), toolPolicyResolver.forGeneralAgent(), promptAuditInterceptor))
+                    ), toolPolicyResolver.forGeneralAgent(), memoryPromptInterceptor, skillsPromptInterceptor, promptAuditInterceptor))
                     .build();
             subAgents.put("general-purpose", generalPurposeAgent);
         }

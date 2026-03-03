@@ -20,6 +20,8 @@ import javax.sql.DataSource;
         "cn.ts.web.session.mapper",
         "cn.ts.web.rag.mapper",
         "cn.ts.web.tool.mapper",
+        "cn.ts.web.channel.mapper",
+        "cn.ts.web.cron.mapper",
         "cn.ts.web.infra.mcp.mapper",
         "cn.ts.web.infra.checkpoint.mapper",
         "cn.ts.web.infra.audit.mapper"
@@ -48,12 +50,14 @@ public class MyBatisConfig {
         // 配置类型别名包
         factoryBean.setTypeAliasesPackage(
                 "cn.ts.web.agent.entity," +
-                        "cn.ts.web.session.entity," +
-                        "cn.ts.web.rag.entity," +
-                        "cn.ts.web.tool.entity," +
-                        "cn.ts.web.infra.mcp.entity," +
-                        "cn.ts.web.infra.checkpoint.entity," +
-                        "cn.ts.web.infra.audit.entity"
+                "cn.ts.web.session.entity," +
+                "cn.ts.web.rag.entity," +
+                "cn.ts.web.tool.entity," +
+                "cn.ts.web.channel.entity," +
+                "cn.ts.web.cron.entity," +
+                "cn.ts.web.infra.mcp.entity," +
+                "cn.ts.web.infra.checkpoint.entity," +
+                "cn.ts.web.infra.audit.entity"
         );
 
         // MyBatis 配置

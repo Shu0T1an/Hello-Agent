@@ -20,6 +20,8 @@ import cn.ts.web.agent.mapper.AgentConfigMapper;
 import cn.ts.web.agent.mapper.SubAgentMappingMapper;
 import cn.ts.web.agent.service.ModelConfigService;
 import cn.ts.web.agent.service.SubAgentProgressBus;
+import cn.ts.web.memory.interceptor.MemoryPromptInterceptor;
+import cn.ts.web.skills.interceptor.SkillsPromptInterceptor;
 import cn.ts.web.shared.config.AgentExecutionConfig;
 import cn.ts.web.tool.service.ToolDefinitionService;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -56,6 +58,8 @@ public class AgentFactory {
     private final SubAgentProgressBus subAgentProgressBus;
     private final PromptAuditInterceptor promptAuditInterceptor;
     private final RuntimeContextPromptInterceptor runtimeContextPromptInterceptor;
+    private final MemoryPromptInterceptor memoryPromptInterceptor;
+    private final SkillsPromptInterceptor skillsPromptInterceptor;
     private final List<String> blockedToolNames;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -67,6 +71,8 @@ public class AgentFactory {
                         SubAgentProgressBus subAgentProgressBus,
                         AgentExecutionConfig agentExecutionConfig,
                         PromptAuditInterceptor promptAuditInterceptor,
+                        MemoryPromptInterceptor memoryPromptInterceptor,
+                        SkillsPromptInterceptor skillsPromptInterceptor,
                         @Value("${agent.subagent.blocked-tool-names:}") String blockedToolNamesRaw) {
         this.modelConfigService = modelConfigService;
         this.toolDefinitionService = toolDefinitionService;
@@ -76,6 +82,8 @@ public class AgentFactory {
         this.subAgentProgressBus = subAgentProgressBus;
         this.runtimeContextPromptInterceptor = createRuntimeContextPromptInterceptor(agentExecutionConfig);
         this.promptAuditInterceptor = promptAuditInterceptor;
+        this.memoryPromptInterceptor = memoryPromptInterceptor;
+        this.skillsPromptInterceptor = skillsPromptInterceptor;
         this.blockedToolNames = parseBlockedToolNames(blockedToolNamesRaw);
     }
 
@@ -124,6 +132,8 @@ public class AgentFactory {
                     blockedToolNames
             ));
         }
+        modelInterceptors.add(memoryPromptInterceptor);
+        modelInterceptors.add(skillsPromptInterceptor);
         modelInterceptors.add(promptAuditInterceptor);
         if (!modelInterceptors.isEmpty()) {
             builder.modelInterceptors(modelInterceptors);

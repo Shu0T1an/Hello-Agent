@@ -1,0 +1,56 @@
+{
+  "roadmap": {
+    "objective": "Project-wide code review and quality baseline",
+    "tasks": [
+      {
+        "id": 1,
+        "number": "01",
+        "pinned": true,
+        "status": "done",
+        "title": "Collect scope and establish review baseline"
+      },
+      {
+        "id": 2,
+        "number": "02",
+        "pinned": true,
+        "status": "done",
+        "title": "[PLAN REVIEW REQUEST] Approve review strategy and scoring rubric"
+      },
+      {
+        "id": 3,
+        "number": "03",
+        "pinned": false,
+        "status": "done",
+        "title": "Run static checks and build/test verification"
+      },
+      {
+        "id": 4,
+        "number": "04",
+        "pinned": false,
+        "status": "done",
+        "title": "Module-by-module deep review: graph-core, agent-core, Agent-Studio, frontend"
+      },
+      {
+        "id": 5,
+        "number": "05",
+        "pinned": false,
+        "status": "done",
+        "title": "Cross-cutting review: API contracts, security, encoding, concurrency, observability"
+      },
+      {
+        "id": 6,
+        "number": "06",
+        "pinned": true,
+        "status": "done",
+        "title": "[CODE REVIEW REQUEST] Quantitative scoring and pass/fail gate"
+      },
+      {
+        "id": 7,
+        "number": "07",
+        "pinned": false,
+        "status": "in-progress",
+        "title": "Produce remediation backlog with priorities and owners"
+      }
+    ]
+  }
+}

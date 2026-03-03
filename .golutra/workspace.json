@@ -1,0 +1,167 @@
+{
+  "inviteSkillSelections": {
+    "assistant": [
+      "D:\\JavaProject\\Hello-Agent\\.golutra\\skills\\project-development-quality-maintainability"
+    ],
+    "member": [
+      "D:\\JavaProject\\Hello-Agent\\.golutra\\skills\\project-development-quality-maintainability"
+    ]
+  },
+  "memberSequence": {
+    "hello-agent-assistant-codex": 2,
+    "hello-agent-member-claude": 6,
+    "hello-agent-member-codex": 7
+  },
+  "members": [
+    {
+      "autoStartTerminal": false,
+      "avatar": "css:orbit",
+      "id": "01J00000000000000000000000",
+      "name": "群主",
+      "role": "",
+      "roleKey": "members.roles.owner",
+      "roleType": "owner",
+      "status": "online"
+    },
+    {
+      "autoStartTerminal": true,
+      "avatar": "css:mint",
+      "collaborationMode": true,
+      "id": "01KJEJZ7D9HCZ8JQ6KJEY3J1DA",
+      "name": "hello-agent-assistant-codex-1",
+      "role": "",
+      "roleKey": "members.roles.aiAssistant",
+      "roleType": "assistant",
+      "sandboxed": false,
+      "skillPaths": [
+        "D:\\JavaProject\\Hello-Agent\\.golutra\\skills\\project-development-quality-maintainability"
+      ],
+      "status": "online",
+      "terminalCommand": "codex",
+      "terminalType": "codex",
+      "unlimitedAccess": true
+    },
+    {
+      "autoStartTerminal": true,
+      "avatar": "css:mint",
+      "collaborationMode": true,
+      "id": "01KJEME96NQRFDEGYKX2RAK68K",
+      "name": "hello-agent-member-codex-6",
+      "role": "",
+      "roleKey": "members.roles.member",
+      "roleType": "member",
+      "sandboxed": false,
+      "skillPaths": [
+        "D:\\JavaProject\\Hello-Agent\\.golutra\\skills\\project-development-quality-maintainability"
+      ],
+      "status": "online",
+      "terminalCommand": "codex",
+      "terminalType": "codex",
+      "unlimitedAccess": true
+    },
+    {
+      "autoStartTerminal": true,
+      "avatar": "css:orbit",
+      "collaborationMode": true,
+      "id": "01KJEMJG96CCMWZADTRWSM6QPE",
+      "name": "hello-agent-member-claude-4",
+      "role": "",
+      "roleKey": "members.roles.member",
+      "roleType": "member",
+      "sandboxed": false,
+      "skillPaths": [
+        "D:\\JavaProject\\Hello-Agent\\.golutra\\skills\\project-development-quality-maintainability"
+      ],
+      "status": "online",
+      "terminalCommand": "claude",
+      "terminalType": "claude",
+      "unlimitedAccess": true
+    },
+    {
+      "autoStartTerminal": true,
+      "avatar": "css:ember",
+      "collaborationMode": true,
+      "id": "01KJEMJKC9C88BESQQFRA8PF2N",
+      "name": "hello-agent-member-claude-5",
+      "role": "",
+      "roleKey": "members.roles.member",
+      "roleType": "member",
+      "sandboxed": false,
+      "skillPaths": [
+        "D:\\JavaProject\\Hello-Agent\\.golutra\\skills\\project-development-quality-maintainability"
+      ],
+      "status": "online",
+      "terminalCommand": "claude",
+      "terminalType": "claude",
+      "unlimitedAccess": true
+    }
+  ],
+  "projectId": "0111afd1d3b5b022e0348ae041bda37241748829d4c083952b43f259d2a12533",
+  "roadmap": {
+    "objective": "Project-wide code review and quality baseline",
+    "tasks": [
+      {
+        "id": 1,
+        "number": "01",
+        "pinned": true,
+        "status": "done",
+        "title": "Collect scope and establish review baseline"
+      },
+      {
+        "id": 2,
+        "number": "02",
+        "pinned": true,
+        "status": "done",
+        "title": "[PLAN REVIEW REQUEST] Approve review strategy and scoring rubric"
+      },
+      {
+        "id": 3,
+        "number": "03",
+        "pinned": false,
+        "status": "done",
+        "title": "Run static checks and build/test verification"
+      },
+      {
+        "id": 4,
+        "number": "04",
+        "pinned": false,
+        "status": "done",
+        "title": "Module-by-module deep review: graph-core, agent-core, Agent-Studio, frontend"
+      },
+      {
+        "id": 5,
+        "number": "05",
+        "pinned": false,
+        "status": "done",
+        "title": "Cross-cutting review: API contracts, security, encoding, concurrency, observability"
+      },
+      {
+        "id": 6,
+        "number": "06",
+        "pinned": true,
+        "status": "done",
+        "title": "[CODE REVIEW REQUEST] Quantitative scoring and pass/fail gate"
+      },
+      {
+        "id": 7,
+        "number": "07",
+        "pinned": false,
+        "status": "in-progress",
+        "title": "Produce remediation backlog with priorities and owners"
+      }
+    ]
+  },
+  "terminal": {
+    "recentClosedTabs": [
+      {
+        "closedAt": 1772167348814,
+        "memberId": "01KJEJZ7D9HCZ8JQ6KJEY3J1DA"
+      },
+      {
+        "closedAt": 1772167348813,
+        "memberId": "01KJEME96NQRFDEGYKX2RAK68K"
+      }
+    ]
+  },
+  "version": 1
+}
