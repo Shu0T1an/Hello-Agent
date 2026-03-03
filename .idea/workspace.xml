@@ -6,19 +6,19 @@
   <component name="ChangeListManager">
     <list default="true" id="0e294f23-af53-4e42-af50-c9a578c991d4" name="Changes" comment="fix 会话Input">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/agent/deepsearch/DeepSearchAgentBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/agent/deepsearch/DeepSearchAgentBuilder.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/agent/factory/AgentFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/agent/factory/AgentFactory.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/agent/service/AgentResponseBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/agent/service/AgentResponseBuilder.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/shared/config/AgentConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/shared/config/AgentConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/shared/config/MyBatisConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/shared/config/MyBatisConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/shared/config/OpenAiManualChatModelConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/shared/config/OpenAiManualChatModelConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent-studio/src/test/java/cn/ts/web/agent/deepsearch/DeepSearchAgentBuilderTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/test/java/cn/ts/web/agent/deepsearch/DeepSearchAgentBuilderTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent-studio/src/test/java/cn/ts/web/factory/AgentFactorySubAgentIntegrationTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/test/java/cn/ts/web/factory/AgentFactorySubAgentIntegrationTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent-studio/src/test/java/cn/ts/web/mapper/MyBatisPostgreSQLIntegrationTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/test/java/cn/ts/web/mapper/MyBatisPostgreSQLIntegrationTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent-studio/src/test/java/cn/ts/web/mapper/SimpleMyBatisTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/test/java/cn/ts/web/mapper/SimpleMyBatisTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent-studio/src/test/java/cn/ts/web/service/AgentResponseBuilderTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/test/java/cn/ts/web/service/AgentResponseBuilderTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/api/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/api/index.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/layouts/MainLayout.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/layouts/MainLayout.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-studio/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/channel/adapters/dingtalk/DingTalkChannelAdapter.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/channel/adapters/dingtalk/DingTalkChannelAdapter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/channel/controller/ChannelWebhookController.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/channel/controller/ChannelWebhookController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/channel/runtime/ChannelMessageDispatcher.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/channel/runtime/ChannelMessageDispatcher.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/channel/runtime/ChannelRuntimeBootstrap.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/main/java/cn/ts/web/channel/runtime/ChannelRuntimeBootstrap.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-studio/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/main/resources/application.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-studio/src/main/resources/db/schema.sql" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/main/resources/db/schema.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-studio/src/test/java/cn/ts/web/channel/adapters/dingtalk/DingTalkChannelAdapterTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/test/java/cn/ts/web/channel/adapters/dingtalk/DingTalkChannelAdapterTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-studio/src/test/java/cn/ts/web/controller/ChannelWebhookControllerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/agent-studio/src/test/java/cn/ts/web/controller/ChannelWebhookControllerTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/api/channel.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/api/channel.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/stores/channel.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/stores/channel.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/types/channel.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/types/channel.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/views/agent/ChannelManagement.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/views/agent/ChannelManagement.vue" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -287,7 +287,9 @@
       <workItem from="1772069608067" duration="1615000" />
       <workItem from="1772102675810" duration="2660000" />
       <workItem from="1772158733151" duration="4708000" />
-      <workItem from="1772526852744" duration="2828000" />
+      <workItem from="1772526852744" duration="4027000" />
+      <workItem from="1772537074887" duration="2565000" />
+      <workItem from="1772550229096" duration="659000" />
     </task>
     <task id="LOCAL-00001" summary="fix 会话Input">
       <option name="closed" value="true" />
