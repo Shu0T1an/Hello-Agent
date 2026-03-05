@@ -6,6 +6,12 @@ import cn.ts.web.channel.dto.ChannelInboundMessage;
 import cn.ts.web.agent.dto.AgentResponse;
 import cn.ts.web.channel.entity.ChannelSessionMappingEntity;
 import cn.ts.web.channel.mapper.ChannelSessionMappingMapper;
+import cn.ts.web.channel.runtime.command.ChannelCommandContext;
+import cn.ts.web.channel.runtime.command.ChannelCommandHandler;
+import cn.ts.web.channel.runtime.command.ChannelCommandRegistry;
+import cn.ts.web.channel.runtime.command.ChannelCommandResult;
+import cn.ts.web.channel.runtime.command.ChannelSlashCommandParser;
+import cn.ts.web.channel.runtime.command.ParsedSlashCommand;
 import cn.ts.web.session.dto.GraphStateVO;
 import cn.ts.web.session.service.GraphStateService;
 import cn.ts.web.session.service.MessageConversionService;
@@ -31,12 +37,17 @@ import java.util.function.Consumer;
 public class ChannelMessageDispatcher {
 
     private static final Logger logger = LoggerFactory.getLogger(ChannelMessageDispatcher.class);
+    private static final String COMMAND_PARSE_ERROR = "命令格式错误，请检查引号和参数格式";
+    private static final String UNKNOWN_COMMAND_TEMPLATE = "未知命令：/%s，当前支持：/clear";
+    private static final String COMMAND_EXECUTE_ERROR = "执行命令失败，请稍后重试";
 
     private final AgentExecutionService agentExecutionService;
     private final SessionService sessionService;
     private final ChannelSessionMappingMapper channelSessionMappingMapper;
     private final GraphStateService graphStateService;
     private final MessageConversionService messageConversionService;
+    private final ChannelSlashCommandParser commandParser;
+    private final ChannelCommandRegistry commandRegistry;
 
     @Value("${agent.channel.default-agent:general-purpose}")
     private String defaultAgent;
@@ -45,12 +56,16 @@ public class ChannelMessageDispatcher {
                                     SessionService sessionService,
                                     ChannelSessionMappingMapper channelSessionMappingMapper,
                                     GraphStateService graphStateService,
-                                    MessageConversionService messageConversionService) {
+                                    MessageConversionService messageConversionService,
+                                    ChannelSlashCommandParser commandParser,
+                                    ChannelCommandRegistry commandRegistry) {
         this.agentExecutionService = agentExecutionService;
         this.sessionService = sessionService;
         this.channelSessionMappingMapper = channelSessionMappingMapper;
         this.graphStateService = graphStateService;
         this.messageConversionService = messageConversionService;
+        this.commandParser = commandParser;
+        this.commandRegistry = commandRegistry;
     }
 
     public void dispatch(ChannelInboundMessage message) {
@@ -61,6 +76,10 @@ public class ChannelMessageDispatcher {
         String agentName = (message.getAgentName() == null || message.getAgentName().isBlank())
                 ? defaultAgent
                 : message.getAgentName().trim();
+
+        if (processCommandIfPresent(message, agentName, onReply)) {
+            return;
+        }
 
         String sessionId = resolveSessionId(message, agentName);
         String resolvedSessionId = sessionId;
@@ -82,6 +101,34 @@ public class ChannelMessageDispatcher {
                             }
                             publishReply(onReply, reply);
                         });
+    }
+
+    private boolean processCommandIfPresent(ChannelInboundMessage message, String agentName, Consumer<String> onReply) {
+        ParsedSlashCommand parsed = commandParser.parse(message.getText());
+        if (!parsed.isCommand()) {
+            return false;
+        }
+        if (parsed.hasError()) {
+            publishReply(onReply, COMMAND_PARSE_ERROR);
+            return true;
+        }
+
+        ChannelCommandHandler handler = commandRegistry.find(parsed.getName()).orElse(null);
+        if (handler == null) {
+            publishReply(onReply, String.format(UNKNOWN_COMMAND_TEMPLATE, parsed.getName()));
+            return true;
+        }
+
+        try {
+            ChannelCommandContext context = new ChannelCommandContext(message, agentName);
+            ChannelCommandResult result = handler.handle(context, parsed.getArgs());
+            publishReply(onReply, result.replyMessage());
+        } catch (RuntimeException ex) {
+            logger.error("Channel command execution failed: command={}, message={}",
+                    parsed.getName(), ex.getMessage(), ex);
+            publishReply(onReply, COMMAND_EXECUTE_ERROR);
+        }
+        return true;
     }
 
     private void collectReply(AgentResponse response,
