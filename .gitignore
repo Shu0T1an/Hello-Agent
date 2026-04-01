@@ -41,5 +41,17 @@ build/
 
 # 敏感配置文件（包含密钥）
 **/application-dev.yml
+**/application-test.yml
+**/application-local.yml
 # 保留模板文件供参考
 !**/application-dev.yml.template
+
+# 环境变量文件（包含密钥）
+.env
+.env.local
+.env.*.local
+
+# 前端环境变量
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
