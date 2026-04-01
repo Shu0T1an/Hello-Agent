@@ -1,0 +1,193 @@
+# 日志配置
+logging:
+  level:
+    root: INFO
+    cn.ts: INFO  # 项目包下的日志级别设为 DEBUG
+    cn.ts.web.mapper: INFO  # MyBatis Mapper 日志级别设为 INFO，不显示 SQL 详情
+    org.springframework.ai: INFO
+
+agent:
+  shelltool:
+    enabled: true
+    allowed-working-directories:
+      - ${SHELLTOOL_ALLOWED_ROOT:/path/to/your/project}
+
+spring:
+  datasource:
+    # PostgreSQL 默认超级管理员通常是 postgres，而不是 root，请根据实际情况修改
+    username: ${DB_USERNAME:admin}
+    password: ${DB_PASSWORD:your-password}
+    # 核心修改：协议改为 postgresql，端口改为 5432
+    # 移除了 MySQL 特有的参数，PostgreSQL 通常不需要手动指定编码，currentSchema用于指定模式（默认public）
+    url: ${DB_URL:jdbc:postgresql://127.0.0.1:5432/agent_studio_db?currentSchema=public&useSSL=false}
+    # 核心修改：驱动类名
+    driver-class-name: org.postgresql.Driver
+    type: com.zaxxer.hikari.HikariDataSource
+    # Spring Boot 数据库初始化配置
+    sql:
+      init:
+        mode: always
+        schema-locations: classpath:db/schema.sql,classpath:db/schema-checkpoint.sql,classpath:db/schema-rag.sql
+        data-locations: classpath:db/data.sql
+        encoding: UTF-8
+        separator: ;
+        continue-on-error: false
+    hikari:
+      pool-name: Retail_HikariCP
+      minimum-idle: 15 #最小空闲连接数量
+      idle-timeout: 180000 #空闲连接存活最大时间
+      maximum-pool-size: 25 #连接池最大连接数
+      auto-commit: true  #此属性控制从池返回的连接的默认自动提交行为
+      max-lifetime: 1800000 #池中连接的最长生命周期
+      connection-timeout: 30000 #数据库连接超时时间
+      # PostgreSQL 也支持 SELECT 1，但在 JDBC4 驱动下通常可以省略此行，Hikari 会自动使用 Connection.isValid()
+      connection-test-query: SELECT 1
+
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:your-api-key-here}
+      base-url: ${OPENAI_BASE_URL:https://open.bigmodel.cn/api/coding/paas/v4}
+      chat:
+        options:
+          model: ${OPENAI_MODEL:glm-4.7}
+
+    # 向量存储配置
+    vectorstore:
+      pgvector:
+        index-type: HNSW
+        dimension: 1536
+        distance-type: COSINE_DISTANCE
+        max-document-batch-size: 10000
+        schema-name: public
+        table-name: vector_store
+
+    # Embedding 配置
+    embedding:
+      options:
+        model: text-embedding-v4
+
+  # Redis配置
+#redis:
+#  sdk:
+#    config:
+#      host: 127.0.0.1
+#      port: 16379
+#      pool-size: 10
+#      min-idle-size: 5
+#      idle-timeout: 30000
+#      connect-timeout: 5000
+#      retry-attempts: 3
+#      retry-interval: 1000
+#      ping-interval: 60000
+#      keep-alive: true
+
+jwt:
+  secret: ${JWT_SECRET:your-jwt-secret-key-change-this-in-production}
+  expiration: 2000000000    # 24小时，单位毫秒
+  header: Authorization
+  prefix: "Bearer "
+
+# MyBatis配置
+mybatis:
+  mapper-locations: classpath:mapper/**/*.xml
+  type-aliases-package: cn.ts.web.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+
+# MCP 服务器配置（开发环境）
+mcp:
+  servers:
+    servers:
+      - name: amap
+        type: STDIO
+        description: 高德地图 MCP 服务
+        stdio:
+          command: ${nodejs.npx-path}
+          args:
+            - "-y"
+            - "@amap/amap-maps-mcp-server"
+          env:
+            AMAP_MAPS_API_KEY: ${api.keys.amap}
+            NPM_CONFIG_REGISTRY: ${NPM_CONFIG_REGISTRY:https://registry.npmjs.org/}
+            NPM_CONFIG_CACHE: ${NPM_CONFIG_CACHE:/path/to/npm-cache}
+          timeout-seconds: 30
+          auto-reconnect: true
+          max-retries: 3
+          retry-interval-seconds: 5
+
+      # Tavily 搜索 MCP 服务（通过 mcp-remote 使用 STDIO）
+      - name: tavily-search
+        type: STDIO
+        description: Tavily AI 搜索 MCP 服务
+        stdio:
+          command: ${nodejs.npx-path}
+          args:
+            - "-y"
+            - "mcp-remote"
+            - "https://mcp.tavily.com/mcp/?tavilyApiKey=${TAVILY_API_KEY:your-tavily-api-key}"
+          env:
+            NPM_CONFIG_REGISTRY: ${NPM_CONFIG_REGISTRY:https://registry.npmjs.org/}
+            NPM_CONFIG_CACHE: ${NPM_CONFIG_CACHE:/path/to/npm-cache}
+          timeout-seconds: 30
+          auto-reconnect: true
+          max-retries: 3
+          retry-interval-seconds: 5
+
+# Node.js 路径配置（开发环境）
+nodejs:
+  npx-path: ${NPX_PATH:/usr/local/bin/npx}
+
+# API 密钥配置（开发环境）
+api:
+  keys:
+    keys:
+      amap: ${AMAP_API_KEY:your-amap-api-key}
+
+# 应用配置
+app:
+  llm:
+    openai-manual:
+      enabled: true
+      base-url: ${OPENAI_BASE_URL:https://open.bigmodel.cn/api/coding/paas/v4}
+      api-key: ${OPENAI_API_KEY:your-api-key-here}
+      completions-path: /chat/completions
+      model: ${OPENAI_MODEL:glm-4.7}
+
+  encryption:
+    # AES-256 加密密钥（32字节），生产环境应从环境变量获取
+    key: ${APP_ENCRYPTION_KEY:your-32-byte-encryption-key-change-this}
+
+# RAG 功能配置
+rag:
+  # 文档上传配置
+  document:
+    upload-directory: ${UPLOAD_DIR:/path/to/uploads/documents}
+    max-file-size: 50MB
+    allowed-extensions:
+      - pdf
+      - txt
+      - md
+      - markdown
+  # 文本分块配置
+  text-splitter:
+    chunk-size: 1000
+    chunk-overlap: 200
+    min-chunk-size: 100
+  # 检索配置
+  retrieval:
+    default-top-k: 5
+    default-similarity-threshold: 0.7
+    max-context-length: 4000
+  # 知识库配置
+  knowledge-base:
+    default-kb-id: default
+    auto-create: true
+
+# Checkpoint 配置
+checkpoint:
+  storage:
+    type: database  # memory | database
+    strategy: ALWAYS  # ALWAYS | MANUAL | ERROR | ON_SPECIFIC_NODES
+    max-history-size: 100
+    ttl: 7d

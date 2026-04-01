@@ -1,0 +1,24 @@
+# 开发环境配置
+
+spring:
+  ai:
+    openai:
+      # 请设置环境变量 OPENAI_API_KEY
+      api-key: ${OPENAI_API_KEY:your-api-key-here}
+      base-url: ${OPENAI_BASE_URL:https://api.openai.com}
+      chat:
+        options:
+          model: ${OPENAI_MODEL:gpt-4o-mini}
+          temperature: 0.7
+          max-tokens: 2000
+
+# 开发环境日志配置
+logging:
+  level:
+    root: INFO
+    cn.ts.agent: DEBUG
+    cn.ts.graph: DEBUG
+    org.springframework.ai: DEBUG
+    org.springframework.boot: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
